@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Use ChatGPT Web (including Pro) as native Codex models.</strong><br>
-  Change the model tier, save your workflow.
+  Model availability remains dependent on the signed-in account and plan.
 </p>
 
 <p align="center">
@@ -14,13 +14,20 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/miuuyy/codex-chatgpt-web/actions/workflows/ci.yml"><img src="https://github.com/miuuyy/codex-chatgpt-web/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/SanHsien/codex-chatgpt-web/actions/workflows/ci.yml"><img src="https://github.com/SanHsien/codex-chatgpt-web/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/macOS-arm64%20%7C%20x64-black?logo=apple" alt="macOS arm64 and x64">
   <img src="https://img.shields.io/badge/Windows-x64-0078d4?logo=windows11" alt="Windows x64">
   <img src="https://img.shields.io/badge/Linux-x64-fcc624?logo=linux&logoColor=black" alt="Linux x64">
-  <img src="https://img.shields.io/badge/Free_AI-no_API_fees-10a37f" alt="Free AI with no API fees">
+  <img src="https://img.shields.io/badge/unofficial-ChatGPT_Web_automation-555555" alt="Unofficial ChatGPT Web automation">
 </p>
+
+> **Maintained fork notice.** This repository is maintained at
+> [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web). It preserves the
+> upstream MIT project and product behavior while adding Windows-first development and maintenance
+> controls. See [FORK.md](FORK.md) and [development](docs/DEVELOPMENT.md). This is unofficial
+> ChatGPT Web automation: account/plan allowances still apply, UI changes can break it, and users
+> must follow OpenAI terms and their workspace policy.
 
 Free and Go accounts get **ChatGPT Web — Luna** in Codex's native model picker. Accounts that
 expose the reasoning selector keep **Instant**, **Medium**, **High**, **Extra High**, and **Pro** as
@@ -78,13 +85,13 @@ preserving the ChatGPT profile and launcher configuration.
 **macOS or Linux**
 
 ```bash
-curl -fsSL https://github.com/miuuyy/codex-chatgpt-web/releases/latest/download/install-launcher.sh | sh
+curl -fsSL https://github.com/SanHsien/codex-chatgpt-web/releases/latest/download/install-launcher.sh | sh
 ```
 
 **Windows PowerShell**
 
 ```powershell
-irm https://github.com/miuuyy/codex-chatgpt-web/releases/latest/download/install-launcher.ps1 | iex
+irm https://github.com/SanHsien/codex-chatgpt-web/releases/latest/download/install-launcher.ps1 | iex
 ```
 
 Then complete the three checks in the app:
@@ -105,7 +112,7 @@ model API key, installed Chrome/Chromium, system Node/Bun, or project-managed br
 **Run from source**
 
 ```bash
-git clone https://github.com/miuuyy/codex-chatgpt-web.git && \
+git clone https://github.com/SanHsien/codex-chatgpt-web.git && \
 cd codex-chatgpt-web && \
 bun run app
 ```

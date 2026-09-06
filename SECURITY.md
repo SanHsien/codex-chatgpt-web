@@ -1,5 +1,10 @@
 # Security policy
 
+For this maintained fork, use GitHub's private Security Advisory flow for
+[SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web/security/advisories/new).
+Do not report fork-only findings to upstream. Upstream attribution and scope are recorded in
+[FORK.md](FORK.md).
+
 Do not open public issues containing ChatGPT cookies, browser storage, tunnel IDs, API keys,
 Codex prompts, tool results, or local filesystem paths. Redact diagnostic bundles before sharing.
 

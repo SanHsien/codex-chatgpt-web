@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "upstream": {
+    "repository": "miuuyy/codex-chatgpt-web",
+    "remote": "upstream",
+    "branch": "main"
+  },
+  "reviewedCommit": "c648c09501bb1b704c7ad5273fb5f5d6b8992dd2",
+  "reviewedAt": "2026-09-06",
+  "status": "reviewed-not-merged"
+}
