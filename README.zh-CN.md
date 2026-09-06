@@ -25,7 +25,7 @@
 > **维护 fork 说明。** 此仓库由
 > [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web) 维护。在保留上游
 > MIT 项目及产品行为的同时，增加了 Windows 优先的开发与维护控制。请参阅 [FORK.md](FORK.md)
-> 和[开发文档](docs/DEVELOPMENT.md)。这是非官方 ChatGPT Web 自动化：可用额度仍取决于账户和
+> 和[开发文档](docs/DEVELOPMENT.md)、维护 fork 的[更新记录](CHANGELOG.md)。这是非官方 ChatGPT Web 自动化：可用额度仍取决于账户和
 > 方案，UI 变化可能导致其失效，用户必须遵守 OpenAI 条款及其工作区政策。
 
 Free 和 Go 账户会在 Codex 原生模型选择器中看到 **ChatGPT Web — Luna**。具有推理选择器的

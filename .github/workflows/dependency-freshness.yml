@@ -1,0 +1,57 @@
+name: Dependency freshness
+
+on:
+  schedule:
+    - cron: "11 3 1 * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "package.json"
+      - "bun.lock"
+      - "launcher/package.json"
+      - "launcher/bun.lock"
+      - "scripts/check-dependency-freshness.ts"
+      - ".github/dependency-deferrals.json"
+      - "tests/dependency-freshness.test.ts"
+      - ".github/workflows/dependency-freshness.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-freshness-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: launcher
+      - run: bun test tests/dependency-freshness.test.ts
+      - name: Check read-only dependency freshness
+        id: checker
+        continue-on-error: true
+        run: |
+          mkdir -p .maintenance-reports
+          bun run scripts/check-dependency-freshness.ts --strict --github-output --output .maintenance-reports/dependency-freshness.md
+      - name: Publish dependency report
+        if: always()
+        run: |
+          if [[ -f .maintenance-reports/dependency-freshness.md ]]; then
+            cat .maintenance-reports/dependency-freshness.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "# Dependency freshness" >> "$GITHUB_STEP_SUMMARY"
+            echo "Report unavailable: checker did not produce a report." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Enforce dependency result
+        if: always()
+        run: |
+          test "${{ steps.checker.outcome }}" = success
+          test "${{ steps.checker.outputs.dependency_status }}" = current

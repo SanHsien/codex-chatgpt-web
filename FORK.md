@@ -1,5 +1,10 @@
 # Maintained fork
 
+This fork adds maintenance controls without changing upstream product behavior. Fork-only writes,
+issues, releases, and workflows target `SanHsien/codex-chatgpt-web`; upstream is read-only unless
+the owner explicitly authorizes a contribution. The reviewed upstream state is not merged
+automatically: see [docs/UPSTREAM.md](docs/UPSTREAM.md) and [CHANGELOG.md](CHANGELOG.md).
+
 This is a maintained fork of [miuuyy/codex-chatgpt-web](https://github.com/miuuyy/codex-chatgpt-web),
 licensed under the upstream MIT License retained in [LICENSE](LICENSE).
 

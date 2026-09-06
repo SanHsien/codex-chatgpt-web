@@ -5,6 +5,7 @@ import {
   cpSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
   realpathSync,
@@ -12,6 +13,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { VERSION } from "../src/version";
 
@@ -82,13 +84,31 @@ if (!browserHelperBuild.success) {
 
 copyFileSync(join(root, "package.json"), join(appDir, "package.json"));
 copyFileSync(join(root, "bun.lock"), join(appDir, "bun.lock"));
-const install = Bun.spawnSync([process.execPath, "install", "--production", "--frozen-lockfile", "--ignore-scripts"], {
-  cwd: appDir,
-  stdout: "pipe",
-  stderr: "pipe",
-});
-if (install.exitCode !== 0) {
-  throw new Error(`Runtime dependencies failed to install: ${install.stderr.toString() || install.stdout.toString()}`);
+const installCache = mkdtempSync(join(tmpdir(), "codex-chatgpt-web-runtime-cache-"));
+try {
+  const install = Bun.spawnSync([process.execPath, "install", "--production", "--frozen-lockfile", "--ignore-scripts", "--cache-dir", installCache], {
+    cwd: appDir,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (install.exitCode !== 0) {
+    throw new Error(`Runtime dependencies failed to install with its isolated cache: ${install.stderr.toString() || install.stdout.toString()}`);
+  }
+} finally {
+  rmSync(installCache, { recursive: true, force: true });
+}
+
+const requiredRuntimeEntries = [
+  "@modelcontextprotocol/sdk/package.json",
+  "@modelcontextprotocol/sdk/dist/esm/server/mcp.js",
+  "ajv/package.json",
+  "ajv/dist/ajv.js",
+  "playwright-core/package.json",
+  "playwright-core/index.js",
+];
+const missingRuntimeEntries = requiredRuntimeEntries.filter(entry => !statSync(join(appDir, "node_modules", entry), { throwIfNoEntry: false })?.isFile());
+if (missingRuntimeEntries.length > 0) {
+  throw new Error(`Runtime dependency install is incomplete after a successful isolated-cache install; missing: ${missingRuntimeEntries.join(", ")}`);
 }
 const bunName = process.platform === "win32" ? "bun.exe" : "bun";
 cpSync(embeddedBunExecutable(), join(runtimeDir, bunName));

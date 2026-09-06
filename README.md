@@ -25,7 +25,8 @@
 > **Maintained fork notice.** This repository is maintained at
 > [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web). It preserves the
 > upstream MIT project and product behavior while adding Windows-first development and maintenance
-> controls. See [FORK.md](FORK.md) and [development](docs/DEVELOPMENT.md). This is unofficial
+> controls. See [FORK.md](FORK.md), [development](docs/DEVELOPMENT.md), and the maintained-fork
+> [changelog](CHANGELOG.md). This is unofficial
 > ChatGPT Web automation: account/plan allowances still apply, UI changes can break it, and users
 > must follow OpenAI terms and their workspace policy.
 

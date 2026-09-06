@@ -1,0 +1,52 @@
+name: Upstream check
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/check-upstream-baseline.ts"
+      - "tools/upstream_baseline.json"
+      - "tests/upstream-baseline.test.ts"
+      - ".github/workflows/upstream-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-check-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun test tests/upstream-baseline.test.ts
+      - name: Check read-only upstream inventory
+        id: checker
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .maintenance-reports
+          bun run scripts/check-upstream-baseline.ts --strict --github-output --output .maintenance-reports/upstream.md
+      - name: Publish upstream report
+        if: always()
+        run: |
+          if [[ -f .maintenance-reports/upstream.md ]]; then
+            cat .maintenance-reports/upstream.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "# Upstream check" >> "$GITHUB_STEP_SUMMARY"
+            echo "Report unavailable: checker did not produce a report." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Enforce upstream result
+        if: always()
+        run: |
+          test "${{ steps.checker.outcome }}" = success
+          test "${{ steps.checker.outputs.upstream_status }}" = current

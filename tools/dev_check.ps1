@@ -47,8 +47,9 @@ if (-not (Test-ElectronRuntime -LauncherRoot (Join-Path $repoRoot 'launcher'))) 
   throw 'Electron runtime is incomplete. Run pwsh -NoProfile -File tools\bootstrap_dev.ps1, then rerun this check.'
 }
 
-Invoke-Checked -FilePath 'bun' -Arguments @('test', 'tests/fork-contract.test.ts', 'tests/upstream-baseline.test.ts')
+Invoke-Checked -FilePath 'bun' -Arguments @('test', 'tests/fork-contract.test.ts', 'tests/upstream-baseline.test.ts', 'tests/dependency-freshness.test.ts')
 Invoke-Checked -FilePath 'bun' -Arguments @('run', 'scripts/check-upstream-baseline.ts', '--strict')
+Invoke-Checked -FilePath 'bun' -Arguments @('run', 'scripts/check-dependency-freshness.ts', '--strict')
 Invoke-Checked -FilePath 'bun' -Arguments @('run', 'verify')
 Invoke-Checked -FilePath 'git' -Arguments @('diff', '--check')
 Invoke-Checked -FilePath 'git' -Arguments @('diff', '--cached', '--check')
@@ -60,4 +61,4 @@ if ($BaseRef) {
 } else {
   Invoke-Checked -FilePath 'git' -Arguments @('show', '--check', '--format=', 'HEAD')
 }
-Write-Output "DEV CHECK PASSED: Bun $actualBun, fork contract, upstream baseline, upstream verify, and whitespace."
+Write-Output "DEV CHECK PASSED: Bun $actualBun, fork contract, upstream/dependency checks, upstream verify, and whitespace."

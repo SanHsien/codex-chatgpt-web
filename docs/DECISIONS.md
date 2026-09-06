@@ -12,3 +12,9 @@ making maintenance repeatable on Windows.
 Record `c648c09501bb1b704c7ad5273fb5f5d6b8992dd2` as reviewed upstream `main`, not as an automatic
 merge target. The scheduled checker fails visibly when `main` moves, requiring a deliberate review
 and documented adopt/defer decision.
+
+## 2026-09-06 — Four-axis and dependency policy
+
+Upstream review tracks main, latest pull request, latest non-PR issue, and the full branch set;
+unavailable inventory is a check failure, never zero findings. Dependency checks cover root and
+launcher, are read-only, and allow only exact latest-version deferrals with no compatibility claim.

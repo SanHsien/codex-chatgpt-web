@@ -25,7 +25,7 @@
 > **メンテナンス fork の案内。** このリポジトリは
 > [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web) で保守されています。
 > 上流の MIT プロジェクトと製品動作を保持しつつ、Windows 優先の開発・保守管理を追加しています。
-> [FORK.md](FORK.md) と[開発ドキュメント](docs/DEVELOPMENT.md)を参照してください。これは非公式の
+> [FORK.md](FORK.md)、[開発ドキュメント](docs/DEVELOPMENT.md)、メンテナンス fork の[変更履歴](CHANGELOG.md)を参照してください。これは非公式の
 > ChatGPT Web 自動化です。利用可能量はアカウントとプランに依存し、UI の変更で動作しなくなる
 > 場合があります。OpenAI の利用規約およびワークスペースポリシーを遵守してください。
 
