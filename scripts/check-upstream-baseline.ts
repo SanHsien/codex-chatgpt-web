@@ -61,16 +61,30 @@ function runJson<T>(runner: CommandRunner, cwd: string, args: string[]): T {
   try { return JSON.parse(result.stdout) as T; } catch { throw new Error("GitHub inventory unavailable: malformed JSON response."); }
 }
 
+function runPagedJson<T>(runner: CommandRunner, cwd: string, args: string[]): T[] {
+  const pages = runJson<unknown>(runner, cwd, ["api", "-X", "GET", "--paginate", "--slurp", ...args]);
+  if (!Array.isArray(pages) || pages.length === 0 || !pages.every(Array.isArray)) {
+    throw new Error("GitHub branch inventory unavailable: pagination was malformed or incomplete.");
+  }
+  return pages.flat() as T[];
+}
+
+function validSearchResponse(value: unknown): value is { incomplete_results: false; items: Array<{ number?: unknown }> } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const search = value as { incomplete_results?: unknown; items?: unknown };
+  return search.incomplete_results === false && Array.isArray(search.items);
+}
+
 export function readUpstreamInventory(baseline: UpstreamBaseline, runner: CommandRunner = defaultRunner, cwd = resolve(import.meta.dir, "..")): UpstreamInventory {
   const repo = baseline.upstream.repository;
   const main = runJson<{ object?: { sha?: unknown } }>(runner, cwd, ["api", "-X", "GET", `repos/${repo}/git/ref/heads/${baseline.upstream.branch}`]);
-  const pulls = runJson<{ items?: Array<{ number?: unknown }> }>(runner, cwd, ["api", "-X", "GET", `search/issues?q=repo:${repo}+is:pr&sort=created&order=desc&per_page=1`]);
-  const issues = runJson<{ items?: Array<{ number?: unknown }> }>(runner, cwd, ["api", "-X", "GET", `search/issues?q=repo:${repo}+is:issue&sort=created&order=desc&per_page=1`]);
-  const branches = runJson<Array<{ ref?: unknown; object?: { sha?: unknown } }>>(runner, cwd, ["api", "-X", "GET", `repos/${repo}/git/matching-refs/heads/`]);
-  if (!isString(main.object?.sha, COMMIT) || !Array.isArray(pulls.items) || !Array.isArray(issues.items) || !Array.isArray(branches)) throw new Error("GitHub inventory unavailable: malformed axis response.");
+  const pulls = runJson<unknown>(runner, cwd, ["api", "-X", "GET", `search/issues?q=repo:${repo}+is:pr&sort=created&order=desc&per_page=1`]);
+  const issues = runJson<unknown>(runner, cwd, ["api", "-X", "GET", `search/issues?q=repo:${repo}+is:issue&sort=created&order=desc&per_page=1`]);
+  const branches = runPagedJson<{ name?: unknown; commit?: { sha?: unknown } }>(runner, cwd, [`repos/${repo}/branches?per_page=100`]);
+  if (!isString(main.object?.sha, COMMIT) || !validSearchResponse(pulls) || !validSearchResponse(issues)) throw new Error("GitHub inventory unavailable: malformed or incomplete axis response.");
   const pullRequestNumbers = pulls.items.map((item) => item.number).filter((item): item is number => typeof item === "number" && Number.isSafeInteger(item) && item > 0);
   const nonPullRequestIssueNumbers = issues.items.map((item) => item.number).filter((item): item is number => typeof item === "number" && Number.isSafeInteger(item) && item > 0);
-  const branchInventory = branches.map((item) => ({ name: typeof item.ref === "string" ? item.ref.replace(/^refs\/heads\//, "") : item.ref, commit: item.object?.sha })).filter((item): item is { name: string; commit: string } => isBranchName(item.name) && isString(item.commit, COMMIT));
+  const branchInventory = branches.map((item) => ({ name: item.name, commit: item.commit?.sha })).filter((item): item is { name: string; commit: string } => isBranchName(item.name) && isString(item.commit, COMMIT));
   if (pullRequestNumbers.length !== pulls.items.length || nonPullRequestIssueNumbers.length !== issues.items.length || branchInventory.length !== branches.length) throw new Error("GitHub inventory unavailable: malformed axis item.");
   return { mainCommit: main.object.sha, pullRequestNumbers, nonPullRequestIssueNumbers, branches: branchInventory };
 }

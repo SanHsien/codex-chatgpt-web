@@ -2,8 +2,15 @@
 
 The baseline is reviewed history, not a merge target. Its 2026-09-06 review records upstream
 `miuuyy/codex-chatgpt-web`: `main` at `c648c09501bb1b704c7ad5273fb5f5d6b8992dd2`, latest PR
-`#343`, latest non-PR issue `#345`, and one branch (`main` at that SHA). Status remains
+`#343`, latest non-PR issue `#346`, and one branch (`main` at that SHA). Status remains
 **reviewed-not-merged**.
+
+## 2026-09-06 review — Issue #346
+
+Upstream [Issue #346](https://github.com/miuuyy/codex-chatgpt-web/issues/346), “The message you
+submitted was too long, please edit it and resubmit,” is an open Windows/Plus/Full-harness report
+against v5.0.4 with no upstream fix. It is monitored, not ported: there is no reviewed upstream
+change to adopt. No product, package, or lockfile change is made by this watermark update.
 
 ```text
 GitHub read-only inventory

@@ -18,3 +18,9 @@ and documented adopt/defer decision.
 Upstream review tracks main, latest pull request, latest non-PR issue, and the full branch set;
 unavailable inventory is a check failure, never zero findings. Dependency checks cover root and
 launcher, are read-only, and allow only exact latest-version deferrals with no compatibility claim.
+
+## 2026-09-06 — Monitor upstream Issue #346
+
+Record upstream Issue #346 as reviewed and monitored, not ported. It is an open v5.0.4 report with
+no upstream fix, so it does not justify a fork product, package, or lockfile change. Reassess when
+upstream publishes a concrete fix or related change.

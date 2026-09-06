@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+  [switch]$CheckOnly
+)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -38,9 +40,24 @@ function Test-ElectronRuntime {
   return Test-Path -LiteralPath $runtimePath -PathType Leaf
 }
 
+function Test-GitHubAccess {
+  if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    throw 'GitHub CLI (gh) is required for strict upstream tracking. Install gh, authenticate with gh auth login --hostname github.com, then rerun bootstrap.'
+  }
+  $null = & gh auth status --hostname github.com 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Authenticated GitHub CLI access is required for strict upstream tracking. Run gh auth login --hostname github.com, then rerun bootstrap. Bootstrap never signs in for you.'
+  }
+}
+
 $actualBun = (& bun --version).Trim()
 if ($LASTEXITCODE -ne 0 -or $actualBun -ne $expectedBun) {
   throw "Bun $expectedBun is required; found '$actualBun'."
+}
+Test-GitHubAccess
+if ($CheckOnly) {
+  Write-Output "BOOTSTRAP PREREQUISITES PASSED: Bun $actualBun and authenticated GitHub CLI access."
+  return
 }
 
 Invoke-Checked -FilePath 'bun' -Arguments @('install', '--frozen-lockfile') -WorkingDirectory $repoRoot

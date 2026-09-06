@@ -8,7 +8,7 @@
   "reviewed": {
     "mainCommit": "c648c09501bb1b704c7ad5273fb5f5d6b8992dd2",
     "latestPullRequest": 343,
-    "latestNonPullRequestIssue": 345,
+    "latestNonPullRequestIssue": 346,
     "branches": [
       { "name": "main", "commit": "c648c09501bb1b704c7ad5273fb5f5d6b8992dd2" }
     ]

@@ -6,7 +6,7 @@ const root = resolve(import.meta.dir, "..");
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 test("maintained-fork manifest documents cross-platform entrypoints and boundaries", () => {
-  for (const path of ["AGENTS.md", "CLAUDE.md", "CHANGELOG.md", "FORK.md", "docs/DEVELOPMENT.md", "docs/DECISIONS.md", "docs/REVIEW.md", "docs/TEST_PLAN.md", "docs/UPSTREAM.md", "tools/bootstrap_dev.ps1", "tools/dev_check.ps1", "tools/bootstrap_dev.sh", "tools/dev_check.sh", "tools/upstream_baseline.json", ".github/dependency-deferrals.json", "scripts/check-dependency-freshness.ts"]) expect(existsSync(resolve(root, path))).toBe(true);
+  for (const path of ["AGENTS.md", "CLAUDE.md", "CHANGELOG.md", "FORK.md", "NOTICE.md", "CODE_OF_CONDUCT.md", "docs/DEVELOPMENT.md", "docs/DECISIONS.md", "docs/REVIEW.md", "docs/TEST_PLAN.md", "docs/UPSTREAM.md", "tools/bootstrap_dev.ps1", "tools/dev_check.ps1", "tools/bootstrap_dev.sh", "tools/dev_check.sh", "tools/upstream_baseline.json", ".github/dependency-deferrals.json", "scripts/check-dependency-freshness.ts"]) expect(existsSync(resolve(root, path))).toBe(true);
   expect(read("FORK.md")).toContain("reviewed");
   expect(read("README.md")).toContain("Maintained fork notice");
   expect(read("README.md")).toContain("https://github.com/miuuyy/codex-chatgpt-web/releases/latest/download/install-launcher.sh");
@@ -17,7 +17,7 @@ test("maintained-fork manifest documents cross-platform entrypoints and boundari
 });
 
 test("maintenance workflows are read-only, bounded, strict, and do not write issues", () => {
-  const upstream = read(".github/workflows/upstream-check.yml"), dependencies = read(".github/workflows/dependency-freshness.yml");
+  const upstream = read(".github/workflows/upstream-check.yml"), dependencies = read(".github/workflows/dependency-freshness.yml"), codeql = read(".github/workflows/codeql.yml"), dependabot = read(".github/dependabot.yml");
   for (const workflow of [upstream, dependencies]) {
     expect(workflow).toContain("contents: read");
     expect(workflow).toContain("timeout-minutes:");
@@ -38,6 +38,12 @@ test("maintenance workflows are read-only, bounded, strict, and do not write iss
   expect(upstream).toContain("steps.checker.outputs.upstream_status");
   expect(dependencies).toContain("steps.checker.outputs.dependency_status");
   expect(read(".gitignore")).toContain(".maintenance-reports/");
+  expect(codeql).toContain("actions: read");
+  expect(codeql).toContain("contents: read");
+  expect(codeql).toContain("security-events: write");
+  expect(dependabot).toContain('package-ecosystem: "bun"');
+  expect(dependabot).toContain('directory: "/"');
+  expect(dependabot).toContain('directory: "/launcher"');
 });
 
 test("canonical gates enforce no-repair checks and maintenance contracts", () => {
@@ -49,5 +55,12 @@ test("canonical gates enforce no-repair checks and maintenance contracts", () =>
   }
   expect(bootstrap).toContain("ELECTRON_RUNTIME=repaired");
   expect(posixBootstrap).toContain("ELECTRON_RUNTIME=repaired");
+  expect(bootstrap).toContain("gh auth status --hostname github.com");
+  expect(posixBootstrap).toContain("gh auth status --hostname github.com");
+  expect(powershell).toContain("'diff', '--cached', '--check'");
+  expect(powershell).toContain("'show', '--check', '--format=', 'HEAD'");
+  expect(powershell).toContain('"$resolvedBase..HEAD"');
+  expect(powershell).toContain("Test-ElectronRuntime");
+  expect(powershell).toContain("tools\\bootstrap_dev.ps1");
   expect(posix).not.toContain("install.js");
 });

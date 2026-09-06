@@ -8,7 +8,9 @@ pwsh -NoProfile -File tools\dev_check.ps1
 ```
 
 Bootstrap requires Bun `1.4.0`, installs root and launcher with `--frozen-lockfile`, and never
-changes either lockfile. It validates Electron's contained `path.txt` runtime and safely runs the
+changes either lockfile. It also requires the GitHub CLI with authenticated GitHub access because
+the canonical gate performs strict read-only upstream tracking; bootstrap never starts a login flow.
+Use `pwsh -NoProfile -File tools\bootstrap_dev.ps1 -CheckOnly` to check those prerequisites. It validates Electron's contained `path.txt` runtime and safely runs the
 installed lifecycle script once only when that artifact is incomplete. The repair-free gate validates
 Bun/Electron, fork/upstream/dependency contracts, strict upstream and dependency checks, upstream
 `bun run verify`, and Git whitespace.
@@ -20,14 +22,17 @@ tools/bootstrap_dev.sh
 tools/dev_check.sh [base-ref]
 ```
 
-These scripts have the same frozen-install and Electron lifecycle rules as PowerShell. The dev gate
-never repairs dependencies; run bootstrap first if Electron is incomplete.
+These scripts have the same frozen-install, authenticated-GitHub prerequisite, and Electron lifecycle
+rules as PowerShell. Run `tools/bootstrap_dev.sh --check-only` to check Bun/GitHub prerequisites.
+The dev gate never repairs dependencies; run bootstrap first if Electron is incomplete.
 
 ## Boundaries
 
-The canonical gates are offline source/package checks. They do **not** sign in to ChatGPT, launch a
-browser, configure MCP/Codex, install the production launcher, or consume model quota. Browser,
-account, MCP, and release smoke remain opt-in procedures and cannot be inferred from unit tests.
+The canonical gates are networked source/package maintenance checks: strict upstream tracking uses
+authenticated read-only GitHub API access and dependency freshness/audit may access the registry.
+They do **not** sign in to ChatGPT, launch a browser, configure MCP/Codex, install the production
+launcher, or consume model quota. Browser, account, MCP, and release smoke remain opt-in procedures
+and cannot be inferred from unit tests.
 See [TEST_PLAN.md](TEST_PLAN.md), [REVIEW.md](REVIEW.md), and [UPSTREAM.md](UPSTREAM.md).
 
 ## Dependency freshness
