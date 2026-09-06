@@ -2,13 +2,13 @@ import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 export interface UpstreamBaseline {
-  schemaVersion: 2;
+  schemaVersion: 3;
   upstream: { repository: string; remote: string; branch: string };
-  reviewed: { mainCommit: string; latestPullRequest: number; latestNonPullRequestIssue: number; branches: Array<{ name: string; commit: string }> };
+  reviewed: { mainCommit: string; latestPullRequest: number; latestPullRequestHead: string; latestNonPullRequestIssue: number; branches: Array<{ name: string; commit: string }> };
   reviewedAt: string;
   status: "reviewed-not-merged";
 }
-export interface UpstreamInventory { mainCommit?: string; pullRequestNumbers?: number[]; nonPullRequestIssueNumbers?: number[]; branches?: Array<{ name: string; commit: string }> }
+export interface UpstreamInventory { mainCommit?: string; pullRequestNumbers?: number[]; latestPullRequestHead?: string; nonPullRequestIssueNumbers?: number[]; branches?: Array<{ name: string; commit: string }> }
 export type AxisStatus = "current" | "attention" | "unavailable";
 export interface UpstreamEvaluation { status: "current" | "attention" | "check-failure"; axes: Record<"main" | "pullRequests" | "issues" | "branches", AxisStatus> }
 export interface CommandResult { exitCode: number; stdout: string; stderr: string }
@@ -28,7 +28,7 @@ export function validateBaseline(value: unknown): UpstreamBaseline {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Upstream baseline must be a JSON object.");
   const baseline = value as Record<string, unknown>, upstream = baseline.upstream as Record<string, unknown> | undefined, reviewed = baseline.reviewed as Record<string, unknown> | undefined;
   const branches = reviewed?.branches;
-  if (baseline.schemaVersion !== 2 || !upstream || !reviewed || !isString(upstream.repository, REPOSITORY) || !isString(upstream.remote, REMOTE_NAME) || !isBranchName(upstream.branch) || !isString(reviewed.mainCommit, COMMIT) || !Number.isSafeInteger(reviewed.latestPullRequest) || (reviewed.latestPullRequest as number) < 1 || !Number.isSafeInteger(reviewed.latestNonPullRequestIssue) || (reviewed.latestNonPullRequestIssue as number) < 1 || !Array.isArray(branches) || branches.length === 0 || !branches.every((branch) => { const item = branch as Record<string, unknown>; return isBranchName(item.name) && isString(item.commit, COMMIT); }) || !isDate(baseline.reviewedAt) || baseline.status !== "reviewed-not-merged") throw new Error("Upstream baseline is invalid or incomplete; refusing to continue.");
+  if (baseline.schemaVersion !== 3 || !upstream || !reviewed || !isString(upstream.repository, REPOSITORY) || !isString(upstream.remote, REMOTE_NAME) || !isBranchName(upstream.branch) || !isString(reviewed.mainCommit, COMMIT) || !Number.isSafeInteger(reviewed.latestPullRequest) || (reviewed.latestPullRequest as number) < 1 || !isString(reviewed.latestPullRequestHead, COMMIT) || !Number.isSafeInteger(reviewed.latestNonPullRequestIssue) || (reviewed.latestNonPullRequestIssue as number) < 1 || !Array.isArray(branches) || branches.length === 0 || !branches.every((branch) => { const item = branch as Record<string, unknown>; return isBranchName(item.name) && isString(item.commit, COMMIT); }) || !isDate(baseline.reviewedAt) || baseline.status !== "reviewed-not-merged") throw new Error("Upstream baseline is invalid or incomplete; refusing to continue.");
   return baseline as unknown as UpstreamBaseline;
 }
 
@@ -43,7 +43,7 @@ const validBranches = (branches: Array<{ name: string; commit: string }>) => bra
 export function evaluateUpstream(baseline: UpstreamBaseline, inventory: UpstreamInventory): UpstreamEvaluation {
   const axes: UpstreamEvaluation["axes"] = { main: "unavailable", pullRequests: "unavailable", issues: "unavailable", branches: "unavailable" };
   if (isString(inventory.mainCommit, COMMIT)) axes.main = inventory.mainCommit === baseline.reviewed.mainCommit ? "current" : "attention";
-  if (Array.isArray(inventory.pullRequestNumbers) && inventory.pullRequestNumbers.every((number) => Number.isSafeInteger(number) && number > 0)) axes.pullRequests = latest(inventory.pullRequestNumbers) === baseline.reviewed.latestPullRequest ? "current" : "attention";
+  if (Array.isArray(inventory.pullRequestNumbers) && inventory.pullRequestNumbers.every((number) => Number.isSafeInteger(number) && number > 0) && isString(inventory.latestPullRequestHead, COMMIT)) axes.pullRequests = latest(inventory.pullRequestNumbers) === baseline.reviewed.latestPullRequest && inventory.latestPullRequestHead === baseline.reviewed.latestPullRequestHead ? "current" : "attention";
   if (Array.isArray(inventory.nonPullRequestIssueNumbers) && inventory.nonPullRequestIssueNumbers.every((number) => Number.isSafeInteger(number) && number > 0)) axes.issues = latest(inventory.nonPullRequestIssueNumbers) === baseline.reviewed.latestNonPullRequestIssue ? "current" : "attention";
   if (Array.isArray(inventory.branches) && validBranches(inventory.branches)) {
     const observed = [...inventory.branches].sort((a, b) => a.name.localeCompare(b.name));
@@ -85,13 +85,16 @@ export function readUpstreamInventory(baseline: UpstreamBaseline, runner: Comman
   const pullRequestNumbers = pulls.items.map((item) => item.number).filter((item): item is number => typeof item === "number" && Number.isSafeInteger(item) && item > 0);
   const nonPullRequestIssueNumbers = issues.items.map((item) => item.number).filter((item): item is number => typeof item === "number" && Number.isSafeInteger(item) && item > 0);
   const branchInventory = branches.map((item) => ({ name: item.name, commit: item.commit?.sha })).filter((item): item is { name: string; commit: string } => isBranchName(item.name) && isString(item.commit, COMMIT));
-  if (pullRequestNumbers.length !== pulls.items.length || nonPullRequestIssueNumbers.length !== issues.items.length || branchInventory.length !== branches.length) throw new Error("GitHub inventory unavailable: malformed axis item.");
-  return { mainCommit: main.object.sha, pullRequestNumbers, nonPullRequestIssueNumbers, branches: branchInventory };
+  const latestPullRequest = latest(pullRequestNumbers);
+  if (pullRequestNumbers.length !== pulls.items.length || nonPullRequestIssueNumbers.length !== issues.items.length || branchInventory.length !== branches.length || !latestPullRequest) throw new Error("GitHub inventory unavailable: malformed axis item.");
+  const pull = runJson<{ head?: { sha?: unknown } }>(runner, cwd, ["api", "-X", "GET", `repos/${repo}/pulls/${latestPullRequest}`]);
+  if (!isString(pull.head?.sha, COMMIT)) throw new Error("GitHub inventory unavailable: malformed latest pull request head.");
+  return { mainCommit: main.object.sha, pullRequestNumbers, latestPullRequestHead: pull.head.sha, nonPullRequestIssueNumbers, branches: branchInventory };
 }
 
 export function renderReport(baseline: UpstreamBaseline, inventory: UpstreamInventory | undefined, evaluation: UpstreamEvaluation, detail?: string): string {
-  const observed = inventory ? [inventory.mainCommit ?? "unavailable", latest(inventory.pullRequestNumbers ?? []) ?? "unavailable", latest(inventory.nonPullRequestIssueNumbers ?? []) ?? "unavailable", inventory.branches?.map((item) => `${item.name}@${item.commit}`).join(", ") ?? "unavailable"] : ["unavailable", "unavailable", "unavailable", "unavailable"];
-  return ["# Upstream check", "", `Status: **${evaluation.status}**`, "", "| Axis | Reviewed | Observed | Status |", "| --- | --- | --- | --- |", `| main | ${baseline.reviewed.mainCommit} | ${observed[0]} | ${evaluation.axes.main} |`, `| pull requests | #${baseline.reviewed.latestPullRequest} | #${observed[1]} | ${evaluation.axes.pullRequests} |`, `| non-PR issues | #${baseline.reviewed.latestNonPullRequestIssue} | #${observed[2]} | ${evaluation.axes.issues} |`, `| branches | ${baseline.reviewed.branches.map((item) => `${item.name}@${item.commit}`).join(", ")} | ${observed[3]} | ${evaluation.axes.branches} |`, ...(detail ? ["", `Check detail: ${detail}`] : []), ""].join("\n");
+  const observed = inventory ? [inventory.mainCommit ?? "unavailable", latest(inventory.pullRequestNumbers ?? []) ?? "unavailable", inventory.latestPullRequestHead ?? "unavailable", latest(inventory.nonPullRequestIssueNumbers ?? []) ?? "unavailable", inventory.branches?.map((item) => `${item.name}@${item.commit}`).join(", ") ?? "unavailable"] : ["unavailable", "unavailable", "unavailable", "unavailable", "unavailable"];
+  return ["# Upstream check", "", `Status: **${evaluation.status}**`, "", "| Axis | Reviewed | Observed | Status |", "| --- | --- | --- | --- |", `| main | ${baseline.reviewed.mainCommit} | ${observed[0]} | ${evaluation.axes.main} |`, `| pull requests | #${baseline.reviewed.latestPullRequest} | #${observed[1]} | ${evaluation.axes.pullRequests} |`, `| latest PR head | ${baseline.reviewed.latestPullRequestHead} | ${observed[2]} | ${evaluation.axes.pullRequests} |`, `| non-PR issues | #${baseline.reviewed.latestNonPullRequestIssue} | #${observed[3]} | ${evaluation.axes.issues} |`, `| branches | ${baseline.reviewed.branches.map((item) => `${item.name}@${item.commit}`).join(", ")} | ${observed[4]} | ${evaluation.axes.branches} |`, ...(detail ? ["", `Check detail: ${detail}`] : []), ""].join("\n");
 }
 
 function optionValue(name: string): string | undefined { const index = process.argv.indexOf(name); return index === -1 || process.argv[index + 1]?.startsWith("--") ? undefined : process.argv[index + 1]; }

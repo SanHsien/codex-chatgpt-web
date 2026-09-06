@@ -33,14 +33,18 @@ const readOnlyProfileXml = `<permission_profile type="managed"><file_system type
 const externalProfileXml = `<permission_profile type="external"><file_system type="external" /></permission_profile>`;
 
 function currentWire(
-  options: { workspace?: string; sandbox?: string; includeIds?: boolean; environmentXml?: string } = {},
+  options: {
+    workspace?: string; sandbox?: string; includeIds?: boolean; environmentXml?: string;
+    threadId?: string; parentThreadId?: string;
+  } = {},
 ): CodexParsedRequest {
   const workspace = options.workspace ?? root;
   const sandbox = options.sandbox ?? "none";
   const includeIds = options.includeIds ?? true;
   const envXml = options.environmentXml ?? environmentXml;
   const turnMetadata = {
-    thread_id: "thread_current",
+    thread_id: options.threadId ?? "thread_current",
+    ...(options.parentThreadId ? { parent_thread_id: options.parentThreadId } : {}),
     turn_id: "turn_current",
     sandbox,
     workspaces: { [workspace]: { has_changes: true } },
@@ -319,6 +323,27 @@ describe("trusted current Codex environment envelope", () => {
     });
   });
 
+  test("steering accepts a spawned task's parent visualization root", () => {
+    const codexHome = resolve(process.env.CODEX_HOME?.trim() || join(homedir(), ".codex"));
+    const visualizationRoot = join(codexHome, "visualizations", "2026", "08", "25", "thread_parent");
+    const projectEnvironment = `<environment_context>
+  <cwd>${root}</cwd>
+  <filesystem><workspace_roots><root>${root}</root><root>${visualizationRoot}</root></workspace_roots>${dangerFullAccessProfileXml}</filesystem>
+</environment_context>`;
+    const request = currentWire({
+      environmentXml: projectEnvironment,
+      threadId: "thread_child",
+      parentThreadId: "thread_parent",
+    });
+    const body = request._rawBody as { input: Array<Record<string, unknown>> };
+    for (const item of body.input) item.internal_chat_message_metadata_passthrough = { turn_id: "turn_current" };
+    body.input.push(
+      { type: "message", id: "msg_assistant", role: "assistant", content: [{ type: "output_text", text: "Working." }], internal_chat_message_metadata_passthrough: { turn_id: "turn_current" } },
+      { type: "message", id: "msg_steering", role: "user", content: [{ type: "input_text", text: "Stop and review first." }], internal_chat_message_metadata_passthrough: { turn_id: "turn_current" } },
+    );
+    expect(extractChatGptTurnEnvironment(request).roots).toEqual([root, visualizationRoot]);
+  });
+
   test("skill recovery rejects another task's Codex visualization root", () => {
     const codexHome = resolve(process.env.CODEX_HOME?.trim() || join(homedir(), ".codex"));
     const visualizationRoot = join(codexHome, "visualizations", "2026", "08", "25", "thread_other");
@@ -326,7 +351,7 @@ describe("trusted current Codex environment envelope", () => {
   <cwd>${root}</cwd>
   <filesystem><workspace_roots><root>${root}</root><root>${visualizationRoot}</root></workspace_roots>${dangerFullAccessProfileXml}</filesystem>
 </environment_context>`;
-    const request = currentWire({ environmentXml: injectedEnvironment });
+    const request = currentWire({ environmentXml: injectedEnvironment, parentThreadId: "thread_parent" });
     const body = request._rawBody as { input: Array<Record<string, unknown>> };
     for (const item of body.input) {
       item.internal_chat_message_metadata_passthrough = { turn_id: "turn_current" };
@@ -659,6 +684,13 @@ describe("trusted Codex task environment continuity", () => {
     metadata.subagent_kind = "other";
     (child._rawBody as { client_metadata: Record<string, string> }).client_metadata["x-codex-turn-metadata"] = JSON.stringify(metadata);
     expect(() => store.resolve(child)).toThrow("missing cwd");
+
+    for (const agent_name of [null, undefined]) {
+      (child._rawBody as { client_metadata: Record<string, string> }).client_metadata["x-codex-turn-metadata"] = JSON.stringify({
+        ...metadata, subagent_kind: "thread_spawn", agent_name,
+      });
+      expect(() => store.resolve(child)).toThrow("missing cwd");
+    }
   });
 
   const rolloutThreadId = "01a06c66-4232-7ae1-9108-69b5f70e0671";
@@ -776,6 +808,31 @@ describe("trusted Codex task environment continuity", () => {
       cwd: root, roots: [root], writableRoots: [root], sandboxPolicy: { type: "dangerFullAccess" },
       tools: request.context.tools,
     });
+  });
+
+  test.each([null, undefined])("recovers a V1 root child with session agent_path=%s", agentPath => {
+    const codexHome = mkdtempSync(join(tmpdir(), "codex-chatgpt-null-agent-path-"));
+    temporaryRoots.push(codexHome);
+    const rolloutPath = join(codexHome, "sessions", "2026", "09", "06",
+      `rollout-2026-09-06T15-30-36-${rolloutThreadId}.jsonl`);
+    mkdirSync(dirname(rolloutPath), { recursive: true });
+    const session = childSessionMeta();
+    const payload = session.payload as Record<string, unknown>;
+    payload.agent_path = agentPath;
+    const spawn = ((payload.source as Record<string, unknown>).subagent as Record<string, unknown>)
+      .thread_spawn as Record<string, unknown>;
+    spawn.agent_path = null;
+    writeFileSync(rolloutPath, [JSON.stringify(session), JSON.stringify(childTurnContext())].join("\n") + "\n");
+    createRolloutState(join(codexHome, "state_5.sqlite"), rolloutPath);
+    const database = new Database(join(codexHome, "state_5.sqlite"));
+    database.query("UPDATE threads SET agent_path = NULL WHERE id = ?").run(rolloutThreadId);
+    database.close();
+    const request = environmentlessChild();
+    const body = request._rawBody as { client_metadata: Record<string, string> };
+    const metadata = JSON.parse(body.client_metadata["x-codex-turn-metadata"]!);
+    metadata.agent_name = "/root";
+    body.client_metadata["x-codex-turn-metadata"] = JSON.stringify(metadata);
+    expect(new ChatGptThreadEnvironmentStore(undefined, Date.now, codexHome).resolve(request).cwd).toBe(root);
   });
 
   for (const format of ["v1", "v2"]) test(`${format} context-only continuation requires a matching current rollout, not just a checkpoint`, () => {

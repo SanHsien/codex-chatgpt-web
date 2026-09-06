@@ -5,7 +5,7 @@ editing Codex configuration, or opening a new issue.
 
 ## The first five minutes
 
-1. Install the [latest release](https://github.com/miuuyy/codex-chatgpt-web/releases/latest). Quit
+1. Install the [reviewed upstream Windows release v5.0.4](https://github.com/miuuyy/codex-chatgpt-web/releases/tag/v5.0.4). Quit
    **Codex Web GPT** before running the installer again; updating preserves its private ChatGPT
    profile and launcher configuration.
 2. In the launcher, confirm that ChatGPT sign-in, the browser smoke test, and **Install models** (or
@@ -65,9 +65,6 @@ window does not automatically transfer that session.
   running.
 - If the account offers **Try another way**, an alternate authentication method can avoid a
   platform-passkey limitation.
-- Passkey-only macOS accounts have a known open issue: [#209](https://github.com/miuuyy/codex-chatgpt-web/issues/209).
-  If no alternate method exists, follow that issue rather than repeatedly deleting the browser
-  profile; there is no safe generic workaround to claim yet.
 
 If an ordinary login still fails, export a safe log immediately after one attempt. Include the OS,
 launcher version, account tier, sign-in provider, and whether the Temporary Chat composer ever
@@ -190,7 +187,7 @@ To remove the integration safely:
 
 1. Open **Settings → Remove Codex integration** and wait for it to restore the previous Codex route.
 2. Fully restart Codex.
-3. Quit the launcher and uninstall the application normally for the platform.
+3. Quit the launcher and uninstall the application from Windows normally.
 4. If Full harness was configured and is no longer wanted, separately delete **Codex Native2**, its
    Tunnel, and the API key created for that Tunnel from the corresponding account settings.
 

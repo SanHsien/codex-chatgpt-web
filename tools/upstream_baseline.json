@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "upstream": {
     "repository": "miuuyy/codex-chatgpt-web",
     "remote": "upstream",
@@ -7,12 +7,13 @@
   },
   "reviewed": {
     "mainCommit": "c648c09501bb1b704c7ad5273fb5f5d6b8992dd2",
-    "latestPullRequest": 343,
-    "latestNonPullRequestIssue": 346,
+    "latestPullRequest": 347,
+    "latestPullRequestHead": "df0224756d639edfa2124ed96c1dad75e05e06df",
+    "latestNonPullRequestIssue": 348,
     "branches": [
       { "name": "main", "commit": "c648c09501bb1b704c7ad5273fb5f5d6b8992dd2" }
     ]
   },
-  "reviewedAt": "2026-09-06",
+  "reviewedAt": "2026-09-07",
   "status": "reviewed-not-merged"
 }

@@ -53,7 +53,7 @@ large unsolicited pull request may be closed even when substantial work went int
    local-tool execution, MCP execution, or the outer Codex agent loop. Execution changes require a
    real installed Codex integration; DEV simulation is not end-to-end acceptance evidence.
 
-Launcher changes must preserve native packaging on macOS, Windows, and Linux. Platform packages
-must be built on their matching operating system. See [DEV chat mode](docs/dev-chat.md) for isolated
+This maintained fork supports Windows only. Launcher changes must preserve the Windows x64 NSIS
+package and Windows updater contract. See [DEV chat mode](docs/dev-chat.md) for isolated
 browser and MCP development, and [release validation](docs/release-validation.md) for the required
 account-bound release checks.

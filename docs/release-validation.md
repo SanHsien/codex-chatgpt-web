@@ -1,9 +1,9 @@
 # Release validation
 
-CI proves that the runtime builds, the launcher starts, and native packages pass their smoke
-contract on macOS, Windows, and Linux. It does not prove an authenticated ChatGPT session, a live
-MCP connector, or a complete Codex turn. A release candidate is not ready until those account-bound
-flows are exercised manually on the platforms below.
+CI proves that the Windows runtime builds, the launcher starts, and the Windows package passes its
+smoke contract. It does not prove an authenticated ChatGPT session, a live MCP connector, or a
+complete Codex turn. A release candidate is not ready until those account-bound flows are exercised
+manually on Windows.
 
 ## Required evidence
 
@@ -51,15 +51,3 @@ upgrade package and a real ChatGPT Pro account. The authenticated launcher, Code
 Full-mode MCP tools, Pro turns, compaction, cancellation, session reuse, and preserved connector
 configuration were exercised successfully. The direct installer completed successfully but gave no
 clear completion action; v3.0.0 changes it to an assisted installer with a final launch option.
-
-## macOS gate
-
-Repeat items 2 through 10 on the oldest supported macOS version or the closest maintained machine.
-Packaging smoke and code-signing verification remain separate gates; neither substitutes for the
-interactive account flow.
-
-## Linux gate
-
-CI packaging smoke is required. Before claiming interactive Linux support for a release, repeat
-items 2 through 7 under a supported desktop session and record the display server and packaging
-format used.

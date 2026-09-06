@@ -1,6 +1,6 @@
 # Development
 
-## Windows-first canonical path
+## Windows-only canonical path
 
 ```powershell
 pwsh -NoProfile -File tools\bootstrap_dev.ps1
@@ -14,17 +14,6 @@ Use `pwsh -NoProfile -File tools\bootstrap_dev.ps1 -CheckOnly` to check those pr
 installed lifecycle script once only when that artifact is incomplete. The repair-free gate validates
 Bun/Electron, fork/upstream/dependency contracts, strict upstream and dependency checks, upstream
 `bun run verify`, and Git whitespace.
-
-## POSIX parity
-
-```bash
-tools/bootstrap_dev.sh
-tools/dev_check.sh [base-ref]
-```
-
-These scripts have the same frozen-install, authenticated-GitHub prerequisite, and Electron lifecycle
-rules as PowerShell. Run `tools/bootstrap_dev.sh --check-only` to check Bun/GitHub prerequisites.
-The dev gate never repairs dependencies; run bootstrap first if Electron is incomplete.
 
 ## Boundaries
 

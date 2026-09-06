@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
@@ -31,22 +31,25 @@ jobs:
       - name: Check read-only upstream inventory
         id: checker
         continue-on-error: true
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p .maintenance-reports
+          New-Item -ItemType Directory -Force .maintenance-reports | Out-Null
           bun run scripts/check-upstream-baseline.ts --strict --github-output --output .maintenance-reports/upstream.md
       - name: Publish upstream report
         if: always()
+        shell: pwsh
         run: |
-          if [[ -f .maintenance-reports/upstream.md ]]; then
-            cat .maintenance-reports/upstream.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "# Upstream check" >> "$GITHUB_STEP_SUMMARY"
-            echo "Report unavailable: checker did not produce a report." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          if (Test-Path .maintenance-reports/upstream.md) {
+            Get-Content .maintenance-reports/upstream.md | Add-Content $env:GITHUB_STEP_SUMMARY
+          } else {
+            Add-Content $env:GITHUB_STEP_SUMMARY "# Upstream check"
+            Add-Content $env:GITHUB_STEP_SUMMARY "Report unavailable: checker did not produce a report."
+          }
       - name: Enforce upstream result
         if: always()
+        shell: pwsh
         run: |
-          test "${{ steps.checker.outcome }}" = success
-          test "${{ steps.checker.outputs.upstream_status }}" = current
+          if ("${{ steps.checker.outcome }}" -ne "success") { throw "Upstream checker failed" }
+          if ("${{ steps.checker.outputs.upstream_status }}" -ne "current") { throw "Upstream status is not current" }

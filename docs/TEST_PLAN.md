@@ -2,7 +2,7 @@
 
 ## Networked canonical gates
 
-`tools/dev_check.ps1` is the Windows canonical gate; `tools/dev_check.sh` is POSIX parity. They
+`tools/dev_check.ps1` is the Windows-only canonical gate. It
 validate pinned Bun, the existing Electron artifact, fork contracts, four-axis upstream tracking,
 whole-workspace dependency freshness and Bun audit, upstream verification, and whitespace. Strict
 upstream tracking requires authenticated read-only GitHub access; dependency checks may use the

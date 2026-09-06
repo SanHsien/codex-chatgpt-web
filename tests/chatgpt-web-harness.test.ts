@@ -2124,7 +2124,17 @@ describe("ChatGPT outer-native harness v4", () => {
     }, 10_000);
     await broker.nextToolBatch(token);
     broker.revoke(token);
-    await expect(invocation).rejects.toThrow("revoked");
+    let rejectionDeadline: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await expect(Promise.race([
+        invocation,
+        new Promise<never>((_, reject) => {
+          rejectionDeadline = setTimeout(() => reject(new Error("revoked invocation did not terminate its named-pipe client")), 2_000);
+        }),
+      ])).rejects.toThrow("revoked");
+    } finally {
+      if (rejectionDeadline) clearTimeout(rejectionDeadline);
+    }
     await expect(callTurnBroker(socketPath, { method: "resolve", bindingId: claimed.bindingId }))
       .rejects.toThrow("has already finished");
     await broker.close();

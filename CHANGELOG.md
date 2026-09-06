@@ -5,7 +5,9 @@ This file records maintained-fork work, not upstream product releases. See the
 
 ## 2026-09-06
 
-- Added the Windows-first maintained-fork overlay: frozen bootstrap, networked canonical maintenance gate,
+- Added the Windows-only maintained-fork overlay: frozen bootstrap, networked canonical maintenance gate,
   reviewed upstream baseline, and fork documentation.
-- Aligned the overlay with POSIX parity, four-axis fail-closed upstream tracking, whole-workspace
+- Removed public macOS/Linux distribution, packaging, autostart, updater, release, and developer-support
+  surfaces. Future upstream changes are evaluated only for Windows applicability.
+- Aligned the overlay with four-axis fail-closed upstream tracking, whole-workspace
   dependency freshness, least-privilege scheduled checks, and explicit review/test boundaries.

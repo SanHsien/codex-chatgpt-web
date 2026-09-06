@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
@@ -38,20 +38,23 @@ jobs:
       - name: Check read-only dependency freshness
         id: checker
         continue-on-error: true
+        shell: pwsh
         run: |
-          mkdir -p .maintenance-reports
+          New-Item -ItemType Directory -Force .maintenance-reports | Out-Null
           bun run scripts/check-dependency-freshness.ts --strict --github-output --output .maintenance-reports/dependency-freshness.md
       - name: Publish dependency report
         if: always()
+        shell: pwsh
         run: |
-          if [[ -f .maintenance-reports/dependency-freshness.md ]]; then
-            cat .maintenance-reports/dependency-freshness.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "# Dependency freshness" >> "$GITHUB_STEP_SUMMARY"
-            echo "Report unavailable: checker did not produce a report." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          if (Test-Path .maintenance-reports/dependency-freshness.md) {
+            Get-Content .maintenance-reports/dependency-freshness.md | Add-Content $env:GITHUB_STEP_SUMMARY
+          } else {
+            Add-Content $env:GITHUB_STEP_SUMMARY "# Dependency freshness"
+            Add-Content $env:GITHUB_STEP_SUMMARY "Report unavailable: checker did not produce a report."
+          }
       - name: Enforce dependency result
         if: always()
+        shell: pwsh
         run: |
-          test "${{ steps.checker.outcome }}" = success
-          test "${{ steps.checker.outputs.dependency_status }}" = current
+          if ("${{ steps.checker.outcome }}" -ne "success") { throw "Dependency checker failed" }
+          if ("${{ steps.checker.outputs.dependency_status }}" -ne "current") { throw "Dependency status is not current" }

@@ -7,7 +7,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { packagedRuntimePaths } = require("../electron/runtime-command.cjs");
-const { linuxDesktopEntry, requireAutostartState } = require("../electron/autostart.cjs");
+const { requireAutostartState } = require("../electron/autostart.cjs");
 const {
   MAX_RESTARTS_PER_WINDOW,
   RuntimeSupervisor,
@@ -68,48 +68,10 @@ function launcherConfig(descriptorPath, overrides = {}) {
   };
 }
 
-test("packaged runtime paths are native on Windows and Unix", () => {
+test("packaged runtime paths retain the Windows Bun executable contract", () => {
   const windows = packagedRuntimePaths("C:\\Program Files\\Codex\\resources", "win32");
   assert.equal(path.basename(windows.executable), "bun.exe");
   assert.equal(path.basename(windows.entrypoint), "cli.js");
-
-  const linux = packagedRuntimePaths("/opt/codex/resources", "linux");
-  assert.equal(path.basename(linux.executable), "bun");
-  assert.equal(path.basename(linux.entrypoint), "cli.js");
-});
-
-test("Linux autostart launches the durable AppImage invisibly", () => {
-  const entry = linuxDesktopEntry(
-    { getPath: () => "/tmp/transient-electron" },
-    "/home/example/Applications/Codex Web GPT.AppImage",
-  );
-  assert.match(
-    entry,
-    /^Exec="\/home\/example\/Applications\/Codex Web GPT\.AppImage" --hidden$/m,
-  );
-  assert.doesNotMatch(entry, /APPIMAGE_EXTRACT_AND_RUN/);
-  assert.match(entry, /^Terminal=false$/m);
-  assert.match(entry, /^X-GNOME-Autostart-enabled=true$/m);
-});
-
-test("Linux autostart escapes desktop-entry field codes in executable paths", () => {
-  const entry = linuxDesktopEntry(
-    { getPath: () => "/tmp/transient-electron" },
-    "/home/example/100% ready/Codex Web GPT.AppImage",
-  );
-  assert.match(entry, /"\/home\/example\/100%% ready\/Codex Web GPT\.AppImage" --hidden/);
-});
-
-test("Linux autostart follows the stable installer wrapper across app updates", () => {
-  const previous = process.env.CODEX_WEB_GPT_LAUNCHER_EXECUTABLE;
-  process.env.CODEX_WEB_GPT_LAUNCHER_EXECUTABLE = "/home/example/.local/bin/codex-web-gpt";
-  try {
-    const entry = linuxDesktopEntry({ getPath: () => "/tmp/versioned-appimage-mount" });
-    assert.match(entry, /"\/home\/example\/\.local\/bin\/codex-web-gpt" --hidden/);
-  } finally {
-    if (previous === undefined) delete process.env.CODEX_WEB_GPT_LAUNCHER_EXECUTABLE;
-    else process.env.CODEX_WEB_GPT_LAUNCHER_EXECUTABLE = previous;
-  }
 });
 
 test("launcher autostart fails explicitly when the operating system rejects the requested state", () => {

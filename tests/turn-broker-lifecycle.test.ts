@@ -293,8 +293,17 @@ test("an unbounded broker call fails when the broker closes without answering", 
   const broker = unansweredBrokerEndpoint("cgw-broker-closed-", socket => socket.on("data", () => socket.end()));
   await broker.listen();
   try {
-    await expect(callTurnBroker(broker.socketPath, { method: "claim", token: "turn_closed" }, null))
-      .rejects.toThrow("closed the connection");
+    let closeDeadline: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await expect(Promise.race([
+        callTurnBroker(broker.socketPath, { method: "claim", token: "turn_closed" }, null),
+        new Promise<never>((_resolve, reject) => {
+          closeDeadline = setTimeout(() => reject(new Error("unanswered named-pipe client did not observe broker end")), 2_000);
+        }),
+      ])).rejects.toThrow("closed the connection");
+    } finally {
+      if (closeDeadline) clearTimeout(closeDeadline);
+    }
   } finally {
     await broker.close();
   }

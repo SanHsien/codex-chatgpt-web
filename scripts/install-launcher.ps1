@@ -27,20 +27,10 @@ function Test-IsFullyQualifiedWindowsPath {
   return $Path -match '^(?:[A-Za-z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+(?:[\\/]|$))'
 }
 
-$Repository = if ($env:CODEX_WEB_GPT_REPOSITORY) { $env:CODEX_WEB_GPT_REPOSITORY } else { "miuuyy/codex-chatgpt-web" }
-if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
-  throw "Invalid GitHub repository: $Repository"
-}
-$Version = $env:CODEX_WEB_GPT_VERSION
-if (-not $Version) {
-  $Release = Invoke-WithRetry -Label "Resolving the latest release" -Operation {
-    Invoke-RestMethod "https://api.github.com/repos/$Repository/releases/latest" -TimeoutSec 60
-  }
-  $Version = [string]$Release.tag_name
-}
-if ($Version -and $Version.StartsWith("v")) { $Version = $Version.Substring(1) }
-if (-not $Version) { throw "Could not resolve the latest Codex Web GPT release" }
-if ($Version -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$') { throw "Invalid release version: $Version" }
+# This fork has not published a package yet. Keep the temporary upstream source and release
+# immutable until maintainers explicitly review and change both values.
+$Repository = "miuuyy/codex-chatgpt-web"
+$Version = "5.0.4"
 
 if (-not [Environment]::Is64BitOperatingSystem) {
   throw "The packaged Windows launcher requires 64-bit Windows"

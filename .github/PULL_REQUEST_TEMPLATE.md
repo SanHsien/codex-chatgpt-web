@@ -27,10 +27,10 @@ Fixes #
 - [ ] I manually tested the affected behavior.
 - [ ] If this changes local tools, MCP execution, or the outer Codex agent loop, I tested it through a real installed Codex integration; DEV mode alone is acceptable only when execution is not affected.
 - [ ] If this changes ChatGPT browser UI handling, I included observed DOM evidence and a reproducible fixture instead of broadening selectors speculatively.
-- [ ] If this changes the launcher, I preserved macOS, Windows, and Linux packaging and named the platform packages actually built below.
+- [ ] If this changes the launcher, I preserved the Windows x64 NSIS package, Windows updater, and PowerShell installer contract.
 - [ ] I did not commit browser state, credentials, Tunnel IDs, raw logs, generated artifacts, or private paths.
 - [ ] I did not include an unrelated dependency update, release artifact, or version change.
 
 ## Platform or account validation
 
-<!-- List the platforms, account tiers, Browser-only/Full modes, and packaged builds actually exercised. Write "not run" for anything not verified. -->
+<!-- List the Windows version, account tier, Browser-only/Full mode, and packaged build actually exercised. Write "not run" for anything not verified. -->

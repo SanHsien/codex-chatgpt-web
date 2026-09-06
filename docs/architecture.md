@@ -144,27 +144,24 @@ Codex commentary.
 
 ## Installation and service lifecycle
 
-Each native desktop package contains Electron, a platform-matched pinned Bun executable, the
+The Windows desktop package contains Electron, a Windows-matched pinned Bun executable, the
 Responses bridge, Playwright client code, MCP server, setup, doctor, and the browser helper.
 Browser-only mode downloads no browser and requires no installed Chrome/Chromium or system Node/Bun;
 sign-in and model turns both remain in Electron. Full mode separately downloads the official pinned
-`openai/tunnel-client` build for the current OS/architecture and verifies it against the release
+`openai/tunnel-client` Windows build and verifies it against the release
 SHA-256 manifest.
 
 On first launch, the embedded runtime is checked against a deterministic manifest covering every
 file path, size, and SHA-256 before any launcher port or window opens. The source, transactional
 temporary copy, and final destination are all validated before the private versioned directory is
-accepted under the application home. Daemon and MCP commands use that durable copy, which is
-required because Linux AppImage mount paths are temporary and must never be persisted in Codex or
-tunnel configuration.
+accepted under the application home. Daemon and MCP commands use that durable copy so runtime
+ownership remains stable across Windows updates.
 
-The launcher is the sole process supervisor on macOS, Windows, and Linux. It starts the optional
+The Windows launcher is the sole process supervisor. It starts the optional
 tunnel first, waits for healthy/ready evidence, starts the Responses daemon, and then waits for its
-versioned health payload. Native login items or an owner-local XDG autostart file launch the app
-hidden after sign-in. A marker containing only launcher-owned PIDs lets doctor distinguish the
-launcher runtime from a stale or external process. Legacy macOS launchd services are drained and
-removed during an explicit launcher migration; launchd remains only for the advanced terminal-only
-mode.
+versioned health payload. Windows login-item autostart launches the app hidden after sign-in. A marker
+containing only launcher-owned PIDs lets doctor distinguish the launcher runtime from a stale or external
+process.
 
 Setup keeps Codex's built-in `openai` provider. It routes Responses through the local daemon with
 `openai_base_url`, while pinning `experimental_realtime_webrtc_call_base_url` to Codex's official

@@ -71,7 +71,7 @@ const config = {
   contextWindow: 256_000,
   appName: "Codex Native",
   browserHost: "managed-chrome",
-  chromeExecutablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  chromeExecutablePath: join(process.env.ProgramFiles ?? "C:\\Program Files", "Google", "Chrome", "Application", "chrome.exe"),
   storageStatePath: join(appHome, "browser", "storage-state.json"),
   brokerSocketPath: defaultBrokerEndpoint(appHome),
   headed: true,
@@ -152,10 +152,6 @@ try {
     throw new Error(`daemon did not resume after the drain smoke: ${JSON.stringify(resumePayload)}`);
   }
 
-  if (process.platform === "darwin") {
-    const browser = Bun.spawnSync([...runtimeCommand, "browser", "check"], { env, stdout: "pipe", stderr: "pipe" });
-    if (browser.exitCode !== 0) throw new Error(`relocated Playwright smoke failed: ${browser.stderr.toString()}`);
-  }
   const finalDrain = await fetch(`http://127.0.0.1:${port}/admin/drain`, {
     method: "POST",
     headers: { authorization: `Bearer ${config.controlToken}` },

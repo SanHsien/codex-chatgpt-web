@@ -833,9 +833,11 @@ export class TurnBroker implements TurnBrokerOwner {
     let buffered = "";
     let handled = false;
     const disconnected = new AbortController();
+    const abortDisconnected = () => disconnected.abort();
     socket.setEncoding("utf8");
     socket.on("error", () => {});
-    socket.once("close", () => disconnected.abort());
+    socket.once("close", abortDisconnected);
+    socket.once("end", abortDisconnected);
     socket.on("data", chunk => {
       if (handled) return;
       buffered += chunk;
@@ -865,12 +867,15 @@ export class TurnBroker implements TurnBrokerOwner {
   }
 
   private writeSocketResponse(socket: Socket, response: BrokerResponse): void {
+    const closeAfterFlush = () => {
+      if (!socket.destroyed) socket.destroy();
+    };
     const line = `${JSON.stringify(response)}\n`;
     if (line.length > MAX_BROKER_LINE_CHARS) {
-      socket.end(`${JSON.stringify({ id: response.id, error: "turn broker response exceeds size limit" } satisfies BrokerResponse)}\n`);
+      socket.end(`${JSON.stringify({ id: response.id, error: "turn broker response exceeds size limit" } satisfies BrokerResponse)}\n`, closeAfterFlush);
       return;
     }
-    socket.end(line);
+    socket.end(line, closeAfterFlush);
   }
 
   private validateRequest(request: BrokerRequest): void {
@@ -1279,12 +1284,7 @@ export async function callTurnBroker<T>(
         return;
       }
       response = parsed;
-      if (settleOnResponseFrame) {
-        // A long-poll keeps its request half open while the server waits. Its complete response
-        // frame is therefore the terminal boundary; ordinary calls still wait for physical close.
-        finishResponse();
-        socket.destroy();
-      }
+      if (settleOnResponseFrame) finishResponse();
     });
   });
 }

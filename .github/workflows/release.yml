@@ -9,19 +9,7 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: macos-15
-            runtime_asset: codex-chatgpt-web-darwin-arm64.tar.gz
-          - runner: macos-15-intel
-            runtime_asset: codex-chatgpt-web-darwin-amd64.tar.gz
-          - runner: ubuntu-latest
-            runtime_asset: codex-chatgpt-web-linux-amd64.tar.gz
-          - runner: windows-latest
-            runtime_asset: codex-chatgpt-web-windows-amd64.zip
-    runs-on: ${{ matrix.runner }}
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
@@ -31,63 +19,25 @@ jobs:
       - run: bun install --frozen-lockfile
         working-directory: launcher
       - name: Prepare AVX2-independent Windows runtime
-        if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/prepare-windows-baseline-bun.ps1 -Version 1.4.0 -GitHubEnv $env:GITHUB_ENV
-      - name: Prepare compatible Linux libnotify
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y meson ninja-build pkg-config libglib2.0-dev libgdk-pixbuf-2.0-dev binutils
-          ./scripts/prepare-linux-libnotify.sh
-      - name: Prepare owned AppImage toolset
-        if: runner.os == 'Linux'
-        run: bun run launcher/scripts/prepare-linux-appimage-tools.cjs
       - run: bun run verify
       - run: bun run app:package
-      - name: Verify Linux AppImage ABI on current Arch
-        if: runner.os == 'Linux'
-        run: |
-          artifact="$(find launcher/artifacts -maxdepth 1 -name '*-linux-x64.AppImage' -print -quit)"
-          test -n "$artifact"
-          docker run --rm -v "$PWD:/work:ro" -e APPIMAGE_PATH="/work/$artifact" archlinux:base \
-            sh -lc 'pacman -Sy --noconfirm binutils file glibc alsa-lib at-spi2-core cairo cups gtk3 libx11 libxcb libxcomposite libxdamage libxext libxfixes libxkbcommon libxrandr mesa nspr nss pango >/dev/null && /work/launcher/scripts/smoke-linux-appimage-symbols.sh "$APPIMAGE_PATH"'
-      - name: Ensure virtual display is available
-        if: runner.os == 'Linux'
-        run: command -v xvfb-run || (sudo apt-get update && sudo apt-get install -y xvfb)
       - run: bun run app:smoke
-      - name: Verify embedded macOS runtime signature
-        if: runner.os == 'macOS'
-        run: codesign --verify --deep --strict launcher/build/runtime/runtime/bun
-      - name: Verify packaged macOS application signature
-        if: runner.os == 'macOS'
-        run: |
-          archive="$(find launcher/artifacts -maxdepth 1 -name '*-mac-*.zip' -print -quit)"
-          test -n "$archive"
-          stage="$(mktemp -d)"
-          ditto -x -k "$archive" "$stage"
-          codesign --verify --deep --strict --verbose=2 "$stage/Codex Web GPT.app"
-      - name: Archive runtime
-        if: runner.os != 'Windows'
-        run: tar -czf "${{ matrix.runtime_asset }}" -C launcher/build/runtime .
       - name: Archive Windows runtime
-        if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path launcher/build/runtime/* -DestinationPath "${{ matrix.runtime_asset }}"
+        run: Compress-Archive -Path launcher/build/runtime/* -DestinationPath codex-chatgpt-web-windows-amd64.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.runner }}
+          name: release-windows
           path: |
-            ${{ matrix.runtime_asset }}
-            launcher/artifacts/*.dmg
-            launcher/artifacts/*.zip
-            launcher/artifacts/*.exe
-            launcher/artifacts/*.AppImage
+            codex-chatgpt-web-windows-amd64.zip
+            launcher/artifacts/*-win-x64.exe
           if-no-files-found: error
 
   publish:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
@@ -99,117 +49,79 @@ jobs:
       - run: bun run licenses
       - uses: actions/download-artifact@v4
         with:
+          name: release-windows
           path: release-assets
-          merge-multiple: true
-      - name: Verify release tag matches package version
+      - name: Verify release tag and add Windows-only assets
+        shell: pwsh
         run: |
-          expected="v$(jq -r .version package.json)"
-          test "$GITHUB_REF_NAME" = "$expected"
-      - name: Add licenses and installers
-        run: |
-          cp LICENSE release-assets/LICENSE
-          cp LICENSES/Bun-1.4.0.md release-assets/Bun-1.4.0.md
-          cp LICENSES/libnotify-0.8.7-LGPL-2.1.md release-assets/libnotify-0.8.7-LGPL-2.1.md
-          cp dist/THIRD_PARTY_NOTICES.txt release-assets/THIRD_PARTY_NOTICES.txt
-          cp scripts/install.sh release-assets/install.sh
-          cp scripts/install-launcher.sh release-assets/install-launcher.sh
-          cp scripts/install-launcher.ps1 release-assets/install-launcher.ps1
-      - name: Flatten release assets
-        run: |
-          cd release-assets
-          while IFS= read -r -d '' file; do
-            name="$(basename "$file")"
-            if [ -e "$name" ]; then
-              echo "Duplicate release asset name: $name" >&2
-              exit 1
-            fi
-            mv "$file" "$name"
-          done < <(find . -mindepth 2 -type f -print0 | sort -z)
-          find . -mindepth 1 -type d -empty -delete
-      - name: Create checksums
-        run: |
-          cd release-assets
-          checksum_file="$(mktemp)"
-          find . -maxdepth 1 -type f ! -name checksums.txt -print0 \
-            | sort -z \
-            | xargs -0 sha256sum \
-            | sed 's#  \./#  #' > "$checksum_file"
-          mv "$checksum_file" checksums.txt
-      - name: Verify every built asset is checksummed
-        run: |
-          cd release-assets
-          missing=""
-          while IFS= read -r -d '' file; do
-            name="${file#./}"
-            if [ "$name" = checksums.txt ]; then continue; fi
-            if ! awk -v asset="$name" '$2 == asset { found = 1 } END { exit found ? 0 : 1 }' checksums.txt; then
-              missing="$missing $name"
-            fi
-          done < <(find . -type f -print0)
-          if [ -n "$missing" ]; then
-            echo "checksums.txt is missing entries for:$missing" >&2
-            exit 1
-          fi
+          $expected = "v$((Get-Content package.json -Raw | ConvertFrom-Json).version)"
+          if ($env:GITHUB_REF_NAME -ne $expected) { throw "Release tag $env:GITHUB_REF_NAME does not match $expected" }
+          Copy-Item LICENSE release-assets/LICENSE
+          Copy-Item dist/THIRD_PARTY_NOTICES.txt release-assets/THIRD_PARTY_NOTICES.txt
+          Copy-Item scripts/install-launcher.ps1 release-assets/install-launcher.ps1
+          $payloadAssets = @(Get-ChildItem release-assets -File | Sort-Object Name)
+          if ($payloadAssets.Count -lt 4) { throw "Expected Windows runtime, installer, notices, and PowerShell installer" }
+          $checksumLines = @($payloadAssets | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          })
+          $checksumsPath = Join-Path $PWD 'release-assets/checksums.txt'
+          [System.IO.File]::WriteAllLines($checksumsPath, [string[]]$checksumLines, (New-Object System.Text.UTF8Encoding($false)))
+          $manifest = Get-Content -LiteralPath $checksumsPath
+          if ($manifest.Count -ne $payloadAssets.Count) { throw "checksums.txt must contain one line per payload asset" }
+          foreach ($asset in $payloadAssets) {
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $asset.FullName).Hash.ToLowerInvariant()
+            if (@($manifest | Where-Object { $_ -eq "$hash  $($asset.Name)" }).Count -ne 1) {
+              throw "checksums.txt does not cover $($asset.Name) exactly once"
+            }
+          }
       - name: Publish GitHub release
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mapfile -d '' release_files < <(find release-assets -type f -print0)
-          test "${#release_files[@]}" -gt 0
-          release_flags=(--latest)
-          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
-            release_flags=(--prerelease --latest=false)
-          fi
-          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "${release_files[@]}" \
-              --repo "$GITHUB_REPOSITORY" \
-              --clobber
-            gh release edit "$GITHUB_REF_NAME" \
-              --repo "$GITHUB_REPOSITORY" \
-              --draft=false \
-              "${release_flags[@]}"
-          else
-            gh release create "$GITHUB_REF_NAME" "${release_files[@]}" \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "$GITHUB_REF_NAME" \
-              "${release_flags[@]}" \
-              --generate-notes
-          fi
+          function Invoke-GhRelease {
+            param([Parameter(Mandatory = $true)][string[]]$Arguments)
+            & gh @Arguments
+            if ($LASTEXITCODE -ne 0) {
+              throw "GitHub release command failed with exit code $($LASTEXITCODE): gh $($Arguments -join ' ')"
+            }
+          }
 
-          published_manifest="$(mktemp)"
-          gh release view "$GITHUB_REF_NAME" \
-            --repo "$GITHUB_REPOSITORY" \
-            --json assets \
-            --jq '.assets[] | select(.name != "checksums.txt") | [.name, .digest] | @tsv' \
-            | while IFS=$'\t' read -r name digest; do
-                if [[ "$digest" != sha256:* || -z "${digest#sha256:}" ]]; then
-                  echo "Published asset has no SHA-256 digest: $name" >&2
-                  exit 1
-                fi
-                printf '%s  %s\n' "${digest#sha256:}" "$name"
-              done \
-            | LC_ALL=C sort -k2 > "$published_manifest"
-          test -s "$published_manifest"
-          mv "$published_manifest" release-assets/checksums.txt
-          gh release upload "$GITHUB_REF_NAME" release-assets/checksums.txt \
-            --repo "$GITHUB_REPOSITORY" \
-            --clobber
-
-          while IFS=$'\t' read -r name digest; do
-            if [ "$name" = checksums.txt ]; then continue; fi
-            expected="$(awk -v asset="$name" '$2 == asset { print $1 }' release-assets/checksums.txt)"
-            if [ -z "$expected" ] || [ "sha256:$expected" != "$digest" ]; then
-              echo "Published asset checksum mismatch: $name" >&2
-              exit 1
-            fi
-          done < <(gh release view "$GITHUB_REF_NAME" \
-            --repo "$GITHUB_REPOSITORY" \
-            --json assets \
-            --jq '.assets[] | [.name, .digest] | @tsv')
-
-          local_manifest_digest="$(sha256sum release-assets/checksums.txt | awk '{ print $1 }')"
-          remote_manifest_digest="$(gh release view "$GITHUB_REF_NAME" \
-            --repo "$GITHUB_REPOSITORY" \
-            --json assets \
-            --jq '.assets[] | select(.name == "checksums.txt") | .digest')"
-          test "sha256:$local_manifest_digest" = "$remote_manifest_digest"
+          $files = Get-ChildItem release-assets -File | ForEach-Object { $_.FullName }
+          $expectedPrerelease = $env:GITHUB_REF_NAME -like '*-*'
+          if ($expectedPrerelease) { $flags = @('--prerelease', '--latest=false') } else { $flags = @('--latest') }
+          $probe = @(& gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY 2>&1)
+          $probeExitCode = $LASTEXITCODE
+          if ($probeExitCode -eq 0) {
+            Invoke-GhRelease -Arguments (@("release", "upload", $env:GITHUB_REF_NAME) + $files + @("--repo", $env:GITHUB_REPOSITORY, "--clobber"))
+            Invoke-GhRelease -Arguments (@("release", "edit", $env:GITHUB_REF_NAME, "--repo", $env:GITHUB_REPOSITORY, "--draft=false") + $flags)
+          } elseif (($probe -join "`n") -match '(?i)(release not found|HTTP 404)') {
+            Invoke-GhRelease -Arguments (@("release", "create", $env:GITHUB_REF_NAME) + $files + @("--repo", $env:GITHUB_REPOSITORY, "--title", $env:GITHUB_REF_NAME) + $flags + @("--generate-notes"))
+          } else {
+            throw "Could not determine whether release $env:GITHUB_REF_NAME already exists (gh exit code $probeExitCode): $($probe -join ' ')"
+          }
+          $publishedRelease = Invoke-GhRelease -Arguments @("release", "view", $env:GITHUB_REF_NAME, "--repo", $env:GITHUB_REPOSITORY, "--json", "assets,isDraft,isPrerelease,tagName") | ConvertFrom-Json
+          if ($publishedRelease.tagName -ne $env:GITHUB_REF_NAME) { throw "Published release tag does not match this workflow event" }
+          if ($publishedRelease.isDraft -ne $false) { throw "Published release must not remain a draft" }
+          if ([bool]$publishedRelease.isPrerelease -ne [bool]$expectedPrerelease) { throw "Published prerelease state does not match tag semantics" }
+          if (-not $expectedPrerelease) {
+            $latestRelease = Invoke-GhRelease -Arguments @("api", "repos/$env:GITHUB_REPOSITORY/releases/latest") | ConvertFrom-Json
+            if ($latestRelease.tag_name -ne $env:GITHUB_REF_NAME) { throw "Published stable release is not GitHub's latest release" }
+          }
+          $published = @($publishedRelease.assets)
+          $expectedAssets = @(Get-ChildItem release-assets -File)
+          $expectedAssetNames = @($expectedAssets | ForEach-Object Name | Sort-Object -Unique)
+          $publishedAssetNames = @($published | ForEach-Object { [string]$_.name } | Sort-Object -Unique)
+          if ($expectedAssetNames.Count -ne $expectedAssets.Count -or $publishedAssetNames.Count -ne $published.Count -or [string]::Join("`n", $expectedAssetNames) -ne [string]::Join("`n", $publishedAssetNames)) {
+            throw "Published release asset names must exactly match this run's expected Windows asset set"
+          }
+          $payloadAssets = @(Get-ChildItem release-assets -File | Where-Object Name -ne 'checksums.txt')
+          foreach ($asset in $payloadAssets) {
+            $expected = "sha256:$((Get-FileHash -Algorithm SHA256 -LiteralPath $asset.FullName).Hash.ToLowerInvariant())"
+            $remote = @($published | Where-Object Name -eq $asset.Name)
+            if ($remote.Count -ne 1 -or $remote[0].digest -ne $expected) { throw "Published asset checksum mismatch: $($asset.Name)" }
+          }
+          $manifest = @($published | Where-Object Name -eq 'checksums.txt')
+          $manifestExpected = "sha256:$((Get-FileHash -Algorithm SHA256 -LiteralPath release-assets/checksums.txt).Hash.ToLowerInvariant())"
+          if ($manifest.Count -ne 1 -or $manifest[0].digest -ne $manifestExpected) { throw 'Published checksums.txt digest mismatch' }
