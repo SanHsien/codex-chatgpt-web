@@ -14,6 +14,10 @@ Bootstrap verifies the exact Bun 1.4.0 runtime and installs both locked dependen
 stale global Bun cache cannot affect a reproducible Windows setup. The full check runs the fork-contract tests,
 strict upstream baseline check, upstream `bun run verify`, and whitespace validation.
 
+Bootstrap also verifies Electron's installed `path.txt` and referenced runtime under `launcher/node_modules/electron/dist`.
+If a frozen Bun install leaves that lifecycle artifact incomplete, bootstrap runs the installed Electron lifecycle
+script once and fails if the runtime is still unsafe or absent. `dev_check.ps1` never repairs it: run bootstrap first.
+
 These source/package checks deliberately do not sign in to ChatGPT, launch a browser, use MCP,
 install the production launcher, change Codex configuration, or use model quota. Account-bound
 acceptance remains opt-in upstream release validation and is not a fork gate.

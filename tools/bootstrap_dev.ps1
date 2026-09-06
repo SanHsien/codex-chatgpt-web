@@ -17,11 +17,46 @@ function Invoke-Checked {
   }
 }
 
+function Test-ElectronRuntime {
+  param([string]$LauncherRoot)
+  $electronRoot = Join-Path $LauncherRoot 'node_modules/electron'
+  $distRoot = Join-Path $electronRoot 'dist'
+  $pathFile = Join-Path $electronRoot 'path.txt'
+  if (-not (Test-Path -LiteralPath $pathFile -PathType Leaf) -or -not (Test-Path -LiteralPath $distRoot -PathType Container)) {
+    return $false
+  }
+  $relativePath = (Get-Content -LiteralPath $pathFile -Raw).Trim()
+  if (-not $relativePath -or [IO.Path]::IsPathRooted($relativePath) -or $relativePath -match '(^|[\\/])\.\.([\\/]|$)') {
+    return $false
+  }
+  $distFullPath = [IO.Path]::GetFullPath($distRoot)
+  $runtimePath = [IO.Path]::GetFullPath((Join-Path $distFullPath $relativePath))
+  $distPrefix = $distFullPath.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+  if (-not $runtimePath.StartsWith($distPrefix, [StringComparison]::Ordinal)) {
+    return $false
+  }
+  return Test-Path -LiteralPath $runtimePath -PathType Leaf
+}
+
 $actualBun = (& bun --version).Trim()
 if ($LASTEXITCODE -ne 0 -or $actualBun -ne $expectedBun) {
   throw "Bun $expectedBun is required; found '$actualBun'."
 }
 
 Invoke-Checked -FilePath 'bun' -Arguments @('install', '--frozen-lockfile') -WorkingDirectory $repoRoot
-Invoke-Checked -FilePath 'bun' -Arguments @('install', '--frozen-lockfile') -WorkingDirectory (Join-Path $repoRoot 'launcher')
-Write-Output "BOOTSTRAP PASSED: Bun $actualBun and both frozen lockfiles."
+$launcherRoot = Join-Path $repoRoot 'launcher'
+Invoke-Checked -FilePath 'bun' -Arguments @('install', '--frozen-lockfile') -WorkingDirectory $launcherRoot
+if (-not (Test-ElectronRuntime -LauncherRoot $launcherRoot)) {
+  $lifecycleScript = Join-Path $launcherRoot 'node_modules/electron/install.js'
+  if (-not (Test-Path -LiteralPath $lifecycleScript -PathType Leaf)) {
+    throw "Electron runtime is incomplete and its installed lifecycle script is missing: $lifecycleScript"
+  }
+  Invoke-Checked -FilePath 'bun' -Arguments @('node_modules/electron/install.js') -WorkingDirectory $launcherRoot
+  if (-not (Test-ElectronRuntime -LauncherRoot $launcherRoot)) {
+    throw 'Electron lifecycle repair did not produce a safe runtime under launcher/node_modules/electron/dist.'
+  }
+  Write-Output 'ELECTRON_RUNTIME=repaired'
+} else {
+  Write-Output 'ELECTRON_RUNTIME=ready'
+}
+Write-Output "BOOTSTRAP PASSED: Bun $actualBun, both frozen lockfiles, and Electron runtime."

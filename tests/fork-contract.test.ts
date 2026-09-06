@@ -39,7 +39,12 @@ test("maintenance workflows stay least-privilege and strict on upstream drift", 
   expect(dependabot).toContain('package-ecosystem: "bun"');
   expect(dependabot).toContain('directory: "/launcher"');
   const devCheck = read("tools/dev_check.ps1");
+  const bootstrap = read("tools/bootstrap_dev.ps1");
   expect(devCheck).toContain("'diff', '--cached', '--check'");
   expect(devCheck).toContain("'show', '--check', '--format=', 'HEAD'");
   expect(devCheck).toContain('"$resolvedBase..HEAD"');
+  expect(bootstrap).toContain("'node_modules/electron/install.js'");
+  expect(bootstrap).toContain("ELECTRON_RUNTIME=repaired");
+  expect(devCheck).toContain("Test-ElectronRuntime");
+  expect(devCheck).toContain("tools\\bootstrap_dev.ps1");
 });
