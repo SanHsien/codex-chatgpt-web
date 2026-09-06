@@ -14,13 +14,19 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/miuuyy/codex-chatgpt-web/actions/workflows/ci.yml"><img src="https://github.com/miuuyy/codex-chatgpt-web/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/SanHsien/codex-chatgpt-web/actions/workflows/ci.yml"><img src="https://github.com/SanHsien/codex-chatgpt-web/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/macOS-arm64%20%7C%20x64-black?logo=apple" alt="macOS arm64 and x64">
   <img src="https://img.shields.io/badge/Windows-x64-0078d4?logo=windows11" alt="Windows x64">
   <img src="https://img.shields.io/badge/Linux-x64-fcc624?logo=linux&logoColor=black" alt="Linux x64">
-  <img src="https://img.shields.io/badge/Free_AI-no_API_fees-10a37f" alt="Free AI with no API fees">
+  <img src="https://img.shields.io/badge/unofficial-ChatGPT_Web_automation-555555" alt="非官方 ChatGPT Web 自动化">
 </p>
+
+> **维护 fork 说明。** 此仓库由
+> [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web) 维护。在保留上游
+> MIT 项目及产品行为的同时，增加了 Windows 优先的开发与维护控制。请参阅 [FORK.md](FORK.md)
+> 和[开发文档](docs/DEVELOPMENT.md)。这是非官方 ChatGPT Web 自动化：可用额度仍取决于账户和
+> 方案，UI 变化可能导致其失效，用户必须遵守 OpenAI 条款及其工作区政策。
 
 Free 和 Go 账户会在 Codex 原生模型选择器中看到 **ChatGPT Web — Luna**。具有推理选择器的
 账户仍会按订阅权限看到 **Instant**、**Medium**、**High**、**Extra High** 和 **Pro**。
@@ -69,6 +75,8 @@ Codex 会保留原生任务、上下文生命周期、界面和工具 harness。
 安装或更新桌面启动器。若要更新或修复现有安装，请先退出启动器，然后再次运行同一条命令；它会
 替换应用程序和内置运行时，同时保留 ChatGPT 配置文件和启动器配置。
 
+源码开发和克隆应使用此维护 fork。在该 fork 发布版本之前，打包安装程序来自已审阅的上游版本。
+
 **macOS 或 Linux**
 
 ```bash
@@ -98,7 +106,7 @@ Chrome/Chromium、系统级 Node/Bun，也不会由本项目另行下载浏览�
 **从源码运行**
 
 ```bash
-git clone https://github.com/miuuyy/codex-chatgpt-web.git && \
+git clone https://github.com/SanHsien/codex-chatgpt-web.git && \
 cd codex-chatgpt-web && \
 bun run app
 ```

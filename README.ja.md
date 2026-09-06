@@ -14,13 +14,20 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/miuuyy/codex-chatgpt-web/actions/workflows/ci.yml"><img src="https://github.com/miuuyy/codex-chatgpt-web/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/SanHsien/codex-chatgpt-web/actions/workflows/ci.yml"><img src="https://github.com/SanHsien/codex-chatgpt-web/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT ライセンス"></a>
   <img src="https://img.shields.io/badge/macOS-arm64%20%7C%20x64-black?logo=apple" alt="macOS arm64 および x64">
   <img src="https://img.shields.io/badge/Windows-x64-0078d4?logo=windows11" alt="Windows x64">
   <img src="https://img.shields.io/badge/Linux-x64-fcc624?logo=linux&logoColor=black" alt="Linux x64">
-  <img src="https://img.shields.io/badge/Free_AI-no_API_fees-10a37f" alt="API 料金なしの AI">
+  <img src="https://img.shields.io/badge/unofficial-ChatGPT_Web_automation-555555" alt="非公式 ChatGPT Web 自動化">
 </p>
+
+> **メンテナンス fork の案内。** このリポジトリは
+> [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web) で保守されています。
+> 上流の MIT プロジェクトと製品動作を保持しつつ、Windows 優先の開発・保守管理を追加しています。
+> [FORK.md](FORK.md) と[開発ドキュメント](docs/DEVELOPMENT.md)を参照してください。これは非公式の
+> ChatGPT Web 自動化です。利用可能量はアカウントとプランに依存し、UI の変更で動作しなくなる
+> 場合があります。OpenAI の利用規約およびワークスペースポリシーを遵守してください。
 
 Free および Go アカウントでは、Codex のネイティブモデル選択画面に
 **ChatGPT Web — Luna** が追加されます。reasoning セレクターが表示されるアカウントでは、
@@ -74,6 +81,9 @@ Full モードでは、次のコンパクション境界まで、MCP が ChatGPT
 ランチャーを終了して同じコマンドをもう一度実行してください。ChatGPT プロファイルとランチャー設定を保持したまま、
 アプリケーションと内蔵ランタイムが置き換えられます。
 
+ソース開発と clone にはこのメンテナンス fork を使用します。この fork がリリースを公開するまで、
+パッケージ版インストーラーはレビュー済みの上流リリースから提供されます。
+
 **macOS または Linux**
 
 ```bash
@@ -104,7 +114,7 @@ Free/Go アカウントでは Luna のみが表示され、Pro はサインイ�
 **ソースから実行**
 
 ```bash
-git clone https://github.com/miuuyy/codex-chatgpt-web.git && \
+git clone https://github.com/SanHsien/codex-chatgpt-web.git && \
 cd codex-chatgpt-web && \
 bun run app
 ```
