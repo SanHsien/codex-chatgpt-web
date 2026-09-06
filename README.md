@@ -82,16 +82,19 @@ Install or update the desktop launcher. To update or repair an existing installa
 launcher and run the same command again; it replaces the application and embedded runtime while
 preserving the ChatGPT profile and launcher configuration.
 
+Source development and cloning use this maintained fork. Until this fork publishes a release,
+packaged installer binaries are served from the reviewed upstream release.
+
 **macOS or Linux**
 
 ```bash
-curl -fsSL https://github.com/SanHsien/codex-chatgpt-web/releases/latest/download/install-launcher.sh | sh
+curl -fsSL https://github.com/miuuyy/codex-chatgpt-web/releases/latest/download/install-launcher.sh | sh
 ```
 
 **Windows PowerShell**
 
 ```powershell
-irm https://github.com/SanHsien/codex-chatgpt-web/releases/latest/download/install-launcher.ps1 | iex
+irm https://github.com/miuuyy/codex-chatgpt-web/releases/latest/download/install-launcher.ps1 | iex
 ```
 
 Then complete the three checks in the app:

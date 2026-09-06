@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { evaluateUpstream, validateBaseline } from "../scripts/check-upstream-baseline.ts";
+import { evaluateUpstream, validateBaseline } from "../scripts/check-upstream-baseline";
 
 const baseline = {
   schemaVersion: 1,

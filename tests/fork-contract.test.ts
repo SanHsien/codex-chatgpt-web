@@ -23,6 +23,9 @@ test("maintained-fork documents and PowerShell entrypoints are tracked", () => {
   expect(read("FORK.md")).toContain("reviewed, not merged");
   expect(read("README.md")).toContain("Maintained fork notice");
   expect(read("docs/DEVELOPMENT.md")).toContain("do not sign in to ChatGPT");
+  expect(read("README.md")).toContain("https://github.com/miuuyy/codex-chatgpt-web/releases/latest/download/install-launcher.sh");
+  expect(read("README.md")).toContain("https://github.com/miuuyy/codex-chatgpt-web/releases/latest/download/install-launcher.ps1");
+  expect(read("README.md")).toContain("git clone https://github.com/SanHsien/codex-chatgpt-web.git");
 });
 
 test("maintenance workflows stay least-privilege and strict on upstream drift", () => {
@@ -35,4 +38,8 @@ test("maintenance workflows stay least-privilege and strict on upstream drift", 
   expect(upstream).toContain("--strict");
   expect(dependabot).toContain('package-ecosystem: "bun"');
   expect(dependabot).toContain('directory: "/launcher"');
+  const devCheck = read("tools/dev_check.ps1");
+  expect(devCheck).toContain("'diff', '--cached', '--check'");
+  expect(devCheck).toContain("'show', '--check', '--format=', 'HEAD'");
+  expect(devCheck).toContain('"$resolvedBase..HEAD"');
 });
