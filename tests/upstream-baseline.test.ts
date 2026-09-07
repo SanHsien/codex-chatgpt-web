@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 import { evaluateUpstream, isBranchName, readUpstreamInventory, validateBaseline, type UpstreamBaseline } from "../scripts/check-upstream-baseline";
 
 const sha = "c648c09501bb1b704c7ad5273fb5f5d6b8992dd2";
-const pullHead = "df0224756d639edfa2124ed96c1dad75e05e06df";
-const baseline: UpstreamBaseline = { schemaVersion: 3, upstream: { repository: "miuuyy/codex-chatgpt-web", remote: "upstream", branch: "main" }, reviewed: { mainCommit: sha, latestPullRequest: 347, latestPullRequestHead: pullHead, latestNonPullRequestIssue: 348, branches: [{ name: "main", commit: sha }] }, reviewedAt: "2026-09-07", status: "reviewed-not-merged" };
-const inventory = { mainCommit: sha, pullRequestNumbers: [347], latestPullRequestHead: pullHead, nonPullRequestIssueNumbers: [348], branches: [{ name: "main", commit: sha }] };
+const pullHead = "1108fa6298fab765dce6a052b7edc2510c0bad17";
+const baseline: UpstreamBaseline = { schemaVersion: 3, upstream: { repository: "miuuyy/codex-chatgpt-web", remote: "upstream", branch: "main" }, reviewed: { mainCommit: sha, latestPullRequest: 355, latestPullRequestHead: pullHead, latestNonPullRequestIssue: 359, branches: [{ name: "main", commit: sha }] }, reviewedAt: "2026-09-07", status: "reviewed-not-merged" };
+const inventory = { mainCommit: sha, pullRequestNumbers: [355], latestPullRequestHead: pullHead, nonPullRequestIssueNumbers: [359], branches: [{ name: "main", commit: sha }] };
 
 test("accepts a complete four-axis reviewed inventory", () => {
   expect(validateBaseline(baseline)).toEqual(baseline);
@@ -45,9 +45,9 @@ test("fails closed on incomplete search and consumes every branch page", () => {
   const runner = (_command: string, args: string[]) => {
     const endpoint = args.at(-1) ?? "";
     if (endpoint.includes("git/ref")) return { exitCode: 0, stdout: JSON.stringify({ object: { sha } }), stderr: "" };
-    if (endpoint.includes("is:pr")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 347 }] }), stderr: "" };
-    if (endpoint.includes("is:issue")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 348 }] }), stderr: "" };
-    if (endpoint.includes("pulls/347")) return { exitCode: 0, stdout: JSON.stringify({ head: { sha: pullHead } }), stderr: "" };
+    if (endpoint.includes("is:pr")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 355 }] }), stderr: "" };
+    if (endpoint.includes("is:issue")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 359 }] }), stderr: "" };
+    if (endpoint.includes("pulls/355")) return { exitCode: 0, stdout: JSON.stringify({ head: { sha: pullHead } }), stderr: "" };
     return { exitCode: 0, stdout: JSON.stringify([[{ name: "main", commit: { sha } }], [{ name: "feature/x", commit: { sha } }]]), stderr: "" };
   };
   const multiPageBaseline: UpstreamBaseline = { ...baseline, reviewed: { ...baseline.reviewed, branches: [{ name: "main", commit: sha }, { name: "feature/x", commit: sha }] } };
@@ -56,17 +56,17 @@ test("fails closed on incomplete search and consumes every branch page", () => {
   expect(() => readUpstreamInventory(baseline, (_command, args) => {
     const endpoint = args.at(-1) ?? "";
     if (endpoint.includes("git/ref")) return { exitCode: 0, stdout: JSON.stringify({ object: { sha } }), stderr: "" };
-    if (endpoint.includes("is:pr")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: true, items: [{ number: 347 }] }), stderr: "" };
-    if (endpoint.includes("is:issue")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 348 }] }), stderr: "" };
-    if (endpoint.includes("pulls/347")) return { exitCode: 0, stdout: JSON.stringify({ head: { sha: pullHead } }), stderr: "" };
+    if (endpoint.includes("is:pr")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: true, items: [{ number: 355 }] }), stderr: "" };
+    if (endpoint.includes("is:issue")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 359 }] }), stderr: "" };
+    if (endpoint.includes("pulls/355")) return { exitCode: 0, stdout: JSON.stringify({ head: { sha: pullHead } }), stderr: "" };
     return { exitCode: 0, stdout: JSON.stringify([[{ name: "main", commit: { sha } }]]), stderr: "" };
   })).toThrow("incomplete axis response");
   expect(() => readUpstreamInventory(baseline, (_command, args) => {
     const endpoint = args.at(-1) ?? "";
     if (endpoint.includes("git/ref")) return { exitCode: 0, stdout: JSON.stringify({ object: { sha } }), stderr: "" };
-    if (endpoint.includes("is:pr")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 347 }] }), stderr: "" };
-    if (endpoint.includes("is:issue")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 348 }] }), stderr: "" };
-    if (endpoint.includes("pulls/347")) return { exitCode: 0, stdout: JSON.stringify({ head: { sha: pullHead } }), stderr: "" };
+    if (endpoint.includes("is:pr")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 355 }] }), stderr: "" };
+    if (endpoint.includes("is:issue")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 359 }] }), stderr: "" };
+    if (endpoint.includes("pulls/355")) return { exitCode: 0, stdout: JSON.stringify({ head: { sha: pullHead } }), stderr: "" };
     return { exitCode: 0, stdout: JSON.stringify([{ name: "main", commit: { sha } }]), stderr: "" };
   })).toThrow("pagination was malformed or incomplete");
 });
@@ -76,9 +76,9 @@ test("fails closed when the latest pull request head is missing or malformed", (
     const runner = (_command: string, args: string[]) => {
       const endpoint = args.at(-1) ?? "";
       if (endpoint.includes("git/ref")) return { exitCode: 0, stdout: JSON.stringify({ object: { sha } }), stderr: "" };
-      if (endpoint.includes("is:pr")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 347 }] }), stderr: "" };
-      if (endpoint.includes("is:issue")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 348 }] }), stderr: "" };
-      if (endpoint.includes("pulls/347")) return { exitCode: 0, stdout: JSON.stringify({ head }), stderr: "" };
+      if (endpoint.includes("is:pr")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 355 }] }), stderr: "" };
+      if (endpoint.includes("is:issue")) return { exitCode: 0, stdout: JSON.stringify({ incomplete_results: false, items: [{ number: 359 }] }), stderr: "" };
+      if (endpoint.includes("pulls/355")) return { exitCode: 0, stdout: JSON.stringify({ head }), stderr: "" };
       return { exitCode: 0, stdout: JSON.stringify([[{ name: "main", commit: { sha } }]]), stderr: "" };
     };
     expect(() => readUpstreamInventory(baseline, runner)).toThrow("malformed latest pull request head");

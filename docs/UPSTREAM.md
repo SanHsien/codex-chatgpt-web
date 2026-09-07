@@ -1,9 +1,10 @@
 # Upstream tracking
 
-The baseline is reviewed history, not a merge target. At 2026-09-07, upstream
-`miuuyy/codex-chatgpt-web` `main` remains `c648c09501bb1b704c7ad5273fb5f5d6b8992dd2`; the latest
-open PR is `#347` at `df0224756d639edfa2124ed96c1dad75e05e06df`, the latest non-PR issue is `#348`, and the only upstream branch is `main` at that
-SHA. The fork is **Windows-only**: reviews adopt only verified Windows-applicable work.
+The baseline is reviewed history, not a merge target. A read-only GitHub inventory on 2026-09-07 found
+upstream `miuuyy/codex-chatgpt-web` `main` still at `c648c09501bb1b704c7ad5273fb5f5d6b8992dd2`; the
+latest PR is closed, unmerged draft [#355](https://github.com/miuuyy/codex-chatgpt-web/pull/355) at
+`1108fa6298fab765dce6a052b7edc2510c0bad17`, the latest non-PR issue is [#359](https://github.com/miuuyy/codex-chatgpt-web/issues/359), and the only upstream branch is `main` at that SHA. The fork is
+**Windows-only**: reviews adopt only verified Windows-applicable work.
 
 ## Open pull-request decisions
 
@@ -15,11 +16,31 @@ SHA. The fork is **Windows-only**: reviews adopt only verified Windows-applicabl
 | [#338](https://github.com/miuuyy/codex-chatgpt-web/pull/338) | `37dbecce686bb19fe8871699e205d43ca0dbe5f8` | defer | No committed regression tests or checks prove the Luna Think behavior. | A tested Windows reproduction and checks are supplied. |
 | [#329](https://github.com/miuuyy/codex-chatgpt-web/pull/329) | `c55b5cef7f7a6d1b8c0759d7806a94f06d10ce77` | defer | Localized confirmation handling is potentially Windows-relevant, but the branch has a dirty merge conflict and no checks. | The conflict is resolved and focused tests pass. |
 
-## Open issue decisions
+## 2026-09-07 follow-up: #349–#359 complete register
+
+The following live states were read from GitHub before moving the baseline. PR author claims and local
+tests are not adoption evidence. Closed/unmerged and draft PRs remain unmerged history; no upstream
+write, fetch, merge, or release action was taken.
+
+| Item | Exact observed state / head | Decision | Windows applicability and rationale | Re-review trigger |
+| --- | --- | --- | --- | --- |
+| [#349](https://github.com/miuuyy/codex-chatgpt-web/pull/349) | closed, unmerged; `f9619efd69bf397fec19edcdec53156762a88c92` | reject | Upstream explicitly declined its 502 `Stopped thinking` taxonomy: that visible state does not distinguish manual Stop from an upstream interruption. Its tests therefore do not establish a Windows fix. | A privacy-safe Windows trace distinguishes the termination source, and a focused no-replay regression proves the resulting classification. |
+| [#350](https://github.com/miuuyy/codex-chatgpt-web/issues/350) | closed issue; macOS arm64 setup report | reject | macOS-only connector-creation report is outside public Windows support. | A current Windows reproduction with a bounded local cause. |
+| [#351](https://github.com/miuuyy/codex-chatgpt-web/issues/351) | open issue; macOS arm64 reports | reject | The generic stopped-response reports have no Windows reproduction and do not establish a common cause. | A privacy-safe Windows safe-log trace identifies the post-submit failure state without replaying the accepted turn. |
+| [#352](https://github.com/miuuyy/codex-chatgpt-web/issues/352) | open issue; no PR | defer | A symlinked `config.toml` can matter on Windows, but only macOS isolated checkpoint evidence exists; a `stat`-only change could replace the link during rollback. | A Windows symlink/junction reproduction plus capture, setup, failure rollback, and removal tests prove both link and target bytes remain intact. |
+| [#353](https://github.com/miuuyy/codex-chatgpt-web/issues/353) | open issue; no PR | defer | The report combines a legacy non-`chatgpt-web/*` compact passthrough 404 with a separate non-Pro Web staging-size problem. No bounded Windows fix is supplied. | A Windows regression isolates the legacy fallback and proves an actionable local error or safe local route without bundling a Web size-policy redesign. |
+| [#354](https://github.com/miuuyy/codex-chatgpt-web/pull/354) | open draft; `466d682f0a054ed2699c65e86465e81815c141ce` | defer | Uncached loopback-health discovery could help Windows monitoring, but the draft has no Windows/package acceptance and changes deleted Japanese/Simplified README surfaces. | A non-draft, Windows-packaged reproduction proves inventory false-green behavior; then port only the smallest supervisor behavior and regression, retaining Windows-only docs. |
+| [#355](https://github.com/miuuyy/codex-chatgpt-web/pull/355) | closed, unmerged draft; `1108fa6298fab765dce6a052b7edc2510c0bad17` | monitor | Upstream declined classification/retry policy because it leaves the viewport geometry/lifecycle cause unaddressed and has no installed Windows acceptance. The no-replay boundary remains valuable. | A Windows trace identifies the failed initial-acquisition or post-submit rebind transition, with an installed-path regression that preserves cancellation and never replays an accepted turn. |
+| [#356](https://github.com/miuuyy/codex-chatgpt-web/issues/356) | open issue; no PR | monitor | Claimed Chinese per-call approval labels were not reproduced; contributor tests invented labels and cannot establish the rendered card. | A supported Windows per-call flow (auto-approval off) supplies privacy-safe observed labels/DOM and a regression that keeps one-time and persistent approval distinct. |
+| [#357](https://github.com/miuuyy/codex-chatgpt-web/issues/357) | open issue; no PR | defer | It is a Windows Go/Think Full-mode report, but declined PR #338 bypassed ordinary Think enforcement and lacks fresh-versus-retained connector proof. | Reproduce fresh and retained Go/Full Think requests with connector retention and ordinary Luna controls; a candidate must retain explicit model/effort enforcement. |
+| [#358](https://github.com/miuuyy/codex-chatgpt-web/issues/358) | open enhancement; no PR | reject | Japanese launcher-diagnostic localization is not a Windows-only public-support commitment; the prior formatter corrupts replacement tokens and changed non-Japanese output. | Owner authorizes Japanese UI support and a bounded implementation preserves dynamic values literally with token, quote, and backslash regressions. |
+| [#359](https://github.com/miuuyy/codex-chatgpt-web/issues/359) | open enhancement; no PR | monitor | This is the retained #355 policy idea, not evidence that the viewport defect is fixed. Initial acquisition and post-submit rebind must stay distinct. | The geometry/lifecycle failure is reproduced on Windows and a focused fix proves cancellation plus no replay after `send_activated` and `accepted`. |
+
+## Previously reviewed issue decisions
 
 | Issue | Decision | Windows applicability and reason | Reconsider when |
 | --- | --- | --- | --- |
-| [#348](https://github.com/miuuyy/codex-chatgpt-web/issues/348) | monitor | Windows 10 Full Harness report: TOML rewrite places the interrupt-hook end marker before its start marker; no PR or verified fix exists. | Upstream provides a regression and safe marker-normalization fix. |
+| [#348](https://github.com/miuuyy/codex-chatgpt-web/issues/348) | monitor | Closed Windows 10 Full Harness report: TOML rewrite places the interrupt-hook end marker before its start marker; no PR or verified fix exists. | Upstream provides a regression and safe marker-normalization fix. |
 | [#346](https://github.com/miuuyy/codex-chatgpt-web/issues/346) | monitor | Windows/Plus/Full report has no verified new fix. | A reproducible fix or validated regression test appears. |
 | [#345](https://github.com/miuuyy/codex-chatgpt-web/issues/345) | defer | Windows/WSL feature requires a security design for path, runtime, and ownership boundaries. | A bounded design and Windows/WSL tests are reviewed. |
 | [#344](https://github.com/miuuyy/codex-chatgpt-web/issues/344) | defer | Windows launcher from WSL needs the same explicit cross-environment security design. | A safe design and integration tests exist. |
