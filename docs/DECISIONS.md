@@ -10,8 +10,8 @@ and auto-update use the pinned, reviewed upstream Windows release `v5.0.4`.
 
 ## 2026-09-07 — Upstream baseline and complete decision register
 
-`main` remains reviewed at `c648c09501bb1b704c7ad5273fb5f5d6b8992dd2`; a read-only GitHub inventory
-now records latest PR #355 (`1108fa6298fab765dce6a052b7edc2510c0bad17`, closed/unmerged draft) and
+`main` remains reviewed at `c648c09501bb1b704c7ad5273fb5f5d6b8992dd2`; that initial read-only GitHub inventory
+recorded latest PR #355 (`1108fa6298fab765dce6a052b7edc2510c0bad17`, closed/unmerged draft) and
 latest non-PR issue #359. The baseline is history, never a merge target. Every listed open item has a
 Windows-applicability decision; implementation detail and links are in [UPSTREAM.md](UPSTREAM.md).
 
@@ -63,3 +63,28 @@ release fix.
 Strict tracking fails on changed or unavailable main/PR/issue/branch axes; update this register before
 updating `tools/upstream_baseline.json`. Dependency checks remain read-only and exact-version
 deferrals must be revisited when newer releases appear.
+
+## 2026-09-07 — Upstream #360–#361 reconciliation
+
+The read-only inventory still reports `main` and its only branch at
+`c648c09501bb1b704c7ad5273fb5f5d6b8992dd2`, latest non-PR issue #359, and latest PR #361 at
+`c09aa18b8a2a84e3fa3d77dcd4b339d3575cbbe6`. No application code was imported.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| PR #360 | open, non-draft, `UNSTABLE`; `a4cd7012150bd76789fc818bd04d55cfa90a2744`; no upstream review/comments | defer external-provider mode | Concrete Windows external-router use, upstream-reviewed stabilization without an uncommitted handoff, and bounded Windows compatibility/security acceptance of fail-closed config, journal, native-turn, launcher/setup, and subagent ownership. |
+| PR #361 | open, non-draft, `UNSTABLE`; `c09aa18b8a2a84e3fa3d77dcd4b339d3575cbbe6` | reject macOS Dock/menu-bar mode | Owner-authorized, separately bounded Windows requirement with Windows-applicable design and regression evidence. |
+
+## 2026-09-08 — Upstream #362 Windows Full-mode adoption
+
+Read-only review of [#362](https://github.com/miuuyy/codex-chatgpt-web/pull/362) at
+`80ee0e3eac62067c14dd719d702ae1d7c55fdbe5` confirmed the Windows v5.0.4 Full-mode compaction
+failure: a rebuilt user preamble can place `<environment_context>` beside recommended-plugin and
+AGENTS.md parts, hiding it from joined-text recognition. The minimal local port reads array parts,
+deduplicates identical continuation claims, rejects conflicting claims, and leaves bare-string
+content non-authority-bearing on primary paths. Continuation-only string claims remain subject to
+native rollout cross-checking. No upstream branch was fetched or merged.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| PR #362 | open, non-draft, `UNSTABLE`; `80ee0e3eac62067c14dd719d702ae1d7c55fdbe5` | adopt minimal per-part continuation environment parsing | PR head/content-part/rollout-authority shape changes, or a Windows Full-mode continuation regression fails. `contextualUserMessage` joined-text classification remains excluded pending a separately bounded vocabulary/ordering review. |

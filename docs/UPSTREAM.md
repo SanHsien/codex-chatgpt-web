@@ -2,8 +2,8 @@
 
 The baseline is reviewed history, not a merge target. A read-only GitHub inventory on 2026-09-07 found
 upstream `miuuyy/codex-chatgpt-web` `main` still at `c648c09501bb1b704c7ad5273fb5f5d6b8992dd2`; the
-latest PR is closed, unmerged draft [#355](https://github.com/miuuyy/codex-chatgpt-web/pull/355) at
-`1108fa6298fab765dce6a052b7edc2510c0bad17`, the latest non-PR issue is [#359](https://github.com/miuuyy/codex-chatgpt-web/issues/359), and the only upstream branch is `main` at that SHA. The fork is
+latest PR is open, non-draft [#362](https://github.com/miuuyy/codex-chatgpt-web/pull/362) at
+`80ee0e3eac62067c14dd719d702ae1d7c55fdbe5`, the latest non-PR issue is [#359](https://github.com/miuuyy/codex-chatgpt-web/issues/359), and the only upstream branch is `main` at that SHA. The fork is
 **Windows-only**: reviews adopt only verified Windows-applicable work.
 
 ## Open pull-request decisions
@@ -15,6 +15,18 @@ latest PR is closed, unmerged draft [#355](https://github.com/miuuyy/codex-chatg
 | [#340](https://github.com/miuuyy/codex-chatgpt-web/pull/340) | `ffef4f335c48b521562d4d21c26bb1c89e12f64e` | adopt | Fixes V1 null-agent-path lineage, linked to Windows issue #314; minimal fail-closed compatibility and tests are ported. | Codex changes V1 rollout metadata. |
 | [#338](https://github.com/miuuyy/codex-chatgpt-web/pull/338) | `37dbecce686bb19fe8871699e205d43ca0dbe5f8` | defer | No committed regression tests or checks prove the Luna Think behavior. | A tested Windows reproduction and checks are supplied. |
 | [#329](https://github.com/miuuyy/codex-chatgpt-web/pull/329) | `c55b5cef7f7a6d1b8c0759d7806a94f06d10ce77` | defer | Localized confirmation handling is potentially Windows-relevant, but the branch has a dirty merge conflict and no checks. | The conflict is resolved and focused tests pass. |
+
+## 2026-09-08 follow-up: #360–#362
+
+The PRs below are open, non-draft, and `UNSTABLE`. None of their branches was merged or fetched; #362's
+minimal fix was independently ported and verified in this fork. Author-reported tests alone do not establish
+this fork's Windows acceptance.
+
+| PR | Exact observed state / head | Decision | Windows applicability and rationale | Re-review trigger |
+| --- | --- | --- | --- | --- |
+| [#360](https://github.com/miuuyy/codex-chatgpt-web/pull/360) | open, non-draft, `UNSTABLE`; `a4cd7012150bd76789fc818bd04d55cfa90a2744`; no upstream review or comments | defer | Its opt-in `external-provider` route mode is explicitly an unsupported local-fork patch. This fork has no concrete external-router requirement; its broad setup, launcher, configuration-journal, native-turn, and subagent ownership changes have no bounded Windows compatibility or security acceptance. | A concrete Windows external-router requirement exists; upstream stabilizes and accepts a reviewed implementation without an uncommitted handoff; and a bounded Windows compatibility/security acceptance proves the ownership transfer fails closed for config, journal, native turns, launcher/setup, and subagents. |
+| [#361](https://github.com/miuuyy/codex-chatgpt-web/pull/361) | open, non-draft, `UNSTABLE`; `c09aa18b8a2a84e3fa3d77dcd4b339d3575cbbe6` | reject | The Dock/menu-bar-only preference and its prerequisites are explicitly macOS-only, including a fix for macOS issue #286; they are outside this Windows-only fork's supported scope. | The owner authorizes a separately bounded Windows product requirement with a Windows-applicable design and regression evidence. |
+| [#362](https://github.com/miuuyy/codex-chatgpt-web/pull/362) | open, non-draft, `UNSTABLE`; `80ee0e3eac62067c14dd719d702ae1d7c55fdbe5` | adopt | Windows v5.0.4 Full-mode compaction can lose its continuation environment when Codex rebuilds one user preamble with sibling parts. The minimal port reads `<environment_context>` per array part, deduplicates identical claims, rejects distinct claims, and keeps bare strings off primary authority paths; continuation-only string claims remain cross-checked with native rollout authority. The three focused regressions pass. | The PR head changes, a Windows Full-mode continuation regression fails, or Codex changes content-part/rollout-authority shape. `contextualUserMessage` joined-text classification is deliberately excluded; it needs a separately bounded vocabulary/ordering review. |
 
 ## 2026-09-07 follow-up: #349–#359 complete register
 

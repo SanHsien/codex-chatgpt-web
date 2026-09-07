@@ -9,11 +9,11 @@
     { "workspace": "root", "package": "@types/turndown", "latest": "5.0.6", "reviewed": "2026-09-06", "reason": "Patch/minor lag remains upstream-managed pending a reviewed upstream change." },
     { "workspace": "root", "package": "typescript", "latest": "7.0.2", "reviewed": "2026-09-06", "reason": "Major compiler upgrade requires review before changing the pinned toolchain." },
     { "workspace": "launcher", "package": "motion", "latest": "13.2.0", "reviewed": "2026-09-06", "reason": "Major UI-runtime upgrade requires packaged desktop verification." },
-    { "workspace": "launcher", "package": "@types/node", "latest": "26.4.1", "reviewed": "2026-09-06", "reason": "Major runtime type upgrade requires review before changing desktop tooling." },
+    { "workspace": "launcher", "package": "@types/node", "latest": "26.5.0", "reviewed": "2026-09-08", "reason": "Electron 41.10.7 bundles Node 24.18.0 while launcher resolves 22.20.1; do not widen this existing mismatch independently to Node 26 types. Reconsider with Electron/runtime type alignment and bounded Windows typecheck/package acceptance." },
     { "workspace": "launcher", "package": "@types/react", "latest": "19.2.18", "reviewed": "2026-09-06", "reason": "Patch/minor lag remains upstream-managed pending a reviewed upstream change." },
     { "workspace": "launcher", "package": "@types/react-dom", "latest": "19.2.7", "reviewed": "2026-09-06", "reason": "Patch/minor lag remains upstream-managed pending a reviewed upstream change." },
     { "workspace": "launcher", "package": "@vitejs/plugin-react", "latest": "6.1.1", "reviewed": "2026-09-06", "reason": "Major build-plugin upgrade requires packaged desktop verification." },
-    { "workspace": "launcher", "package": "electron", "latest": "44.2.0", "reviewed": "2026-09-06", "reason": "Major Electron runtime upgrade requires packaged desktop verification." },
+    { "workspace": "launcher", "package": "electron", "latest": "44.2.0", "reviewed": "2026-09-08", "reason": "Electron 41.x is end-of-support; defer the major upgrade only pending bounded Windows package/runtime validation, not as an indefinitely EOL-safe state." },
     { "workspace": "launcher", "package": "typescript", "latest": "7.0.2", "reviewed": "2026-09-06", "reason": "Major compiler upgrade requires review before changing desktop tooling." },
     { "workspace": "launcher", "package": "vite", "latest": "8.2.2", "reviewed": "2026-09-06", "reason": "Major build-tool upgrade requires packaged desktop verification." }
   ]

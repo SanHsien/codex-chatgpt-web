@@ -3,7 +3,7 @@ import { Database } from "bun:sqlite";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { extractChatGptTurnEnvironment, extractChatGptTurnIdentity } from "../src/adapters/chatgpt-web/environment";
+import { extractChatGptContinuationEnvironmentClaim, extractChatGptTurnEnvironment, extractChatGptTurnIdentity } from "../src/adapters/chatgpt-web/environment";
 import { rememberCompactionContinuation } from "../src/adapters/chatgpt-web/compaction-continuation";
 import { encodeCompactionSummary, SUMMARY_PREFIX } from "../src/responses/compaction";
 import { ChatGptThreadEnvironmentStore } from "../src/adapters/chatgpt-web/thread-environment";
@@ -916,6 +916,70 @@ describe("trusted Codex task environment continuity", () => {
         content: [{ type: "input_text", text: "<environment_context><cwd/></environment_context>" }] },
     );
     expect(() => new ChatGptThreadEnvironmentStore(undefined, Date.now, codexHome).resolve(request)).toThrow("missing cwd");
+  });
+
+  test("continuation accepts a current environment part beside Codex's own preamble parts", () => {
+    const { codexHome, request } = resumedRootFixture();
+    const body = request._rawBody as { input: Array<Record<string, unknown>> };
+    const oldTurnId = "01a06c66-0000-75c6-a0df-318f890ef6de";
+    const source = {
+      type: "message", role: "user", id: "msg_source_instruction",
+      content: [{ type: "input_text", text: "Finish the migration" }],
+      internal_chat_message_metadata_passthrough: { turn_id: oldTurnId },
+    };
+    const current = {
+      type: "message", role: "user", id: "msg_current_environment",
+      content: [
+        { type: "input_text", text: "<recommended_plugins>\nAirtable (airtable@openai-curated-remote)\n</recommended_plugins>" },
+        { type: "input_text", text: "# AGENTS.md instructions\n\n<INSTRUCTIONS>\nKeep answers short.\n</INSTRUCTIONS>" },
+        { type: "input_text", text: environmentXml },
+      ],
+      internal_chat_message_metadata_passthrough: { turn_id: rolloutTurnId },
+    };
+    const summary = "Confirmed multipart checkpoint";
+    body.input.splice(0, body.input.length, {
+      type: "message", role: "user", id: "msg_replayed_history",
+      content: [{ type: "input_text", text: "Earlier request" }],
+      internal_chat_message_metadata_passthrough: { turn_id: oldTurnId },
+    }, {
+      type: "message", role: "developer", id: "msg_current_preamble",
+      content: [{ type: "input_text", text: "<skills_instructions>none</skills_instructions>" }],
+      internal_chat_message_metadata_passthrough: { turn_id: rolloutTurnId },
+    }, current, source, { type: "compaction", encrypted_content: encodeCompactionSummary(summary) });
+    rememberCompactionContinuation({ ...request, _compactionRequest: true }, extractChatGptTurnIdentity(request), [
+      { turnId: oldTurnId, content: source.content },
+    ], summary);
+    const store = new ChatGptThreadEnvironmentStore(undefined, Date.now, codexHome);
+    expect(store.resolve(request).cwd).toBe(root);
+  });
+
+  test("duplicate current claims are one claim and conflicting ones still fail closed", () => {
+    const { request } = resumedRootFixture();
+    const body = request._rawBody as { input: Array<Record<string, unknown>> };
+    const quoted = {
+      type: "message", role: "user", id: "msg_quoted_environment",
+      content: [
+        { type: "input_text", text: "Also check the lockfile" },
+        { type: "input_text", text: environmentXml },
+      ],
+      internal_chat_message_metadata_passthrough: { turn_id: rolloutTurnId },
+    };
+    body.input.splice(0, body.input.length, {
+      type: "message", role: "user", id: "msg_current_environment",
+      content: [{ type: "input_text", text: environmentXml }],
+      internal_chat_message_metadata_passthrough: { turn_id: rolloutTurnId },
+    }, quoted);
+    expect(extractChatGptContinuationEnvironmentClaim(request).cwd).toBe(root);
+    quoted.content[1]!.text = environmentXml.replaceAll(root, resolve(root, "another-workspace"));
+    expect(() => extractChatGptContinuationEnvironmentClaim(request))
+      .toThrow("one current native environment claim");
+  });
+
+  test("a whole-message string envelope is not an authority-bearing shape", () => {
+    const request = currentWire();
+    const body = request._rawBody as { input: Array<Record<string, unknown>> };
+    body.input[0]!.content = environmentXml;
+    expect(() => extractChatGptTurnEnvironment(request)).toThrow("missing cwd");
   });
 
   test("root rollout lookup authenticates the indexed owner and current sandbox", () => {

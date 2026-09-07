@@ -240,6 +240,28 @@ export function isChatGptCompactionContinuation(parsed: CodexParsedRequest): boo
     && isAcceptedCompactionContinuation(parsed, identity, revision);
 }
 
+const ENVIRONMENT_ENVELOPE = /^<environment_context>[\s\S]*<\/environment_context>$/;
+
+function environmentEnvelope(text: unknown): string[] {
+  if (typeof text !== "string") return [];
+  const trimmed = text.trim();
+  return ENVIRONMENT_ENVELOPE.test(trimmed) ? [trimmed] : [];
+}
+
+/**
+ * Return the environment envelopes one message carries, one content part at a time.
+ *
+ * Codex keeps the environment part when it rebuilds a compacted-history preamble, but adds
+ * sibling recommended-plugin and AGENTS.md parts. Joined message text is therefore not the unit
+ * of recognition. Only an actual content array is read: primary authority paths have never
+ * accepted a bare message string as filesystem authority.
+ */
+function environmentEnvelopeParts(item: Record<string, unknown>): string[] {
+  return Array.isArray(item.content)
+    ? item.content.flatMap(part => environmentEnvelope(record(part)?.text))
+    : [];
+}
+
 /** Parse a claim only: the caller must compare it with this turn's native rollout authority. */
 export function extractChatGptContinuationEnvironmentClaim(parsed: CodexParsedRequest): ChatGptTurnEnvironment {
   const turnId = extractChatGptTurnIdentity(parsed).turnId;
@@ -248,11 +270,12 @@ export function extractChatGptContinuationEnvironmentClaim(parsed: CodexParsedRe
     const item = record(value);
     if (item?.type !== "message" || item.role !== "user" || itemTurnId(item) !== turnId
       || typeof item.id !== "string" || !item.id) return [];
-    const text = rawMessageText(item).trim();
-    return /^<environment_context>[\s\S]*<\/environment_context>$/.test(text) ? [text] : [];
+    // This remains a claim only: thread-environment cross-checks it with native rollout authority.
+    return typeof item.content === "string" ? environmentEnvelope(item.content) : environmentEnvelopeParts(item);
   });
-  if (updates.length !== 1) throw new Error("Compaction continuation requires one current native environment claim");
-  return parseChatGptEnvironmentText(parsed, updates[0]!);
+  const distinct = [...new Set(updates)];
+  if (distinct.length !== 1) throw new Error("Compaction continuation requires one current native environment claim");
+  return parseChatGptEnvironmentText(parsed, distinct[0]!);
 }
 
 function environmentBeforeUser(input: unknown[], userIndex: number, expectedTurnId?: string): string | undefined {
@@ -276,14 +299,7 @@ function environmentBeforeUser(input: unknown[], userIndex: number, expectedTurn
   const candidateTurnId = itemTurnId(candidate);
   if (candidateTurnId !== userTurnId) return undefined;
 
-  const content = Array.isArray(candidate.content) ? candidate.content : [];
-  for (const part of content) {
-    const text = record(part)?.text;
-    if (typeof text !== "string") continue;
-    const trimmed = text.trim();
-    if (/^<environment_context>[\s\S]*<\/environment_context>$/.test(trimmed)) return trimmed;
-  }
-  return undefined;
+  return environmentEnvelopeParts(candidate)[0];
 }
 
 function sandboxTypeFromEnvironment(text: string): ChatGptSandboxPolicy["type"] | undefined {
@@ -436,12 +452,7 @@ function canonicalMetadataEnvironmentBeforeUser(
   const candidateTurnId = itemTurnId(candidate);
   if (candidateTurnId !== undefined && candidateTurnId !== metadataTurnId) return undefined;
 
-  const content = Array.isArray(candidate.content) ? candidate.content : [];
-  for (const part of content) {
-    const text = record(part)?.text;
-    if (typeof text !== "string") continue;
-    const trimmed = text.trim();
-    if (!/^<environment_context>[\s\S]*<\/environment_context>$/.test(trimmed)) continue;
+  for (const trimmed of environmentEnvelopeParts(candidate)) {
     // Current Codex stamps server-owned item IDs but not per-item turn IDs on the initial request,
     // and canonical workspaces contains Git enrichment rather than filesystem authority. Bind the
     // structurally adjacent context (allowing only provenance-checked developer messages) to
