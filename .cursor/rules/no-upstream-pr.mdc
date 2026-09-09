@@ -1,0 +1,30 @@
+---
+description: Fork PRs must target SanHsien origin; upstream PRs need explicit contribute-back consent
+alwaysApply: true
+---
+
+# 禁止對上游開 PR
+
+本 repo 追蹤 `miuuyy/codex-chatgpt-web`（`upstream` remote）。日常 PR、push、release
+只能打進 `SanHsien/codex-chatgpt-web`。
+
+**根因是機制不是粗心：** `gh` 在有 `upstream` remote 的 clone 上，預設 repo 會指向上游。
+
+```powershell
+gh repo set-default SanHsien/codex-chatgpt-web    # 每個 clone 先跑一次
+gh repo set-default --view                        # 必須回 SanHsien/codex-chatgpt-web
+gh pr create --repo SanHsien/codex-chatgpt-web --base main --head <分支>
+```
+
+建完核對 URL 必須是 `https://github.com/SanHsien/codex-chatgpt-web/pull/...`。
+
+裸跑 `gh pr create` 會打到上游。2026-08-22 一天內兩個工具各誤開一次
+（`lidge-jun/opencodex#2373`、`hamanpaul/paulsha-cortex#787`），禁止再犯。兩次都是
+「指令成功了」的錯覺——開錯的 owner 就寫在輸出的 URL 裡；批次跑多個 repo 時最容易略過那一眼。
+
+**`upstream` remote 只讀不寫。** `tools/upstream_baseline.json` 是已審閱的歷史紀錄，
+不是合併目標；四個軸（main commit、pull request 與其 head SHA、非 PR issue、branches）
+的推進由 `scripts/check-upstream-baseline.ts` 每週檢查，不要手動改水位來讓它變綠。
+
+**唯一例外：** 使用者在這次對話明確同意回貢上游。fork、建環境、開 PR、比照其他 repo、
+合併回 main 都不是例外。
