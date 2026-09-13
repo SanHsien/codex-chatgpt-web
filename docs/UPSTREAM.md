@@ -1,11 +1,16 @@
 # Upstream tracking
 
-The baseline is reviewed history, not a merge target. A read-only GitHub inventory on 2026-09-12 found
+The baseline is reviewed history, not a merge target. A read-only revalidation on 2026-09-13 found
 upstream `main` and its only branch still at `e85e3693fdb4e3e033348c08df0298c20fcdb612`, the latest
 PR at open [#469](https://github.com/miuuyy/codex-chatgpt-web/pull/469) head
 `445362d3dd3baa445d566e561c9abb30c995453c`, and the latest non-PR issue at
-[#467](https://github.com/miuuyy/codex-chatgpt-web/issues/467). The complete #425–#469 review and
-three independent local ports are recorded below; the older inventories remain immutable history.
+[#467](https://github.com/miuuyy/codex-chatgpt-web/issues/467); no #470-or-later item exists. The
+same read-only tag lookup found annotated `v5.0.5` at
+`0b053b6750b1d4f127619765388eb43c6d212ca2` (tag-object prefix `dd254f2e`) and annotated `v5.0.6`
+at `e85e3693fdb4e3e033348c08df0298c20fcdb612` (tag-object prefix `24250dcf`). No new main, PR, or
+issue code exists beyond the reviewed baseline. This fork adopts `v5.0.6` as its own release identity
+without asserting byte-equivalence to upstream. The complete #425–#469 review and three independent
+local ports are recorded below; the older inventories remain immutable history.
 
 The 2026-09-09 inventory: a read-only GitHub inventory that day found
 upstream `miuuyy/codex-chatgpt-web` `main` advanced to `e85e3693fdb4e3e033348c08df0298c20fcdb612` — three

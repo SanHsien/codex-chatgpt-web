@@ -23,8 +23,7 @@
 > **Maintained fork notice.** This repository is maintained at
 > [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web). It preserves the
 > upstream MIT project and product behavior while providing Windows-only maintenance. **Windows only.**
-> Source and development use this fork; until it publishes its first packaged release, the PowerShell
-> installer and auto-update use the reviewed upstream Windows release **v5.0.4**. See [FORK.md](FORK.md), [development](docs/DEVELOPMENT.md), and the maintained-fork
+> Source, the PowerShell installer, and auto-update use this fork's Windows release **v5.0.6**. See [FORK.md](FORK.md), [development](docs/DEVELOPMENT.md), and the maintained-fork
 > [changelog](CHANGELOG.md). This is unofficial
 > ChatGPT Web automation: account/plan allowances still apply, UI changes can break it, and users
 > must follow OpenAI terms and their workspace policy.
@@ -48,12 +47,6 @@ Codex task ──Responses + SSE──▶ codex-chatgpt-web ──embedded brows
 Codex keeps the native task, context lifecycle, UI, and tool harness. The local Responses bridge
 routes only the selected model task through a task-bound ChatGPT Temporary Chat; in full mode, MCP
 connects ChatGPT back to the tools of that same Codex task until its next compaction boundary.
-
-> [!TIP]
-> I also built **[ChatGPT Persona Voice](https://github.com/miuuyy/ChatGPT-Persona-Voice)**, a local
-> app that changes the ChatGPT/Codex voice in near real time. It never touches your account, browser
-> session, or ChatGPT requests, so using it carries no account-blocking risk. If you like my work,
-> give it a try.
 
 ## Highlights
 
@@ -82,25 +75,17 @@ Install or update the desktop launcher. To update or repair an existing installa
 launcher and run the same command again; it replaces the application and embedded runtime while
 preserving the ChatGPT profile and launcher configuration.
 
-Source development and cloning use this maintained fork. Until this fork publishes a release,
-packaged installer binaries are served from the reviewed upstream release **v5.0.4**.
+Source development, cloning, packaged installers, and updates use this maintained fork's Windows
+release **v5.0.6**.
 
 **Windows PowerShell**
 
 ```powershell
-$previousVersion = $env:CODEX_WEB_GPT_VERSION
-try {
-  $env:CODEX_WEB_GPT_VERSION = "5.0.4"
-  irm https://github.com/miuuyy/codex-chatgpt-web/releases/download/v5.0.4/install-launcher.ps1 | iex
-} finally {
-  if ($null -eq $previousVersion) { Remove-Item Env:CODEX_WEB_GPT_VERSION -ErrorAction SilentlyContinue }
-  else { $env:CODEX_WEB_GPT_VERSION = $previousVersion }
-}
+irm https://github.com/SanHsien/codex-chatgpt-web/releases/download/v5.0.6/install-launcher.ps1 | iex
 ```
 
-The published `v5.0.4` installer otherwise resolves the latest release. The command sets its
-`CODEX_WEB_GPT_VERSION` interface only while it runs and restores the prior environment value, so
-it still installs only the reviewed `5.0.4` release.
+The command downloads only this fork's pinned `v5.0.6` installer, which verifies and installs only
+the matching Windows asset from this fork.
 
 Then complete the three checks in the app:
 
@@ -156,8 +141,8 @@ The launcher's **MCP** page guides the complete setup. For the exact clicks, see
 
 > **Limits**
 >
-> See [Limits](https://github.com/miuuyy/codex-chatgpt-web/discussions/309) for the current
-> ChatGPT message allowances for **GPT-5.6 Sol Pro** and **GPT-6 Astra**. Context limits depend on
+> ChatGPT message allowances for **GPT-5.6 Sol Pro** and **GPT-6 Astra** vary with the account and
+> product. Context limits depend on
 > the account type and selected effort. Plus Medium/High uses a measured 90,000-token window, or
 > up to 270,000 tokens with experimental **3× context** enabled, with native Codex compaction
 > supported throughout.
@@ -241,16 +226,6 @@ reused implicitly. See
 - [Security model](docs/security-model.md)
 - [Troubleshooting](TROUBLESHOOTING.md)
 - [Contributing](CONTRIBUTING.md)
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=miuuyy%2Fcodex-chatgpt-web&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=miuuyy/codex-chatgpt-web&type=date&theme=dark&legend=top-left&sealed_token=hBVvg_eOjfMFDrfyeo5FPQkIwcvBEmXc6F7ZoOKnfFE4KPCs67o34w4XwVuM-bHGnKR-SKCAN_TSTWrzuqSBNU-RjNZCLT4f-xNs9qcDhciQtemxHKuuFj0N5YNqZIihdaQfakrh2ANhOrvP0K2LmLXX2zbsYyVaYZknyTnlYeIS_mOGvMcO32ZmPCHK">
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=miuuyy/codex-chatgpt-web&type=date&legend=top-left&sealed_token=hBVvg_eOjfMFDrfyeo5FPQkIwcvBEmXc6F7ZoOKnfFE4KPCs67o34w4XwVuM-bHGnKR-SKCAN_TSTWrzuqSBNU-RjNZCLT4f-xNs9qcDhciQtemxHKuuFj0N5YNqZIihdaQfakrh2ANhOrvP0K2LmLXX2zbsYyVaYZknyTnlYeIS_mOGvMcO32ZmPCHK">
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=miuuyy/codex-chatgpt-web&type=date&legend=top-left&sealed_token=hBVvg_eOjfMFDrfyeo5FPQkIwcvBEmXc6F7ZoOKnfFE4KPCs67o34w4XwVuM-bHGnKR-SKCAN_TSTWrzuqSBNU-RjNZCLT4f-xNs9qcDhciQtemxHKuuFj0N5YNqZIihdaQfakrh2ANhOrvP0K2LmLXX2zbsYyVaYZknyTnlYeIS_mOGvMcO32ZmPCHK">
-  </picture>
-</a>
 
 ## Disclaimer
 

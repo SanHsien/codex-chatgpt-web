@@ -2,13 +2,13 @@
 
 This maintained fork accepts reports and pull requests at
 [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web). Upstream product
-attribution remains with [miuuyy/codex-chatgpt-web](https://github.com/miuuyy/codex-chatgpt-web);
+attribution remains with miuuyy/codex-chatgpt-web;
 do not report fork-only maintenance issues upstream. Run the canonical gate in
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) and follow [docs/REVIEW.md](docs/REVIEW.md) before a
 fork change. See [FORK.md](FORK.md) for boundaries.
 
-Codex Web GPT was created and is primarily developed and maintained by
-[@miuuyy](https://github.com/miuuyy). Product direction, core architecture, and release decisions
+Codex Web GPT was created and is primarily developed and maintained by @miuuyy. Product direction,
+core architecture, and release decisions
 remain with the creator. Other contributors listed by GitHub have provided focused external fixes
 rather than shared product or architectural ownership.
 

@@ -29,7 +29,7 @@ test("launcher exposes Windows-only NSIS packaging and a checksummed PowerShell 
   assert.equal(manifest.build.nsis.oneClick, false);
   assert.equal(manifest.build.nsis.perMachine, false);
   assert.equal(manifest.build.nsis.allowElevation, false);
-  assert.match(installer, /miuuyy\/codex-chatgpt-web/);
+  assert.match(installer, /SanHsien\/codex-chatgpt-web/);
   assert.match(installer, /checksums\.txt/);
   assert.match(installer, /SHA-?256/i);
   assert.match(installer, /codex-web-gpt-\$Version-win-\$Arch\.exe/);

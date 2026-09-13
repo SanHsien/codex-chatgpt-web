@@ -17,18 +17,18 @@ test("release comparison and Windows assets are strict", () => {
   assert.throws(() => buildJob({ version: "1.2.0", platform: "linux", executablePath: "/tmp/launcher", assetPath: "/tmp/update", tempRoot: "/tmp", logPath: "/tmp/log" }), /not supported/);
 });
 
-test("checksums and release URLs bind the reviewed upstream Windows asset", () => {
+test("checksums and release URLs bind the reviewed fork Windows asset", () => {
   const hash = "a".repeat(64);
-  assert.equal(REVIEWED_RELEASE_VERSION, "5.0.4");
-  assert.deepEqual(reviewedRelease("win32", "x64").assets.map(({ name }) => name), ["codex-web-gpt-5.0.4-win-x64.exe", "checksums.txt"]);
+  assert.equal(REVIEWED_RELEASE_VERSION, "5.0.6");
+  assert.deepEqual(reviewedRelease("win32", "x64").assets.map(({ name }) => name), ["codex-web-gpt-5.0.6-win-x64.exe", "checksums.txt"]);
   assert.equal(expectedChecksum(`${hash}  launcher.exe\n`, "launcher.exe"), hash);
   assert.throws(() => expectedChecksum(`${hash}  other.exe\n`, "launcher.exe"), /no entry/);
   assert.equal(
-    validateReleaseAssetUrl("https://github.com/miuuyy/codex-chatgpt-web/releases/download/v5.0.4/launcher.exe", "5.0.4", "launcher.exe"),
-    "https://github.com/miuuyy/codex-chatgpt-web/releases/download/v5.0.4/launcher.exe",
+    validateReleaseAssetUrl("https://github.com/SanHsien/codex-chatgpt-web/releases/download/v5.0.6/launcher.exe", "5.0.6", "launcher.exe"),
+    "https://github.com/SanHsien/codex-chatgpt-web/releases/download/v5.0.6/launcher.exe",
   );
-  assert.throws(() => validateReleaseAssetUrl("https://github.com/miuuyy/codex-chatgpt-web/releases/download/v5.0.5/launcher.exe", "5.0.5", "launcher.exe"), /unreviewed release version/);
-  assert.throws(() => validateReleaseAssetUrl("https://github.com/example/launcher.exe", "5.0.4", "launcher.exe"), /unexpected release asset URL/);
+  assert.throws(() => validateReleaseAssetUrl("https://github.com/SanHsien/codex-chatgpt-web/releases/download/v5.0.5/launcher.exe", "5.0.5", "launcher.exe"), /unreviewed release version/);
+  assert.throws(() => validateReleaseAssetUrl("https://github.com/example/launcher.exe", "5.0.6", "launcher.exe"), /unexpected release asset URL/);
 });
 
 test("verified Windows update is handed to one detached worker", async () => {
@@ -41,17 +41,17 @@ test("verified Windows update is handed to one detached worker", async () => {
       currentVersion: "5.0.3", platform: "win32", arch: "x64", packaged: true,
       executablePath: path.join(root, "Codex Web GPT.exe"), runtimeExecutable: process.execPath, logsDirectory: path.join(root, "logs"),
       dependencies: {
-        fetchRelease: async () => ({ tag_name: "v5.0.4", assets: [
-          { name: "codex-web-gpt-5.0.4-win-x64.exe", browser_download_url: "https://github.com/miuuyy/codex-chatgpt-web/releases/download/v5.0.4/codex-web-gpt-5.0.4-win-x64.exe" },
-          { name: "checksums.txt", browser_download_url: "https://github.com/miuuyy/codex-chatgpt-web/releases/download/v5.0.4/checksums.txt" },
+        fetchRelease: async () => ({ tag_name: "v5.0.6", assets: [
+          { name: "codex-web-gpt-5.0.6-win-x64.exe", browser_download_url: "https://github.com/SanHsien/codex-chatgpt-web/releases/download/v5.0.6/codex-web-gpt-5.0.6-win-x64.exe" },
+          { name: "checksums.txt", browser_download_url: "https://github.com/SanHsien/codex-chatgpt-web/releases/download/v5.0.6/checksums.txt" },
         ] }),
-        downloadText: async () => `${hash}  codex-web-gpt-5.0.4-win-x64.exe\n`,
+        downloadText: async () => `${hash}  codex-web-gpt-5.0.6-win-x64.exe\n`,
         downloadFile: async (_url, destination) => fs.writeFileSync(destination, assetBody),
         sha256: (filePath) => crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex"),
         spawnWorker: (runtime, worker, job) => { spawned = { runtime, worker, job, data: JSON.parse(fs.readFileSync(job, "utf8")) }; return { pid: 123, unref() {}, kill() {} }; },
       },
     });
-    assert.deepEqual(await controller.checkOnce(), { status: "available", version: "5.0.4" });
+    assert.deepEqual(await controller.checkOnce(), { status: "available", version: "5.0.6" });
     const launch = await controller.beginInstall();
     assert.equal(spawned.runtime, process.execPath);
     assert.equal(spawned.data.platform, "win32");

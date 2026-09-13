@@ -27,10 +27,10 @@ function Test-IsFullyQualifiedWindowsPath {
   return $Path -match '^(?:[A-Za-z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+(?:[\\/]|$))'
 }
 
-# This fork has not published a package yet. Keep the temporary upstream source and release
-# immutable until maintainers explicitly review and change both values.
-$Repository = "miuuyy/codex-chatgpt-web"
-$Version = "5.0.4"
+# The fork release identity is reviewed before this pin changes. Assets must always originate
+# from the maintained fork, never from the upstream repository.
+$Repository = "SanHsien/codex-chatgpt-web"
+$Version = "5.0.6"
 
 if (-not [Environment]::Is64BitOperatingSystem) {
   throw "The packaged Windows launcher requires 64-bit Windows"

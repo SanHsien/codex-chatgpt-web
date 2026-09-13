@@ -5,7 +5,7 @@ editing Codex configuration, or opening a new issue.
 
 ## The first five minutes
 
-1. Install the [reviewed upstream Windows release v5.0.4](https://github.com/miuuyy/codex-chatgpt-web/releases/tag/v5.0.4). Quit
+1. Install this fork's [Windows release v5.0.6](https://github.com/SanHsien/codex-chatgpt-web/releases/tag/v5.0.6). Quit
    **Codex Web GPT** before running the installer again; updating preserves its private ChatGPT
    profile and launcher configuration.
 2. In the launcher, confirm that ChatGPT sign-in, the browser smoke test, and **Install models** (or
@@ -51,8 +51,8 @@ Choose one route owner:
   route that existed before Codex Web GPT was installed.
 
 Do not hand-edit the launcher's route journal. It exists so setup and removal can fail closed instead
-of silently destroying another provider's configuration. First-class external-router composition is
-tracked in [#205](https://github.com/miuuyy/codex-chatgpt-web/issues/205), but is not supported today.
+of silently destroying another provider's configuration. This fork does not currently support
+first-class external-router composition.
 
 ## ChatGPT sign-in does not complete
 

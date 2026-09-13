@@ -6,8 +6,8 @@ const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { pipeline } = require("node:stream/promises");
 
-const REPOSITORY = "miuuyy/codex-chatgpt-web";
-const REVIEWED_RELEASE_VERSION = "5.0.4";
+const REPOSITORY = "SanHsien/codex-chatgpt-web";
+const REVIEWED_RELEASE_VERSION = "5.0.6";
 const REVIEWED_RELEASE_BASE_URL = `https://github.com/${REPOSITORY}/releases/download/v${REVIEWED_RELEASE_VERSION}`;
 const USER_AGENT = "codex-web-gpt-launcher-updater";
 const MAX_REDIRECTS = 5;

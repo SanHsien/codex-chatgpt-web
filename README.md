@@ -22,8 +22,8 @@
 
 > **維護 fork 說明。** 此倉庫由
 > [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web) 維護。在保留上游
-> MIT 專案及產品行為的同時，提供 Windows-only 維護。**僅支援 Windows。** 原始碼與開發使用此 fork；
-> 在 fork 首次發布套裝版本前，PowerShell 安裝器與自動更新暫時使用已審閱的上游 Windows release **v5.0.4**。請參閱 [FORK.md](FORK.md)
+> MIT 專案及產品行為的同時，提供 Windows-only 維護。**僅支援 Windows。** 原始碼、PowerShell 安裝器與
+> 自動更新都使用此 fork 的 Windows release **v5.0.6**。請參閱 [FORK.md](FORK.md)
 > 和[開發文件](docs/DEVELOPMENT.md)、維護 fork 的[更新記錄](CHANGELOG.md)。這是非官方 ChatGPT Web 自動化：可用額度仍取決於賬戶和
 > 方案，UI 變化可能導致其失效，使用者必須遵守 OpenAI 條款及其工作區政策。
 
@@ -45,11 +45,6 @@ Codex task ──Responses + SSE──▶ codex-chatgpt-web ──embedded brows
 Codex 會保留原生任務、上下文生命週期、介面和工具 harness。本地 Responses 橋接程式只會將
 所選模型的任務轉發到與該任務繫結的 ChatGPT 臨時聊天；在完整模式下，MCP 會把 ChatGPT 連線回
 同一個 Codex 任務的工具，直到下一次上下文壓縮邊界。
-
-> [!TIP]
-> 我還開發了 **[ChatGPT Persona Voice](https://github.com/miuuyy/ChatGPT-Persona-Voice)**：一款
-> 能夠近實時改變 ChatGPT/Codex 聲音的本地應用。它不會接觸你的賬戶、瀏覽器會話或 ChatGPT
-> 請求，因此不會帶來賬戶封禁風險。如果你喜歡我的作品，歡迎試用。
 
 ## 亮點
 
@@ -74,23 +69,16 @@ Codex 會保留原生任務、上下文生命週期、介面和工具 harness。
 安裝或更新桌面啟動器。若要更新或修復現有安裝，請先退出啟動器，然後再次執行同一條命令；它會
 替換應用程式和內建執行時，同時保留 ChatGPT 配置檔案和啟動器配置。
 
-原始碼開發和克隆應使用此維護 fork。在該 fork 釋出版本之前，打包安裝程式來自已審閱的上游版本 **v5.0.4**。
+原始碼開發、克隆、打包安裝程式與更新都使用此維護 fork 的 Windows release **v5.0.6**。
 
 **Windows PowerShell**
 
 ```powershell
-$previousVersion = $env:CODEX_WEB_GPT_VERSION
-try {
-  $env:CODEX_WEB_GPT_VERSION = "5.0.4"
-  irm https://github.com/miuuyy/codex-chatgpt-web/releases/download/v5.0.4/install-launcher.ps1 | iex
-} finally {
-  if ($null -eq $previousVersion) { Remove-Item Env:CODEX_WEB_GPT_VERSION -ErrorAction SilentlyContinue }
-  else { $env:CODEX_WEB_GPT_VERSION = $previousVersion }
-}
+irm https://github.com/SanHsien/codex-chatgpt-web/releases/download/v5.0.6/install-launcher.ps1 | iex
 ```
 
-已發佈的 `v5.0.4` 安裝器預設會查詢最新版本；上列命令會只在執行期間明確設定其
-`CODEX_WEB_GPT_VERSION`，完成後還原原本的環境變數，因此仍只安裝已審閱的 `5.0.4`。
+上列命令只下載此 fork 已釘選的 `v5.0.6` 安裝器；它也只會驗證及安裝此 fork 的同版 Windows
+資產。
 
 然後在應用中完成三項檢查：
 
@@ -141,8 +129,7 @@ Zero Risk 會保留本機 Responses 橋接程式和完整 Codex harness，但絕
 
 > **限制**
 >
-> 有關 **GPT-5.6 Sol Pro** 和 **GPT-6 Astra** 當前的 ChatGPT 訊息額度，請參閱
-> [Limits](https://github.com/miuuyy/codex-chatgpt-web/discussions/309)。Token 上下文上限取決於
+> **GPT-5.6 Sol Pro** 和 **GPT-6 Astra** 的 ChatGPT 訊息額度會隨賬戶和產品調整。Token 上下文上限取決於
 > 賬戶型別和所選 effort。Plus 的 Medium/High 使用實測的 90,000-token 視窗；啟用實驗性的
 > **3× context** 後最高為 270,000 tokens，並且全程支援原生 Codex compaction。
 
@@ -222,16 +209,6 @@ DEV tunnel 就緒，具名聊天按需連線 broker。正式憑據和 `Codex Nat
 - [安全模型](docs/security-model.md)
 - [故障排除](TROUBLESHOOTING.md)
 - [貢獻指南](CONTRIBUTING.md)
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=miuuyy%2Fcodex-chatgpt-web&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=miuuyy/codex-chatgpt-web&type=date&theme=dark&legend=top-left&sealed_token=hBVvg_eOjfMFDrfyeo5FPQkIwcvBEmXc6F7ZoOKnfFE4KPCs67o34w4XwVuM-bHGnKR-SKCAN_TSTWrzuqSBNU-RjNZCLT4f-xNs9qcDhciQtemxHKuuFj0N5YNqZIihdaQfakrh2ANhOrvP0K2LmLXX2zbsYyVaYZknyTnlYeIS_mOGvMcO32ZmPCHK">
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=miuuyy/codex-chatgpt-web&type=date&legend=top-left&sealed_token=hBVvg_eOjfMFDrfyeo5FPQkIwcvBEmXc6F7ZoOKnfFE4KPCs67o34w4XwVuM-bHGnKR-SKCAN_TSTWrzuqSBNU-RjNZCLT4f-xNs9qcDhciQtemxHKuuFj0N5YNqZIihdaQfakrh2ANhOrvP0K2LmLXX2zbsYyVaYZknyTnlYeIS_mOGvMcO32ZmPCHK">
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=miuuyy/codex-chatgpt-web&type=date&legend=top-left&sealed_token=hBVvg_eOjfMFDrfyeo5FPQkIwcvBEmXc6F7ZoOKnfFE4KPCs67o34w4XwVuM-bHGnKR-SKCAN_TSTWrzuqSBNU-RjNZCLT4f-xNs9qcDhciQtemxHKuuFj0N5YNqZIihdaQfakrh2ANhOrvP0K2LmLXX2zbsYyVaYZknyTnlYeIS_mOGvMcO32ZmPCHK">
-  </picture>
-</a>
 
 ## 免責宣告
 

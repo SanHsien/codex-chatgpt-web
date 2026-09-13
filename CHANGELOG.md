@@ -1,7 +1,13 @@
 # Changelog
 
-This file records maintained-fork work, not upstream product releases. See the
-[upstream releases](https://github.com/miuuyy/codex-chatgpt-web/releases) for product history.
+This file records maintained-fork work and release identity. See this fork's
+[releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
+
+## 2026-09-13
+
+- Adopted the reviewed upstream `v5.0.6` release identity for this fork's Windows package,
+  installer, and updater. Fork assets are released and supported only from
+  `SanHsien/codex-chatgpt-web`; this does not claim byte-equivalence to upstream.
 
 ## 2026-09-06
 

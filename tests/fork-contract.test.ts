@@ -14,19 +14,27 @@ test("maintained-fork manifest documents Windows-only entrypoints and boundaries
   expect(read("README.en.md")).toContain("Maintained fork notice");
   expect(read("README.md")).toContain("僅支援 Windows");
   expect(read("README.en.md")).toContain("Windows only");
-  const reviewedInstaller = "https://github.com/miuuyy/codex-chatgpt-web/releases/download/v5.0.4/install-launcher.ps1";
+  const reviewedInstaller = "https://github.com/SanHsien/codex-chatgpt-web/releases/download/v5.0.6/install-launcher.ps1";
   expect(read("README.md")).toContain(reviewedInstaller);
   expect(read("README.en.md")).toContain(reviewedInstaller);
   expect(read("README.md")).toContain("git clone https://github.com/SanHsien/codex-chatgpt-web.git");
-  expect(read("README.md")).toContain("已審閱的上游 Windows release **v5.0.4**");
-  expect(read("README.en.md")).toContain("reviewed upstream Windows release **v5.0.4**");
+  expect(read("README.md")).toContain("此 fork 的 Windows release **v5.0.6**");
+  expect(read("README.en.md")).toContain("this fork's Windows release **v5.0.6**");
+  for (const path of [
+    "README.md", "README.en.md", "FORK.md", "CONTRIBUTING.md", "NOTICE.md", "CHANGELOG.md",
+    "TROUBLESHOOTING.md", "scripts/install-launcher.ps1", "launcher/electron/update.cjs",
+  ]) {
+    const content = read(path);
+    expect(content).not.toContain("https://github.com/miuuyy");
+    expect(content).not.toMatch(/ChatGPT Persona Voice|Star History|star-history/i);
+  }
   expect(read("README.md")).toContain("Zero Risk 會保留本機 Responses 橋接程式");
   expect(read("README.md")).toContain("`Codex Zero Risk`");
   for (const path of ["README.md", "README.en.md", "TROUBLESHOOTING.md", "scripts/install-launcher.ps1", "launcher/electron/update.cjs"]) expect(read(path)).not.toContain("releases/latest");
-  expect(read("scripts/install-launcher.ps1")).toContain('$Version = "5.0.4"');
-  expect(read("launcher/electron/update.cjs")).toContain('const REVIEWED_RELEASE_VERSION = "5.0.4"');
+  expect(read("scripts/install-launcher.ps1")).toContain('$Version = "5.0.6"');
+  expect(read("launcher/electron/update.cjs")).toContain('const REVIEWED_RELEASE_VERSION = "5.0.6"');
   expect(read("launcher/electron/main.cjs")).toContain('const GITHUB_URL = "https://github.com/SanHsien/codex-chatgpt-web"');
-  expect(read("launcher/electron/update.cjs")).toContain('const REPOSITORY = "miuuyy/codex-chatgpt-web"');
+  expect(read("launcher/electron/update.cjs")).toContain('const REPOSITORY = "SanHsien/codex-chatgpt-web"');
   expect(read("docs/UPSTREAM.md")).toContain("80ee0e3eac62067c14dd719d702ae1d7c55fdbe5");
   expect(read("docs/UPSTREAM.md")).toContain("a4cd7012150bd76789fc818bd04d55cfa90a2744");
   expect(read("docs/UPSTREAM.md")).toContain("f9619efd69bf397fec19edcdec53156762a88c92");

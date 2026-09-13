@@ -213,3 +213,18 @@ reversible journal ownership, cache invalidation, catalog provenance, and curren
   compatible versions; keep zod 4.4.3 deferred at reviewed latest 4.6.4 because the current MCP SDK
   schema types fail against zod 4.6.4. Keep Vite 6.4.3 deferred at reviewed latest 8.3.0 pending a
   packaged Windows major-upgrade acceptance. Strict freshness and both audits must remain green.
+
+## 2026-09-13 — Fork `v5.0.6` release identity revalidation
+
+Read-only revalidation confirmed that upstream `main` remains
+`e85e3693fdb4e3e033348c08df0298c20fcdb612`, open PR #469 remains at
+`445362d3dd3baa445d566e561c9abb30c995453c`, the latest non-PR issue remains #467, and no #470-or-
+later item exists. Annotated tags remain `v5.0.5` at
+`0b053b6750b1d4f127619765388eb43c6d212ca2` (tag-object prefix `dd254f2e`) and `v5.0.6` at
+`e85e3693fdb4e3e033348c08df0298c20fcdb612` (tag-object prefix `24250dcf`). No new main, PR, or
+issue code exists beyond the reviewed baseline.
+
+Decision: use `v5.0.6` as the maintained fork's Windows release identity. Root and launcher
+metadata, installer, updater, user-facing download links, and contracts point only to
+`SanHsien/codex-chatgpt-web`. This is a release-identity and routing decision, not an upstream merge
+or a claim that the fork's source or published artifacts are byte-equivalent to upstream.
