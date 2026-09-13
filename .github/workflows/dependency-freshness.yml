@@ -1,0 +1,60 @@
+name: Dependency freshness
+
+on:
+  schedule:
+    - cron: "11 3 1 * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "package.json"
+      - "bun.lock"
+      - "launcher/package.json"
+      - "launcher/bun.lock"
+      - "scripts/check-dependency-freshness.ts"
+      - ".github/dependency-deferrals.json"
+      - "tests/dependency-freshness.test.ts"
+      - ".github/workflows/dependency-freshness.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-freshness-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: launcher
+      - run: bun test tests/dependency-freshness.test.ts
+      - name: Check read-only dependency freshness
+        id: checker
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .maintenance-reports | Out-Null
+          bun run scripts/check-dependency-freshness.ts --strict --github-output --output .maintenance-reports/dependency-freshness.md
+      - name: Publish dependency report
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path .maintenance-reports/dependency-freshness.md) {
+            Get-Content .maintenance-reports/dependency-freshness.md | Add-Content $env:GITHUB_STEP_SUMMARY
+          } else {
+            Add-Content $env:GITHUB_STEP_SUMMARY "# Dependency freshness"
+            Add-Content $env:GITHUB_STEP_SUMMARY "Report unavailable: checker did not produce a report."
+          }
+      - name: Enforce dependency result
+        if: always()
+        shell: pwsh
+        run: |
+          if ("${{ steps.checker.outcome }}" -ne "success") { throw "Dependency checker failed" }
+          if ("${{ steps.checker.outputs.dependency_status }}" -ne "current") { throw "Dependency status is not current" }

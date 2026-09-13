@@ -1,0 +1,177 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: launcher
+      - name: Prepare AVX2-independent Windows runtime
+        shell: pwsh
+        run: ./scripts/prepare-windows-baseline-bun.ps1 -Version 1.4.0 -GitHubEnv $env:GITHUB_ENV
+      - run: bun run verify
+      - run: bun run app:package
+      - run: bun run app:smoke
+      - name: Archive Windows runtime
+        shell: pwsh
+        run: Compress-Archive -Path launcher/build/runtime/* -DestinationPath codex-chatgpt-web-windows-amd64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: |
+            codex-chatgpt-web-windows-amd64.zip
+            launcher/artifacts/*-win-x64.exe
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: launcher
+      - run: bun run licenses
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-windows
+          path: release-staging
+      - name: Verify release tag and add Windows-only assets
+        shell: pwsh
+        run: |
+          $expected = "v$((Get-Content package.json -Raw | ConvertFrom-Json).version)"
+          if ($env:GITHUB_REF_NAME -ne $expected) { throw "Release tag $env:GITHUB_REF_NAME does not match $expected" }
+          $version = $expected.TrimStart('v')
+          $stagingDirectory = Join-Path $PWD 'release-staging'
+          $releaseAssetsDirectory = Join-Path $PWD 'release-assets'
+          if (-not (Test-Path -LiteralPath $stagingDirectory -PathType Container)) { throw "Downloaded release artifact staging directory is missing" }
+          if (Test-Path -LiteralPath $releaseAssetsDirectory) { throw "Flat release asset directory must not exist before staging" }
+          New-Item -ItemType Directory -Path $releaseAssetsDirectory | Out-Null
+
+          $expectedProducedAssetNames = @(
+            'codex-chatgpt-web-windows-amd64.zip',
+            "codex-web-gpt-$version-win-x64.exe"
+          )
+          $producedFiles = @(Get-ChildItem -LiteralPath $stagingDirectory -Recurse -File | Sort-Object FullName)
+          $unexpectedProducedFiles = @($producedFiles | Where-Object { $_.Name -notin $expectedProducedAssetNames })
+          if ($unexpectedProducedFiles.Count -ne 0) {
+            throw "Downloaded release artifact contains unexpected file(s): $($unexpectedProducedFiles.Name -join ', ')"
+          }
+          if ($producedFiles.Count -ne $expectedProducedAssetNames.Count) {
+            throw "Downloaded release artifact must contain exactly $($expectedProducedAssetNames.Count) produced Windows files; found $($producedFiles.Count)"
+          }
+          foreach ($assetName in $expectedProducedAssetNames) {
+            $matches = @($producedFiles | Where-Object Name -eq $assetName)
+            if ($matches.Count -ne 1) { throw "Downloaded release artifact must contain exactly one $assetName; found $($matches.Count)" }
+            Copy-Item -LiteralPath $matches[0].FullName -Destination (Join-Path $releaseAssetsDirectory $assetName)
+          }
+
+          Copy-Item LICENSE (Join-Path $releaseAssetsDirectory 'LICENSE')
+          Copy-Item dist/THIRD_PARTY_NOTICES.txt (Join-Path $releaseAssetsDirectory 'THIRD_PARTY_NOTICES.txt')
+          Copy-Item scripts/install-launcher.ps1 (Join-Path $releaseAssetsDirectory 'install-launcher.ps1')
+          $expectedPayloadAssetNames = @(
+            'codex-chatgpt-web-windows-amd64.zip',
+            "codex-web-gpt-$version-win-x64.exe",
+            'install-launcher.ps1',
+            'LICENSE',
+            'THIRD_PARTY_NOTICES.txt'
+          ) | Sort-Object
+          $payloadAssets = @(Get-ChildItem -LiteralPath $releaseAssetsDirectory -File | Sort-Object Name)
+          $payloadAssetNames = @($payloadAssets | ForEach-Object Name)
+          if ($payloadAssetNames.Count -ne $expectedPayloadAssetNames.Count -or [string]::Join("`n", $payloadAssetNames) -ne [string]::Join("`n", $expectedPayloadAssetNames)) {
+            throw "Flat release asset directory must contain exactly the expected Windows payload assets"
+          }
+          $checksumLines = @($payloadAssets | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          })
+          $checksumsPath = Join-Path $releaseAssetsDirectory 'checksums.txt'
+          [System.IO.File]::WriteAllLines($checksumsPath, [string[]]$checksumLines, (New-Object System.Text.UTF8Encoding($false)))
+          $manifest = Get-Content -LiteralPath $checksumsPath
+          if ($manifest.Count -ne $payloadAssets.Count) { throw "checksums.txt must contain one line per payload asset" }
+          foreach ($asset in $payloadAssets) {
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $asset.FullName).Hash.ToLowerInvariant()
+            if (@($manifest | Where-Object { $_ -eq "$hash  $($asset.Name)" }).Count -ne 1) {
+              throw "checksums.txt does not cover $($asset.Name) exactly once"
+            }
+          }
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          function Invoke-GhRelease {
+            param([Parameter(Mandatory = $true)][string[]]$Arguments)
+            & gh @Arguments
+            if ($LASTEXITCODE -ne 0) {
+              throw "GitHub release command failed with exit code $($LASTEXITCODE): gh $($Arguments -join ' ')"
+            }
+          }
+
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          $releaseAssetsDirectory = Join-Path $PWD 'release-assets'
+          $finalExpectedAssetNames = @(
+            'codex-chatgpt-web-windows-amd64.zip',
+            "codex-web-gpt-$version-win-x64.exe",
+            'install-launcher.ps1',
+            'LICENSE',
+            'THIRD_PARTY_NOTICES.txt',
+            'checksums.txt'
+          ) | Sort-Object
+          $expectedAssets = @(Get-ChildItem -LiteralPath $releaseAssetsDirectory -File | Sort-Object Name)
+          $stagedAssetNames = @($expectedAssets | ForEach-Object Name)
+          if ($stagedAssetNames.Count -ne $finalExpectedAssetNames.Count -or [string]::Join("`n", $stagedAssetNames) -ne [string]::Join("`n", $finalExpectedAssetNames)) {
+            throw "Flat release asset directory must contain exactly the final published asset set"
+          }
+          $files = @($expectedAssets | ForEach-Object { $_.FullName })
+          $expectedPrerelease = $env:GITHUB_REF_NAME -like '*-*'
+          if ($expectedPrerelease) { $flags = @('--prerelease', '--latest=false') } else { $flags = @('--latest') }
+          $probe = @(& gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY 2>&1)
+          $probeExitCode = $LASTEXITCODE
+          if ($probeExitCode -eq 0) {
+            Invoke-GhRelease -Arguments (@("release", "upload", $env:GITHUB_REF_NAME) + $files + @("--repo", $env:GITHUB_REPOSITORY, "--clobber"))
+            Invoke-GhRelease -Arguments (@("release", "edit", $env:GITHUB_REF_NAME, "--repo", $env:GITHUB_REPOSITORY, "--draft=false") + $flags)
+          } elseif (($probe -join "`n") -match '(?i)(release not found|HTTP 404)') {
+            Invoke-GhRelease -Arguments (@("release", "create", $env:GITHUB_REF_NAME) + $files + @("--repo", $env:GITHUB_REPOSITORY, "--title", $env:GITHUB_REF_NAME) + $flags + @("--generate-notes"))
+          } else {
+            throw "Could not determine whether release $env:GITHUB_REF_NAME already exists (gh exit code $probeExitCode): $($probe -join ' ')"
+          }
+          $publishedRelease = Invoke-GhRelease -Arguments @("release", "view", $env:GITHUB_REF_NAME, "--repo", $env:GITHUB_REPOSITORY, "--json", "assets,isDraft,isPrerelease,tagName") | ConvertFrom-Json
+          if ($publishedRelease.tagName -ne $env:GITHUB_REF_NAME) { throw "Published release tag does not match this workflow event" }
+          if ($publishedRelease.isDraft -ne $false) { throw "Published release must not remain a draft" }
+          if ([bool]$publishedRelease.isPrerelease -ne [bool]$expectedPrerelease) { throw "Published prerelease state does not match tag semantics" }
+          if (-not $expectedPrerelease) {
+            $latestRelease = Invoke-GhRelease -Arguments @("api", "repos/$env:GITHUB_REPOSITORY/releases/latest") | ConvertFrom-Json
+            if ($latestRelease.tag_name -ne $env:GITHUB_REF_NAME) { throw "Published stable release is not GitHub's latest release" }
+          }
+          $published = @($publishedRelease.assets)
+          $expectedAssets = @(Get-ChildItem -LiteralPath $releaseAssetsDirectory -File)
+          $expectedAssetNames = @($finalExpectedAssetNames)
+          $publishedAssetNames = @($published | ForEach-Object { [string]$_.name } | Sort-Object -Unique)
+          if ($expectedAssetNames.Count -ne $expectedAssets.Count -or $publishedAssetNames.Count -ne $published.Count -or [string]::Join("`n", $expectedAssetNames) -ne [string]::Join("`n", $publishedAssetNames)) {
+            throw "Published release asset names must exactly match this run's expected Windows asset set"
+          }
+          $payloadAssets = @(Get-ChildItem -LiteralPath $releaseAssetsDirectory -File | Where-Object Name -ne 'checksums.txt')
+          foreach ($asset in $payloadAssets) {
+            $expected = "sha256:$((Get-FileHash -Algorithm SHA256 -LiteralPath $asset.FullName).Hash.ToLowerInvariant())"
+            $remote = @($published | Where-Object Name -eq $asset.Name)
+            if ($remote.Count -ne 1 -or $remote[0].digest -ne $expected) { throw "Published asset checksum mismatch: $($asset.Name)" }
+          }
+          $manifest = @($published | Where-Object Name -eq 'checksums.txt')
+          $manifestExpected = "sha256:$((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $releaseAssetsDirectory 'checksums.txt')).Hash.ToLowerInvariant())"
+          if ($manifest.Count -ne 1 -or $manifest[0].digest -ne $manifestExpected) { throw 'Published checksums.txt digest mismatch' }

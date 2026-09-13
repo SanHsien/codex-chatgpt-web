@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate launcher installer with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          if ($PSVersionTable.PSVersion.Major -ne 5) { throw "Expected Windows PowerShell 5.1, got $($PSVersionTable.PSVersion)" }
+          $source = Get-Content scripts/install-launcher.ps1 -Raw
+          [void][scriptblock]::Create($source)
+          if ($source.Contains("IsPathFullyQualified")) { throw "The Windows PowerShell 5.1 installer cannot use the .NET Core-only IsPathFullyQualified API" }
+          if (-not [Environment]::Is64BitOperatingSystem) { throw "The Windows CI runner must be 64-bit" }
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: launcher
+      - name: Prepare AVX2-independent Windows runtime
+        shell: pwsh
+        run: ./scripts/prepare-windows-baseline-bun.ps1 -Version 1.4.0 -GitHubEnv $env:GITHUB_ENV
+      - run: bun run verify
+      - run: bun run app:package
+      - run: bun run app:smoke
+
+  actionlint:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.x"
+          cache: false
+      - name: Lint GitHub Actions
+        shell: pwsh
+        run: |
+          $workflowFiles = Get-ChildItem .github/workflows -Filter '*.yml' | ForEach-Object FullName
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 @workflowFiles

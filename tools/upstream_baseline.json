@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 3,
+  "upstream": {
+    "repository": "miuuyy/codex-chatgpt-web",
+    "remote": "upstream",
+    "branch": "main"
+  },
+  "reviewed": {
+    "mainCommit": "e85e3693fdb4e3e033348c08df0298c20fcdb612",
+    "latestPullRequest": 470,
+    "latestPullRequestHead": "79be7ff23b16ba49cf680ebcba3b3cc6c395bbcf",
+    "latestNonPullRequestIssue": 467,
+    "branches": [
+      { "name": "main", "commit": "e85e3693fdb4e3e033348c08df0298c20fcdb612" }
+    ]
+  },
+  "reviewedAt": "2026-09-13",
+  "status": "reviewed-not-merged"
+}

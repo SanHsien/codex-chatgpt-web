@@ -1,0 +1,55 @@
+name: Upstream check
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/check-upstream-baseline.ts"
+      - "tools/upstream_baseline.json"
+      - "tests/upstream-baseline.test.ts"
+      - ".github/workflows/upstream-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-check-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun test tests/upstream-baseline.test.ts
+      - name: Check read-only upstream inventory
+        id: checker
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force .maintenance-reports | Out-Null
+          bun run scripts/check-upstream-baseline.ts --strict --github-output --output .maintenance-reports/upstream.md
+      - name: Publish upstream report
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path .maintenance-reports/upstream.md) {
+            Get-Content .maintenance-reports/upstream.md | Add-Content $env:GITHUB_STEP_SUMMARY
+          } else {
+            Add-Content $env:GITHUB_STEP_SUMMARY "# Upstream check"
+            Add-Content $env:GITHUB_STEP_SUMMARY "Report unavailable: checker did not produce a report."
+          }
+      - name: Enforce upstream result
+        if: always()
+        shell: pwsh
+        run: |
+          if ("${{ steps.checker.outcome }}" -ne "success") { throw "Upstream checker failed" }
+          if ("${{ steps.checker.outputs.upstream_status }}" -ne "current") { throw "Upstream status is not current" }
