@@ -16,9 +16,12 @@ function personalizedTemporaryChatRole(
   _role: string,
   options: { name: string | RegExp },
 ) {
+  const matchesPersonalized = typeof options.name === "string"
+    ? options.name === "Personalized"
+    : options.name.test("Personalized");
   const locator = {
     filter: (_filter: { visible: boolean }) => ({
-      count: async () => options.name === "Personalized" ? 1 : 0,
+      count: async () => matchesPersonalized ? 1 : 0,
     }),
   };
   return locator;
@@ -247,8 +250,9 @@ test("a mutating stage timeout preserves a failed cleanup integrity error", asyn
     },
   };
   const page = {
-    getByRole: (_role: string, options: { name: string }) => (
-      options.name === "Personalized" ? personalized : unpersonalized
+    getByRole: (_role: string, options: { name: string | RegExp }) => (
+      (typeof options.name === "string" ? options.name === "Personalized" : options.name.test("Personalized"))
+        ? personalized : unpersonalized
     ),
     locator: (selector: string) => selector === "body"
       ? { press: async () => { throw new Error("menu cleanup failed"); } }
@@ -1961,7 +1965,7 @@ test("an abort while inserting a connector prompt clears the selected pill and p
   expect(connectorSelected).toBeFalse();
 });
 
-test("retained tool turns insert into the connector-bound composer without selecting it again", async () => {
+test("retained tool turns re-prove their connector-bound composer before inserting", async () => {
   const attachPrompt = (ChatGptBrowserWorker.prototype as unknown as {
     attachPrompt(
       page: unknown,
@@ -1982,11 +1986,52 @@ test("retained tool turns insert into the connector-bound composer without selec
   };
   await attachPrompt.call({
     activeComposer: async () => composer,
+    connectorIsSelected: async () => true,
     selectConnector: async () => { throw new Error("retained connector must not be selected again"); },
     insertPromptText: async (_page: unknown, text: string) => { expect(text).toBe("retained context"); calls.push("insert"); },
     assertPromptAttached: async () => { calls.push("assert"); },
   }, {}, "retained context", true, undefined, undefined, false, undefined, true);
   expect(calls).toEqual(["fill", "focus", "insert", "assert"]);
+});
+
+test("a retained tool turn reselects its connector when the live composer has no pill", async () => {
+  const attachPrompt = (ChatGptBrowserWorker.prototype as unknown as {
+    attachPrompt(
+      page: unknown,
+      prompt: string,
+      localTools: boolean,
+      captureDiagnostic?: (checkpoint: string) => Promise<void>,
+      abortSignal?: AbortSignal,
+      catalogRefreshAvailable?: boolean,
+      connectorAttemptBudget?: unknown,
+      reuseConnector?: boolean,
+    ): Promise<void>;
+  }).attachPrompt;
+
+  const calls: string[] = [];
+  const retainedComposer = {};
+  const selectedComposer = {
+    focus: async () => { calls.push("focus"); },
+    press: async (key: string) => {
+      expect(key).toBe(CHATGPT_COMPOSER_DOCUMENT_END_KEY);
+      calls.push("end");
+    },
+  };
+  await attachPrompt.call({
+    activeComposer: async () => retainedComposer,
+    connectorIsSelected: async (composer: unknown) => {
+      expect(composer).toBe(retainedComposer);
+      calls.push("reprove");
+      return false;
+    },
+    selectConnector: async () => { calls.push("reselect"); return selectedComposer; },
+    insertPromptText: async (_page: unknown, text: string) => {
+      expect(text).toBe(" retained context");
+      calls.push("insert");
+    },
+    assertPromptAttached: async () => { calls.push("assert"); },
+  }, {}, "retained context", true, undefined, undefined, false, undefined, true);
+  expect(calls).toEqual(["reprove", "reselect", "focus", "end", "insert", "assert"]);
 });
 
 test("image attachment readiness uses exact file tiles and not localized remove-button text", async () => {

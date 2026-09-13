@@ -275,7 +275,7 @@ test("DEV browser-only setup persists only the isolated harness profile", async 
     mkdirSync(join(devHome, "runtime"), { recursive: true });
     writeFileSync(helperScript, "module.exports = {};\n", { mode: 0o700 });
     writeFileSync(descriptorPath, `${JSON.stringify({
-      version: 2,
+      version: 3,
       kind: "codex-web-gpt-launcher",
       profile: "development",
       pid: process.pid,
@@ -285,6 +285,7 @@ test("DEV browser-only setup persists only the isolated harness profile", async 
       partition: "persist:codex-web-gpt-dev-chatgpt",
       idleUrl: LAUNCHER_BROWSER_IDLE_URL,
       surfaceId: "d".repeat(32),
+      surfaceTargets: { ["d".repeat(32)]: "native-owned-target" },
       createdAt: new Date().toISOString(),
     })}\n`, { mode: 0o600 });
 
@@ -332,7 +333,7 @@ test("DEV setup accepts explicit browser-interaction flags and preserves manual 
     mkdirSync(join(devHome, "runtime"), { recursive: true });
     writeFileSync(helperScript, "module.exports = {};\n", { mode: 0o700 });
     writeFileSync(descriptorPath, `${JSON.stringify({
-      version: 2,
+      version: 3,
       kind: "codex-web-gpt-launcher",
       profile: "development",
       pid: process.pid,
@@ -345,6 +346,7 @@ test("DEV setup accepts explicit browser-interaction flags and preserves manual 
       partition: "persist:codex-web-gpt-dev-chatgpt",
       idleUrl: LAUNCHER_BROWSER_IDLE_URL,
       surfaceId: "m".repeat(32),
+      surfaceTargets: { ["m".repeat(32)]: "native-owned-target" },
       createdAt: new Date().toISOString(),
     })}\n`, { mode: 0o600 });
     const env = {
@@ -405,7 +407,7 @@ test("browser check uses metadata-only launcher liveness in Zero Risk", async ()
     mkdirSync(join(appHome, "runtime"), { recursive: true });
     writeFileSync(helperScript, "module.exports = {};\n", { mode: 0o700 });
     writeFileSync(descriptorPath, `${JSON.stringify({
-      version: 2,
+      version: 3,
       kind: "codex-web-gpt-launcher",
       profile: "production",
       pid: process.pid,
@@ -418,6 +420,7 @@ test("browser check uses metadata-only launcher liveness in Zero Risk", async ()
       partition: "persist:codex-web-gpt-chatgpt",
       idleUrl: LAUNCHER_BROWSER_IDLE_URL,
       surfaceId: "s".repeat(32),
+      surfaceTargets: { ["s".repeat(32)]: "native-owned-target" },
       createdAt: new Date().toISOString(),
     })}\n`, { mode: 0o600 });
     const config = {
@@ -506,7 +509,7 @@ test("authorized launcher uninstall does not re-probe an already stopped full ru
   writeFileSync(helperScript, "module.exports = {};\n");
   writeFileSync(runtimeKeyFile, "test-key\n");
   writeFileSync(descriptorPath, `${JSON.stringify({
-    version: 2,
+    version: 3,
     kind: "codex-web-gpt-launcher",
     profile: "production",
     pid: process.pid,
@@ -516,6 +519,7 @@ test("authorized launcher uninstall does not re-probe an already stopped full ru
     partition: "persist:codex-web-gpt-chatgpt",
     idleUrl: LAUNCHER_BROWSER_IDLE_URL,
     surfaceId: "a".repeat(32),
+    surfaceTargets: { ["a".repeat(32)]: "native-owned-target" },
     createdAt: new Date().toISOString(),
   })}\n`, { mode: 0o600 });
   writeFileSync(join(appHome, "config.json"), `${JSON.stringify({

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
+import { isAbsolute, relative, resolve, toNamespacedPath } from "node:path";
 import { atomicWriteFile } from "../../config";
 import { getCodexHome } from "../../codex-integration-shared";
 import type { CodexParsedRequest } from "../../types";
@@ -43,7 +43,7 @@ function record(value: unknown): Record<string, unknown> | undefined {
 
 function pathIdentity(value: string): string {
   const normalized = resolve(value);
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+  return process.platform === "win32" ? toNamespacedPath(normalized).toLowerCase() : normalized;
 }
 
 function contains(root: string, path: string): boolean {

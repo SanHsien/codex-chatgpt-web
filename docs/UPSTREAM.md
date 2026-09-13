@@ -1,8 +1,11 @@
 # Upstream tracking
 
-The baseline is reviewed history, not a merge target. A read-only GitHub inventory on 2026-09-10 found
-the non-PR issue axis at [#418](https://github.com/miuuyy/codex-chatgpt-web/issues/418); every other
-axis was unchanged from the 2026-09-09 inventory below, which still describes them accurately.
+The baseline is reviewed history, not a merge target. A read-only GitHub inventory on 2026-09-12 found
+upstream `main` and its only branch still at `e85e3693fdb4e3e033348c08df0298c20fcdb612`, the latest
+PR at open [#469](https://github.com/miuuyy/codex-chatgpt-web/pull/469) head
+`445362d3dd3baa445d566e561c9abb30c995453c`, and the latest non-PR issue at
+[#467](https://github.com/miuuyy/codex-chatgpt-web/issues/467). The complete #425–#469 review and
+three independent local ports are recorded below; the older inventories remain immutable history.
 
 The 2026-09-09 inventory: a read-only GitHub inventory that day found
 upstream `miuuyy/codex-chatgpt-web` `main` advanced to `e85e3693fdb4e3e033348c08df0298c20fcdb612` — three
@@ -45,6 +48,59 @@ fetch, merge, or release action.
 | --- | --- | --- | --- | --- |
 | #417 | never allocated; the API returns 404 | reject | Not an upstream item. Recorded so the range #363–#418 has no unexplained gap, matching how #382–#393, #401, and #409 are handled above. | The number is ever allocated. |
 | [#418](https://github.com/miuuyy/codex-chatgpt-web/issues/418) | open issue, label `bug`, no PR; opened 2026-09-09 | defer | "No codex native tool found" under Full harness (MCP). The report's own platform fields contradict each other — `Platform: macOS arm64` against `OS version: Windows 11` — so it does not yet establish a Windows reproduction, and the evidence is two screenshots plus "i checked plugins and everything" with the error text "just unexpected that it doesnt call the plugin". No bounded local cause, no committed regression, and upstream has not triaged it. | The reporter or upstream resolves the platform contradiction into a Windows reproduction with privacy-safe diagnostics showing which native-tool discovery step returned empty, and a regression distinguishes "no tool registered" from "tool registered but not selected". |
+
+## 2026-09-10 reconciliation: #419–#424
+
+The non-PR issue axis advanced from #418 to #424. Read-only GitHub API inventory confirmed upstream
+`main` remains `e85e3693fdb4e3e033348c08df0298c20fcdb612`, latest PR remains open
+[#415](https://github.com/miuuyy/codex-chatgpt-web/pull/415) at
+`826f8804f59cf8972571018cfb8b15b5166c3a8b`, and the only upstream branch remains `main` at that
+SHA. No upstream write, merge, or release action was taken. This fork later performed one exact
+read-only object fetch of `e85e3693fdb4e3e033348c08df0298c20fcdb612` for the five bounded ports
+recorded below; it did not merge it or write to upstream.
+
+| Item | Exact observed state | Decision | Windows applicability and rationale | Re-review trigger |
+| --- | --- | --- | --- | --- |
+| #419 | never allocated; GitHub API returns 404 | reject | Not an upstream item. Recording the gap prevents an unexplained number between #418 and #420. | GitHub ever allocates #419. |
+| [#420](https://github.com/miuuyy/codex-chatgpt-web/issues/420) | open `bug`/`P1`/`needs info`; Windows x64 report; no maintainer comments | defer | v5.0.6 Browser-only installation is reported to make a native `GPT-5.6 Sol — High` turn fail with 502 through the localhost Responses proxy, while browser smoke/Doctor succeed and removing the integration restores the native path. This is Windows-relevant, but the report does not isolate a local route mutation or provide an upstream-reviewed regression; the observed A/B does not itself identify the failing layer. | Upstream publishes a maintainer-reviewed root cause and Windows regression for native Codex traffic through the loopback route, or this fork independently reproduces the failure and isolates a bounded local path with a privacy-safe regression. |
+| #421 | never allocated; GitHub API returns 404 | reject | Not an upstream item. Recording the gap prevents an unexplained number between #420 and #422. | GitHub ever allocates #421. |
+| [#422](https://github.com/miuuyy/codex-chatgpt-web/issues/422) | open `bug`/`P1`/`fixed locally`; Windows 11 ARM64 host running the official x64 launcher; no maintainer comments | monitor | The reporter reproduced an idle-document 10-second bootstrap timeout, then saw one successful launch after locally extending it to 90 seconds. The successful attempt initialized in about 1.2 seconds, so the reporter expressly does not claim the deadline change caused recovery; process cleanup or transient host conditions remain plausible. No upstream root cause, failure-cleanup design, or regression exists. | A controlled repeated A/B on the unmodified official x64 package distinguishes deadline extension from cleanup/transient recovery, or upstream supplies a root-cause patch with startup-failure cleanup/retry regression coverage. |
+| [#423](https://github.com/miuuyy/codex-chatgpt-web/issues/423) | open `bug`/`P1`/`needs info`; Windows x64 Full harness/Zero Risk report; maintainer requests post-error evidence | defer | The reported bridge call was blocked by OpenAI safety checks, but the attached export ends immediately after `Sent`; it does not cover the failure. The maintainer therefore cannot identify the rejecting layer and requested a fresh post-error safe log plus the expanded ChatGPT `codex_turn_start` tool-call error (or the relevant ChatGPT response if no call appears). Another user reports the same wording, which is corroboration but not a causal diagnosis. | The reporter supplies the requested privacy-safe, same-attempt evidence from `Sent` through the failure and the `codex_turn_start` error/absence evidence; then upstream identifies the rejecting layer and provides a bounded regression or this fork can independently reproduce that diagnosed path. |
+| [#424](https://github.com/miuuyy/codex-chatgpt-web/issues/424) | open `bug`; macOS arm64 Full harness/Bigger Context report; no comments | reject | The post-compaction continuation report is macOS arm64-only. Although it names `trusted environment unavailable` after a successful remote handoff, it supplies neither a Windows reproduction nor a local cause/regression, and this Windows-only fork does not port macOS-specific reports. | A privacy-safe Windows reproduction identifies the post-compaction environment-restoration boundary and a focused regression, or the owner authorizes a separately bounded cross-platform continuation requirement. |
+
+## 2026-09-11 selective adoption: #376, #379, #394, #402, #404
+
+After the #419–#424 reconciliation, this fork made one exact **read-only** fetch of upstream
+`e85e3693fdb4e3e033348c08df0298c20fcdb612`. It did not merge or cherry-pick the release squash,
+write upstream, create a tag, or create a release. Each row below is an independent minimal port;
+the older #363–#416 register is superseded for these five items only.
+
+| Item | Exact source | Decision and local evidence | Re-review trigger |
+| --- | --- | --- | --- |
+| [#376](https://github.com/miuuyy/codex-chatgpt-web/issues/376) | v5.0.5, folded into `e85e3693fdb4e3e033348c08df0298c20fcdb612` | **adopt.** Normalized all three owned `pathIdentity()` copies with `node:path` `toNamespacedPath()` before Windows case folding; retained the #362 environment-authority parser unchanged. `tests/environment.test.ts` now proves indexed rollout and home paths accept either Windows namespace. | A Codex rollout/state path shape changes, or the focused namespace regression fails. |
+| [#379](https://github.com/miuuyy/codex-chatgpt-web/issues/379) | v5.0.6 `e85e3693fdb4e3e033348c08df0298c20fcdb612` | **adopt.** `installedLauncherCandidates()` reads the live registry only when its exact environment is `process.env`; injected fixtures and explicit installation roots stay pure. `tests/dev-profile.test.ts` proves injected, ordinary, and explicit paths. | Windows registry-discovery contract or the injected environment API changes. |
+| [#394](https://github.com/miuuyy/codex-chatgpt-web/issues/394) | v5.0.6 `e85e3693fdb4e3e033348c08df0298c20fcdb612` | **adopt.** Explicit Setup replacement may recover only a wholly absent managed interrupt hook. Changed marker, partial hook, owned state, and invalid TOML remain fail-closed. `tests/codex-integration.test.ts` covers recovery and rejection. | Codex hook TOML ownership/journal format changes, or any fail-closed case regresses. |
+| [#402](https://github.com/miuuyy/codex-chatgpt-web/pull/402) | merged `509cfc97285cc6793af5c0e161153db0b405a767`; head `f69ec84c7b9c9fc8c21c4be4d67538e43ca3afdf` | **adopt.** Added Simplified Chinese `个性化`/`非个性化` selectors and parameterized regression tests. The anchored names, owned-menu check, absolute deadline, rollback, and cleanup fail-closed behavior remain intact. | ChatGPT changes the labeled control/menu ownership semantics or localized regression fails. |
+| [#404](https://github.com/miuuyy/codex-chatgpt-web/pull/404) | maintainer-local v5.0.6 implementation in `e85e3693fdb4e3e033348c08df0298c20fcdb612`; unmerged PR head `451b8a372094c8594e3a9c6cfb7b7ab1de0f1394` was not ported | **adopt.** Added `collaboration__wait_agent` to direct and raw-exec guards, preserved native arguments/results, removed inherited timeout defaults, and fixed polling at the native 30,000 ms default. `tests/chatgpt-web-harness.test.ts` covers direct and raw calls, wrong intervals, and a timed-out result that is not completion. | Native wait tool names/schema/defaults change, or either direct/raw guard regression fails. |
+
+Focused evidence: `bun test tests/environment.test.ts tests/dev-profile.test.ts tests/codex-integration.test.ts tests/personalization-connector-preflight.test.ts tests/chatgpt-web-harness.test.ts` passed on Windows with Bun 1.4.0. Root typecheck/verify and whitespace checks are recorded with this delivery after the focused suite.
+
+## 2026-09-11 selective adoption: #372, #377, #397
+
+This addendum supersedes the earlier #363–#416 decisions for these three items only. It used only
+the exact read-only upstream objects `0b053b6750b1d4f127619765388eb43c6d212ca2` (v5.0.5) and
+`e85e3693fdb4e3e033348c08df0298c20fcdb612` (v5.0.6); there was no upstream write, merge,
+cherry-pick, tag, or release. Each is an independent minimal Windows-fork port.
+
+| Item | Exact source | Decision and local evidence | Re-review trigger |
+| --- | --- | --- | --- |
+| [#372](https://github.com/miuuyy/codex-chatgpt-web/issues/372) | v5.0.5 `0b053b6750b1d4f127619765388eb43c6d212ca2`, retained in `e85e3693fdb4e3e033348c08df0298c20fcdb612` | **adopt.** Every managed-tunnel acquisition, including adoption, resets/discovers its local diagnostics and proves MCP transport before monitor startup. Unknown diagnostics are not readiness; fatal evidence fails closed and cleanup stops the managed alias. `launcher/tests/runtime-supervisor.test.cjs` covers missing/restored evidence, adoption, ordering, and failed cleanup. | Runtime health endpoint or MCP diagnostic event contract changes, or a monitor can start without proof. |
+| [#377](https://github.com/miuuyy/codex-chatgpt-web/issues/377) | v5.0.5 `0b053b6750b1d4f127619765388eb43c6d212ca2` | **adopt.** Zero Risk bindings retire only after a main-frame document change; same-document/hash/history state preserves the binding. A resumed delta-only turn fails explicitly so a new turn sends full context. `launcher/tests/browser-host.test.cjs` covers both navigation forms, frame isolation, retention cleanup, and explicit recovery. | Electron navigation event semantics or Zero Risk retained-turn protocol changes. |
+| [#397](https://github.com/miuuyy/codex-chatgpt-web/issues/397) | v5.0.6 `e85e3693fdb4e3e033348c08df0298c20fcdb612` | **adopt.** Producer and consumer move together to descriptor v3 native `Target.getTargetInfo` identities. Descriptor validation rejects duplicate/malformed target maps; retired surfaces and acquisition abort remain fail-closed without evaluating unrelated renderers. `launcher/tests/browser-host.test.cjs` and `tests/launcher-browser-host.test.ts` cover producer, native selection, duplicate, retired, and abort paths. | Electron DevTools target API or descriptor ownership schema changes. |
+
+Focused evidence: `node --test launcher/tests/runtime-supervisor.test.cjs` (53 pass),
+`node --test launcher/tests/browser-host.test.cjs` (99 pass), and
+`bun test tests/launcher-browser-host.test.ts tests/zero-risk-adapter.test.ts tests/launcher-helper-client.test.ts tests/cli.test.ts` (46 pass).
 
 ## 2026-09-09 follow-up: #363–#416 complete register
 
@@ -154,6 +210,83 @@ write, fetch, merge, or release action was taken.
 | [#297](https://github.com/miuuyy/codex-chatgpt-web/issues/297) | defer | Native V2 encrypted delegation is a broad protocol enhancement, not required by current V1 support. | Owner requests V2 work with a tested contract. |
 | [#286](https://github.com/miuuyy/codex-chatgpt-web/issues/286) | reject | macOS Dock behavior is outside this fork. | It gains a Windows impact. |
 | [#278](https://github.com/miuuyy/codex-chatgpt-web/issues/278) | monitor | Windows hidden-viewport report awaits retest and has no verified new fix. | Retest fails or a focused Windows regression is available. |
+
+## 2026-09-12 reconciliation: #425–#458 and bounded ports
+
+This read-only pass covered every number from #425 through #458; #440 is the only unallocated number.
+No upstream write, fetch, merge, cherry-pick, tag, or release occurred. Upstream text and unreviewed PRs
+were treated as evidence to evaluate, not as trusted implementation. Three Windows-applicable fixes were
+implemented independently in this fork: #428, #436, and the security boundary reported by #442.
+
+| Item | Exact observed state / head | Decision | Windows applicability, local result, and re-review trigger |
+| --- | --- | --- | --- |
+| [#425](https://github.com/miuuyy/codex-chatgpt-web/issues/425) | open `question`/`P2`; macOS connector-name conflict | reject | No Windows reproduction or bounded defect. Re-review only with Windows diagnostics identifying an owned connector-identity failure. |
+| [#426](https://github.com/miuuyy/codex-chatgpt-web/issues/426) | open `bug`/`P1`; macOS Bigger Context orphan/reaper report | defer | No Windows evidence or bounded fix. Re-review with a Windows trace proving request settlement after orphan cleanup. |
+| [#427](https://github.com/miuuyy/codex-chatgpt-web/issues/427) | open `enhancement`/`P3`/`backlog` | reject | Omitting unchanged system instructions changes a security/instruction boundary without an acceptance contract. Re-review only under a separately authorized design. |
+| [#428](https://github.com/miuuyy/codex-chatgpt-web/issues/428) | open `bug`/`P1`; Windows x64 retained follow-up had `selectedConnectorCount=0` | **adopt** | Retained local-tool turns now re-prove the live connector pill and reselect it through the existing exact mention/proof path before prompt insertion. `tests/browser-worker-contract.test.ts` proves ordering and fail-closed selection. Re-review if retained composer or connector identity semantics change. |
+| [#429](https://github.com/miuuyy/codex-chatgpt-web/issues/429) | closed duplicate of #428 | reject | Covered by the independently verified #428 port. |
+| [#430](https://github.com/miuuyy/codex-chatgpt-web/pull/430) | open, non-draft, `UNSTABLE`; `bbdb4077a9ca488c2b6c41162234c228da696f22` | defer | Adds a new read-only task action and connector ABI with only macOS live evidence. Re-review with an accepted API/security contract and Windows tests. |
+| [#431](https://github.com/miuuyy/codex-chatgpt-web/issues/431) | open `bug`/`P2`/`needs info`; Linux DEV setup | reject | Outside the Windows-only support surface; platform fields also conflict. |
+| [#432](https://github.com/miuuyy/codex-chatgpt-web/pull/432) | open, non-draft, `UNSTABLE`; `5b8face7b97f066da8e5fe40fbfcc4d7c0e0a3c8` | defer | Pro retry-date UI has only Linux evidence and upstream failures. Re-review with stable Windows checks. |
+| [#433](https://github.com/miuuyy/codex-chatgpt-web/pull/433) | closed, unmerged; `faec306dceaa137f3bbecabfbeb149ae9ed63e8e` | reject | Broad external-provider/OpenCodex architecture expansion without completed validation; outside this maintenance scope. |
+| [#434](https://github.com/miuuyy/codex-chatgpt-web/issues/434) | open `enhancement`/`P3`/`backlog` | reject | Broad attachment download/persistence proposal requires a separately authorized filesystem/privacy design. |
+| [#435](https://github.com/miuuyy/codex-chatgpt-web/pull/435) | open, non-draft, `UNSTABLE`; `2ed03f60f4785e0624b907b726a6404a28cf061b` | defer | Hooks journal migration overlaps #394, has only macOS evidence, and its audit was not green. Re-review after upstream acceptance and Windows rollback tests. |
+| [#436](https://github.com/miuuyy/codex-chatgpt-web/issues/436) | open `bug`/`P1`; Windows x64 personalization preflight deadline | **adopt** | Label proof and the 30-second absolute deadline remain strict; only the already-failed structural control/menu discovery is bounded to five seconds, with cleanup and 424 fail-closed regression. Re-review when ChatGPT personalization structure changes. |
+| [#437](https://github.com/miuuyy/codex-chatgpt-web/issues/437) | open `bug`/`P1`; contradictory macOS/Windows fields | monitor | Connector-not-found report lacks a stable reproduction. Re-review with a same-attempt Windows trace. |
+| [#438](https://github.com/miuuyy/codex-chatgpt-web/issues/438) | open `bug`/`P1`/`needs info`; Windows restart loop | defer | Missing model-catalog and installation-ownership evidence requested upstream. Re-review when those diagnostics are supplied. |
+| [#439](https://github.com/miuuyy/codex-chatgpt-web/pull/439) | open, non-draft, `UNSTABLE`; `039c385f09ba43eac398259eb6360ffe02ede75e` | defer | Pro version selection crosses settings, IPC, retention, and supervisor boundaries with only macOS live evidence. Re-review with stable Windows acceptance. |
+| #440 | never allocated; API lookup fails | reject | Not an upstream item. Re-review only if GitHub allocates the number. |
+| [#441](https://github.com/miuuyy/codex-chatgpt-web/issues/441) | open `bug`; macOS arm64 long-context retry | reject | No Windows reproduction. |
+| [#442](https://github.com/miuuyy/codex-chatgpt-web/pull/442) | open, non-draft, `UNSTABLE`; `cf75a3162ee28621dcb0beef730c01443a3a1fdb` | **adopt independently** | Local inspection confirmed retired `call`, `control`, and `handoff` capabilities could survive replay. The local scrubber now covers all six known 32-character handle kinds, including JSON-escaped boundaries, while rejecting near matches; `tests/prompt-contract.test.ts` covers the boundary. Re-review if broker token generation changes. |
+| [#443](https://github.com/miuuyy/codex-chatgpt-web/issues/443) | open `bug`; Windows x64 changed interrupt hook | monitor | Current #394 port intentionally keeps changed/partial hooks fail-closed. Re-review only with diagnostics proving an owned unchanged hook was misclassified; never fix by overwriting user changes. |
+| [#444](https://github.com/miuuyy/codex-chatgpt-web/issues/444) | open `bug`; Windows x64 mixed history/context/catalog report | monitor | No diagnostic evidence isolates a component. Re-review with a minimal reproduction and privacy-safe trace. |
+| [#445](https://github.com/miuuyy/codex-chatgpt-web/issues/445) | open; Linux-only DEV Deep Research prototype | reject | Outside Windows scope and adds a separately governed browsing/output capability. |
+| [#446](https://github.com/miuuyy/codex-chatgpt-web/issues/446) | open; macOS read-only call blocked by unknown safety state | monitor | No Windows or causal evidence. Do not lower MCP safety metadata; re-review after the rejecting layer is identified. |
+| [#447](https://github.com/miuuyy/codex-chatgpt-web/issues/447) | open; macOS fallback checkpoint truncation | defer | Source report for #448 but no Windows acceptance. |
+| [#448](https://github.com/miuuyy/codex-chatgpt-web/pull/448) | open draft, `UNSTABLE`; `fb9929a18d6be506364b2b14bb79ad6d8075072c` | defer | Author reports full suite, Windows, and E2E incomplete. Re-review with a complete Windows compaction regression. |
+| [#449](https://github.com/miuuyy/codex-chatgpt-web/issues/449) | open; Windows x64 real `apply_patch` intermittently safety-blocked | monitor | Cloud rejection is not yet attributable to local code; do not bypass safety. Re-review with the rejecting layer and same-attempt evidence. |
+| [#450](https://github.com/miuuyy/codex-chatgpt-web/pull/450) | open, non-draft, `UNSTABLE`; `9eda72fd100b2b992b5075f3a3324e656d4d5cf3` | defer | Simplified-Chinese stopped-thinking handling has only macOS live evidence and overlaps browser-worker state. Re-review with isolated Windows regression. |
+| [#451](https://github.com/miuuyy/codex-chatgpt-web/pull/451) | open draft, `UNSTABLE`; `1af4163310edc4a2c49e9c5c342804ab17db6289` | defer | MCP diagnostic schema and privacy behavior need independent review plus Windows evidence. |
+| [#452](https://github.com/miuuyy/codex-chatgpt-web/issues/452) | open `bug`; Windows x64 model picker empty and forced route 503 | defer | Investigation confirmed an acceptance gap: install manages `openai_base_url` but no static catalog, while the existing native smoke writes `model_catalog_json` itself. Offline catalog/server tests pass but cannot prove Desktop live-account discovery or explain the 503. Re-review with `/healthz` catalog counters/timestamp, safe `/v1/models` ingress, and the 503 diagnostic body; do not claim live picker success meanwhile. |
+| [#453](https://github.com/miuuyy/codex-chatgpt-web/pull/453) | closed, unmerged, `UNSTABLE`; `40da06e49d1daa8850aa37007fea08c6c9b626b1` | reject | Base of a stacked context rewrite; Windows and other CI failed. |
+| [#454](https://github.com/miuuyy/codex-chatgpt-web/pull/454) | closed, unmerged, `UNSTABLE`; `8534e7c458b185236432bd4e3bed8b760f559d10` | reject | Depends on failed #453 stack; Windows CI failed. |
+| [#455](https://github.com/miuuyy/codex-chatgpt-web/pull/455) | closed, unmerged, `UNSTABLE`; `dc9a0d253a72cf0175b25a0d6b435dafd6d3e09c` | reject | Adds sub-agent exposure atop failed #453–#454; Windows CI failed. |
+| [#456](https://github.com/miuuyy/codex-chatgpt-web/pull/456) | closed, unmerged, `UNSTABLE`; `24641d5cea83693fa0a2feddb29a690f297ad1c2` | reject | Traditional Chinese UI is desirable but the stacked series and Windows CI failed; do not split it into this correctness/security delivery. Re-review as an independent green Windows PR. |
+| [#457](https://github.com/miuuyy/codex-chatgpt-web/issues/457) | open `bug`; Windows x64 Computer Use images and `asciitilde` key | defer | Requires a separately bounded image privacy/transport and key-map design with Automatic/Zero Risk acceptance. |
+| [#458](https://github.com/miuuyy/codex-chatgpt-web/issues/458) | open `enhancement`; broad Full Harness image upload | reject | Lacks a safety boundary and duplicates the concrete #457 entry point. |
+
+Earlier-row state changes observed in the same pass: #418 remains monitor because its platform fields
+still conflict; #420 is now reject because the reporter attributed the 502 to local MCP/connector
+configuration and resolved it; #423 remains defer pending same-attempt post-error evidence; #424 moves
+from reject to monitor because newer triage added a retained-surface diagnosis, but it still lacks Windows proof.
+
+Focused Windows evidence for the three ports: `bun test tests/browser-worker-contract.test.ts
+tests/personalization-connector-preflight.test.ts` (137 pass), `bun test tests/prompt-contract.test.ts`
+(22 pass), and root typecheck. Full canonical evidence is recorded with the delivery commit.
+
+## 2026-09-13 reconciliation: #459–#469
+
+All eleven numbers are allocated. The pass was read-only: no upstream fetch, merge, cherry-pick,
+write, tag, or release. Every PR still targets upstream `main` at the older `e85e3693` line; none was
+applied over this fork's current Windows/security work.
+
+| Item | Exact observed state / head | Decision | Windows applicability and re-review trigger |
+| --- | --- | --- | --- |
+| [#459](https://github.com/miuuyy/codex-chatgpt-web/pull/459) | open draft, `UNSTABLE`; `50c2e7e4bb259fd9901162402160e99b4ee2844f` | defer | Doubles automatic tab capacity and adds user tabs, overlapping browser ownership/resource limits. Re-review after rebase plus Windows lease, eviction, capacity, and account-safety tests. |
+| [#460](https://github.com/miuuyy/codex-chatgpt-web/pull/460) | open, `CLEAN`; `c0da72cd66769ec69e140af1ce594e8502268990`; platform verify/actionlint green, classic status pending | defer | Root of a 42-file TXT-context stack that changes both lockfiles and overlaps worker/prompt/harness. Requires an explicit product/security contract and rebased Windows acceptance. |
+| [#461](https://github.com/miuuyy/codex-chatgpt-web/pull/461) | open, `CLEAN`; `ffc2a8c93e32bb9d29fc5cd2d853cf2340719eaa`; platform verify/actionlint green, classic status pending | defer | Plus/Pro budget extension stacked on #460; reconsider only after #460's contract is accepted. |
+| [#462](https://github.com/miuuyy/codex-chatgpt-web/pull/462) | open, `CLEAN`; `605ce4ba9b510c075cd4c29788dbd6a82aca2213`; platform verify/actionlint green, classic status pending | reject | Adds broad sub-agent exposure across MCP/runtime/catalog without a separately authorized Windows security contract. |
+| [#463](https://github.com/miuuyy/codex-chatgpt-web/pull/463) | open, `CLEAN`; `ab9c1812ed966bf60834105b141c987df32aeab7`; platform verify/actionlint green, classic status pending | defer | Traditional Chinese UI is useful but sits atop the 54-commit #460–#462 stack. Re-review as an independent rebased Windows change. |
+| [#464](https://github.com/miuuyy/codex-chatgpt-web/pull/464) | open draft, `UNSTABLE`; `aa4e58348ec85f137f81767462a0b768846efe55`; Windows path explicitly fails | reject | Hard-codes POSIX tooling and rejects win32; outside this Windows-only fork. |
+| [#465](https://github.com/miuuyy/codex-chatgpt-web/pull/465) | open, `UNSTABLE`; `cc1499701d5a7bf08e435f9127260ff005552505`; no checks | defer | DEV deep-research tunnel changes setup, MCP, worker, and supervisor boundaries. Requires separate authorization, threat model, and Windows acceptance. |
+| [#466](https://github.com/miuuyy/codex-chatgpt-web/issues/466) | open `bug`/`P1`; Windows x64 retained follow-up report | monitor | No privacy-safe trace or stable reproduction. Re-review when evidence distinguishes it from the adopted #428 connector re-proof. |
+| [#467](https://github.com/miuuyy/codex-chatgpt-web/issues/467) | open, no code; account/security question | reject | Not a defect or patch. Re-review only if it identifies a concrete Windows security flaw. |
+| [#468](https://github.com/miuuyy/codex-chatgpt-web/pull/468) | open, `UNSTABLE`; `ca15fa3e8a9e9e60e2cd3155a082aa377915843f`; no checks | defer | Retired-handle retry/handoff overlaps environment and capability boundaries. Requires rebase plus Windows regression for cancellation, exact ownership, and no replay. |
+| [#469](https://github.com/miuuyy/codex-chatgpt-web/pull/469) | open, `UNSTABLE`; `445362d3dd3baa445d566e561c9abb30c995453c`; no checks | reject | POSIX/PAC change has no Windows evidence and overlaps launcher/runtime supervision. Re-review only with an independent Windows reproduction and green checks. |
+
+The exact heads above identify the observed objects without treating them as merge targets. No item in
+this range justifies delaying the already bounded local ports, but #466 prevents claiming that every
+live-account retained-follow-up scenario is solved.
 
 ```text
 GitHub read-only inventory

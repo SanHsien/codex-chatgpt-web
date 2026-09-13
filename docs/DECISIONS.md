@@ -148,3 +148,68 @@ marked `defer` are adoption candidates pending further review, not changes alrea
 | Issue #414 | open issue, `bug`, very fresh (2026-09-09) | monitor | Maintainer triage or a translated, itemized reproduction narrows the cause. |
 | PR #415 | open, non-draft, `unstable` `826f8804f59cf8972571018cfb8b15b5166c3a8b` | adopt dependency advisory fixes | Ported 2026-09-10 without fetching the branch: `js-yaml` 4.3.1 → 4.3.2 in `launcher`, and root `overrides` to `@hono/node-server@2.1.1` / `hono@4.13.7` because `@hono/node-server@2.0.12` pinned `hono@4.12.34` exactly. `bun audit` clean in both workspaces; 947 tests pass. Re-review if a later advisory names either package. |
 | Issue #416 | open issue, no labels, very fresh (2026-09-09) | defer | This fork independently reproduces the Extra-High/Pro coupling defect on its own installed v5.0.6-equivalent build and verifies the patch with its own regression run, or upstream reviews and accepts a version of it. |
+
+## 2026-09-11 reconciliation: #419–#424 and bounded v5.0.6 ports
+
+The #419–#424 reconciliation remains authoritative: #419 and #421 are unallocated, #420 and #423
+remain deferred Windows reports without a bounded root cause, #422 remains monitored, and #424 remains
+rejected as macOS-only. After that reconciliation, the fork used one exact read-only fetch of
+`e85e3693fdb4e3e033348c08df0298c20fcdb612`; there was no upstream write, merge, release, or tag.
+The following independently minimal ports supersede the earlier decision rows for these items only.
+
+| Item | Decision | Boundary and evidence | Re-review trigger |
+| --- | --- | --- | --- |
+| #376 | adopt | `toNamespacedPath()` now normalizes each of the three owned Windows `pathIdentity()` copies before case folding; `tests/environment.test.ts` exercises indexed rollout/home namespace combinations without altering #362 authority behavior. | Codex changes rollout/state path conventions. |
+| #379 | adopt | Live Windows registry discovery now requires `environment === process.env`; injected and explicit roots remain pure, covered by `tests/dev-profile.test.ts`. | Discovery injection or registry contract changes. |
+| #394 | adopt | Setup recovery accepts only a fully absent managed interrupt hook; partial, changed, owned-state, and malformed TOML remain fail-closed, covered by `tests/codex-integration.test.ts`. | Hook journal/TOML ownership changes. |
+| #402 | adopt | Merged source `509cfc97285cc6793af5c0e161153db0b405a767` (head `f69ec84c7b9c9fc8c21c4be4d67538e43ca3afdf`) supplied only Simplified Chinese personalization labels and parameterized `tests/personalization-connector-preflight.test.ts`; anchored control, owned-menu, deadline, cleanup, and rollback invariants remain. | ChatGPT changes localized control/menu semantics. |
+| #404 | adopt | Used the v5.0.6 maintainer-local implementation, not unmerged head `451b8a372094c8594e3a9c6cfb7b7ab1de0f1394`: direct/raw guards include `collaboration__wait_agent`, retain native arguments/results, remove inherited schema default, and require the native 30,000 ms interval. `tests/chatgpt-web-harness.test.ts` covers wrong interval, direct/raw paths, and timeout-not-completion. | Native wait tool names/schema/defaults change. |
+
+Focused suite passed on Windows/Bun 1.4.0:
+`bun test tests/environment.test.ts tests/dev-profile.test.ts tests/codex-integration.test.ts tests/personalization-connector-preflight.test.ts tests/chatgpt-web-harness.test.ts`.
+
+## 2026-09-11 selective port reconciliation: #372, #377, #397
+
+The #419–#424 reconciliation and the first five selective ports remain unchanged. This later,
+separate addendum supersedes only the older defer rows for #372, #377, and #397. It inspected the
+exact read-only v5.0.5 `0b053b6750b1d4f127619765388eb43c6d212ca2` and v5.0.6
+`e85e3693fdb4e3e033348c08df0298c20fcdb612` objects; no upstream write, merge, cherry-pick,
+tag, or release occurred.
+
+| Item | Decision | Boundary and evidence | Re-review trigger |
+| --- | --- | --- | --- |
+| #372 | adopt | Managed-tunnel adoption and fresh starts both require local MCP diagnostics proof before monitoring; unknown remains non-ready, fatal diagnostics fail closed, and startup failure runs managed cleanup. `launcher/tests/runtime-supervisor.test.cjs` covers proof/ordering/adoption/cleanup. | Tunnel diagnostics or monitor lifecycle changes. |
+| #377 | adopt | Main-frame document navigation retires a retained Zero Risk binding; same-document/hash/history and child-frame navigation do not. Active resumed turns fail explicitly and require a full-context retry. `launcher/tests/browser-host.test.cjs` covers the boundary and recovery. | Electron navigation semantics or retained-turn lifecycle changes. |
+| #397 | adopt | Browser-host descriptor v3 publishes native target identities for automatic surfaces, and the TypeScript consumer selects with `Target.getTargetInfo`, rejecting malformed/duplicate/retired targets and respecting abort. `launcher/tests/browser-host.test.cjs` plus `tests/launcher-browser-host.test.ts` cover producer/consumer coherence. | DevTools target identity or descriptor schema changes. |
+
+## 2026-09-12 — Upstream #425–#458 reconciliation
+
+Read-only inventory reviewed all 34 numbers; #440 is unallocated. Upstream `main` and its only branch
+remain `e85e3693fdb4e3e033348c08df0298c20fcdb612`; latest PR is closed #456 at
+`24641d5cea83693fa0a2feddb29a690f297ad1c2`, and latest non-PR issue is #458. No upstream write,
+fetch, merge, cherry-pick, tag, or release occurred.
+
+| Items | Decision | Continuation record |
+| --- | --- | --- |
+| #428 | adopt | Retained local-tool turns re-prove and, if absent, reselect the exact connector before prompt insertion; focused regression covers ordering and fail-closed behavior. |
+| #436 | adopt | Structural personalization discovery is bounded to five seconds after label proof fails; the absolute deadline, exact selectors, cleanup, and 424 fail-closed contract remain. |
+| #442 | adopt independently | Scrub all six known exact 32-character broker capabilities, including JSON-escaped boundaries; near matches remain untouched. |
+| #452 | defer, acceptance gap | Actual install does not write a static model catalog, while the native smoke does. Offline tests cannot prove live Desktop picker/503 behavior; require catalog counters, `/v1/models` ingress, and 503 diagnostics before any live-usability claim. |
+| #416, #418, #422–#424, #426, #430, #432, #435, #437–#439, #443–#444, #446–#451, #457 | defer/monitor | Windows or cross-platform relevance exists, but evidence is missing, non-Windows-only, unstable, or crosses a separately governed boundary. Detailed triggers are in `docs/UPSTREAM.md`. |
+| #425, #427, #429, #431, #433–#434, #440–#441, #445, #453–#456, #458 | reject | Missing/unallocated, non-Windows, duplicate, broad unauthorized capability, closed failed stack, or lacks a bounded safety contract. |
+| #420 | reject, supersedes prior defer | Reporter resolved it as local MCP/connector configuration rather than an upstream defect. |
+
+Do not re-open #452 by adding `model_catalog_json` as a one-line workaround: a valid change needs
+reversible journal ownership, cache invalidation, catalog provenance, and current Codex compatibility.
+
+## 2026-09-13 — Upstream #459–#469 and dependency freshness
+
+- #459–#461, #463, #465, #468: defer pending isolated, rebased Windows contracts and tests.
+- #462, #464, #467, #469: reject as unauthorized broad sub-agent capability, POSIX-only work,
+  non-defect question, or a no-Windows-evidence PAC change.
+- #466: monitor; it is a fresh Windows retained-follow-up report without enough evidence to distinguish
+  it from #428, so do not claim universal live-account resolution.
+- Dependency gate: update launcher React/React DOM and their Node/React type packages to the current
+  compatible versions; keep zod 4.4.3 deferred at reviewed latest 4.6.4 because the current MCP SDK
+  schema types fail against zod 4.6.4. Keep Vite 6.4.3 deferred at reviewed latest 8.3.0 pending a
+  packaged Windows major-upgrade acceptance. Strict freshness and both audits must remain green.

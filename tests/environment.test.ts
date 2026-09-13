@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, toNamespacedPath } from "node:path";
 import { extractChatGptContinuationEnvironmentClaim, extractChatGptTurnEnvironment, extractChatGptTurnIdentity } from "../src/adapters/chatgpt-web/environment";
 import { rememberCompactionContinuation } from "../src/adapters/chatgpt-web/compaction-continuation";
 import { encodeCompactionSummary, SUMMARY_PREFIX } from "../src/responses/compaction";
@@ -808,6 +808,21 @@ describe("trusted Codex task environment continuity", () => {
       cwd: root, roots: [root], writableRoots: [root], sandboxPolicy: { type: "dangerFullAccess" },
       tools: request.context.tools,
     });
+  });
+
+  test.skipIf(process.platform !== "win32")("resumed Windows tasks accept the same indexed rollout with either path namespace", () => {
+    for (const namespaceHome of [false, true]) for (const namespaceRollout of [false, true]) {
+      const { codexHome, request, rolloutPath } = resumedRootFixture();
+      const databasePath = join(codexHome, "state_5.sqlite");
+      createRolloutState(databasePath, namespaceRollout ? toNamespacedPath(rolloutPath) : rolloutPath);
+      const database = new Database(databasePath);
+      database.exec("DELETE FROM thread_spawn_edges; UPDATE threads SET agent_path = NULL");
+      database.close();
+      const store = new ChatGptThreadEnvironmentStore(
+        undefined, Date.now, namespaceHome ? toNamespacedPath(codexHome) : codexHome,
+      );
+      expect(store.resolve(request).cwd).toBe(root);
+    }
   });
 
   test.each([null, undefined])("recovers a V1 root child with session agent_path=%s", agentPath => {

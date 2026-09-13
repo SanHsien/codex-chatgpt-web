@@ -136,7 +136,11 @@ export function formatChatGptWebMultipartCommit(
   ].join("\n");
 }
 
-const RETIRED_TURN_HANDLE = /\b(turn|request|binding)_[A-Za-z0-9_-]{24,}/g;
+const RETIRED_BROKER_HANDLE_KIND = "turn|request|binding|call|control|handoff";
+const RETIRED_TURN_HANDLE = new RegExp(
+  `(?:(?<![A-Za-z0-9_-])|(?<=\\\\[bfnrt])|(?<=\\\\u00[01][0-9a-fA-F]))(${RETIRED_BROKER_HANDLE_KIND})_[A-Za-z0-9_-]{32}(?![A-Za-z0-9_-])`,
+  "g",
+);
 
 /**
  * The accumulated Codex context replays earlier turns, including the broker handles those turns

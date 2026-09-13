@@ -210,6 +210,9 @@ const CHATGPT_PERSONALIZATION_CONTROL_SELECTOR = [
 const CHATGPT_PERSONALIZATION_CHOICE_SELECTOR = '[role="menuitemradio"], [role="radio"]';
 const CHATGPT_PERSONALIZATION_PREFLIGHT_TIMEOUT_MS = 30_000;
 const CHATGPT_PERSONALIZATION_CLEANUP_TIMEOUT_MS = 5_000;
+// Once label-based proof has failed, the structural fallback must not consume the entire
+// preflight window waiting for a menu that is absent on this ChatGPT surface.
+const CHATGPT_PERSONALIZATION_STRUCTURAL_DISCOVERY_TIMEOUT_MS = 5_000;
 
 class ChatGptPersonalizationDeadlineError extends Error {
   constructor() {
@@ -392,33 +395,37 @@ async function openChatGptStructuralPersonalizationState(
   deadline: number,
   signal: AbortSignal,
 ): Promise<ChatGptPersonalizationState> {
+  const structuralDeadline = Math.min(
+    deadline,
+    Date.now() + CHATGPT_PERSONALIZATION_STRUCTURAL_DISCOVERY_TIMEOUT_MS,
+  );
   const controls = page.locator(CHATGPT_PERSONALIZATION_CONTROL_SELECTOR).filter({ visible: true });
   const control = controls.first();
   try {
     await control.waitFor({
       state: "visible",
-      timeout: remainingChatGptPersonalizationMs(deadline, signal),
+      timeout: remainingChatGptPersonalizationMs(structuralDeadline, signal),
       signal,
     });
   } catch (error) {
     if (!(error instanceof Error) || error.name !== "TimeoutError") throw error;
     throw chatGptConnectorUnavailableError(
-      "ChatGPT Temporary Chat did not expose a structural personalization control before the readiness deadline",
+      "ChatGPT Temporary Chat did not expose a structural personalization control within its bounded availability window",
     );
   }
-  const controlCount = await runChatGptPersonalizationStep(() => controls.count(), deadline, signal);
+  const controlCount = await runChatGptPersonalizationStep(() => controls.count(), structuralDeadline, signal);
   if (controlCount !== 1) {
     throw chatGptConnectorUnavailableError(
       `ChatGPT Temporary Chat exposed ${controlCount} structural personalization controls; expected exactly one`,
     );
   }
   await control.click({
-    timeout: remainingChatGptPersonalizationMs(deadline, signal),
+    timeout: remainingChatGptPersonalizationMs(structuralDeadline, signal),
     signal,
   });
-  const menu = await waitForChatGptOwnedPersonalizationMenu(page, control, deadline, signal);
+  const menu = await waitForChatGptOwnedPersonalizationMenu(page, control, structuralDeadline, signal);
   const choices = menu.locator(CHATGPT_PERSONALIZATION_CHOICE_SELECTOR).filter({ visible: true });
-  if (await runChatGptPersonalizationStep(() => choices.count(), deadline, signal) !== 2) {
+  if (await runChatGptPersonalizationStep(() => choices.count(), structuralDeadline, signal) !== 2) {
     throw chatGptConnectorUnavailableError(
       "ChatGPT personalization menu did not expose exactly two checkable states",
     );
@@ -426,7 +433,7 @@ async function openChatGptStructuralPersonalizationState(
   return {
     menu,
     choices,
-    checkedIndex: await readChatGptPersonalizationCheckedIndex(choices, deadline, signal),
+    checkedIndex: await readChatGptPersonalizationCheckedIndex(choices, structuralDeadline, signal),
   };
 }
 
@@ -517,10 +524,10 @@ async function ensureChatGptPersonalizedConnectorAccessWithinDeadline(
   // The visible sheet can be aria-hidden during hydration. Include those controls in the role
   // query but still require visibility; never select a hidden duplicate or switch locator rules.
   const personalized = page
-    .getByRole("button", { name: "Personalized", exact: true, includeHidden: true })
+    .getByRole("button", { name: /^(?:Personalized|个性化)$/, exact: true, includeHidden: true })
     .filter({ visible: true });
   const unpersonalized = page
-    .getByRole("button", { name: "Unpersonalized", exact: true, includeHidden: true })
+    .getByRole("button", { name: /^(?:Unpersonalized|非个性化)$/, exact: true, includeHidden: true })
     .filter({ visible: true });
   let personalizedCount = await runChatGptPersonalizationStep(() => personalized.count(), deadline, abortSignal);
   let unpersonalizedCount = await runChatGptPersonalizationStep(() => unpersonalized.count(), deadline, abortSignal);
@@ -595,7 +602,7 @@ async function ensureChatGptPersonalizedConnectorAccessWithinDeadline(
     );
     const choice = menu
       .locator(CHATGPT_PERSONALIZATION_CHOICE_SELECTOR)
-      .filter({ hasText: /^Personalized/ });
+      .filter({ hasText: /^(?:Personalized|个性化)/ });
     if (await runChatGptPersonalizationStep(() => choice.count(), deadline, abortSignal) !== 1) {
       throw chatGptConnectorUnavailableError(
         "ChatGPT personalization menu did not expose one exact Personalized choice",
@@ -3172,6 +3179,24 @@ export class ChatGptBrowserWorker {
     try {
       if (connectorMode !== "mention") {
         const composer = await this.activeComposer(page, 30_000, abortSignal);
+        if (connectorMode === "retained" && !await this.connectorIsSelected(composer, abortSignal)) {
+          const selectedComposer = await this.selectConnector(
+            page,
+            captureDiagnostic,
+            catalogRefreshAvailable,
+            connectorAttemptBudget,
+            abortSignal,
+          );
+          composerMutationStarted = true;
+          await selectedComposer.focus({ signal: abortSignal, timeout: CHATGPT_CONNECTOR_ACTION_TIMEOUT_MS });
+          await selectedComposer.press(CHATGPT_COMPOSER_DOCUMENT_END_KEY, {
+            signal: abortSignal,
+            timeout: CHATGPT_CONNECTOR_ACTION_TIMEOUT_MS,
+          });
+          await this.insertPromptText(page, ` ${prompt}`, abortSignal);
+          await this.assertPromptAttached(page, prompt, abortSignal);
+          return;
+        }
         // Playwright's multiline fill maps through an input action that ChatGPT's Lexical editor can
         // collapse to the first paragraph on the launcher-owned Electron surface. Clear separately,
         // then transport the complete text through the browser's plain-text editing command.

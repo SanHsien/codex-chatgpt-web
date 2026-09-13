@@ -7,6 +7,7 @@ import {
   compileChatGptWebPrompt,
   formatChatGptWebMultipartCommit,
   formatChatGptWebMultipartStage,
+  withoutRetiredTurnHandles,
 } from "../src/adapters/chatgpt-web/prompt";
 import { CHATGPT_WEB_LUNA_MODEL_ID, CHATGPT_WEB_MODEL_ID } from "../src/adapters/chatgpt-web/model";
 import { biggerContextPartCount } from "../src/adapters/chatgpt-web/usage";
@@ -526,6 +527,26 @@ test("the replayed context never carries a finished turn's broker handles", () =
   expect(compiled.text).toContain("keep working");
   const envelope = compiled.text.split("<codex_context_json>")[1]!.split("</codex_context_json>")[0]!.trim();
   expect(() => JSON.parse(envelope) as unknown).not.toThrow();
+});
+
+test("scrubs every retired broker capability exactly, including JSON-escaped prefixes", () => {
+  const body = "0123456789abcdefghijklmnopqrstuv";
+  for (const kind of ["turn", "request", "binding", "call", "control", "handoff"]) {
+    const scrubbed = withoutRetiredTurnHandles(JSON.stringify({ h: `${kind}_${body}` }));
+    expect(scrubbed).toBe(JSON.stringify({ h: `[retired ${kind} handle]` }));
+  }
+
+  expect(withoutRetiredTurnHandles(`"\\ncall_${body}"`)).toBe(`"\\n[retired call handle]"`);
+  expect(withoutRetiredTurnHandles(`"\\u001fcontrol_${body}"`)).toBe(`"\\u001f[retired control handle]"`);
+
+  for (const keep of [
+    `ncall_${body}`,
+    `call_${body.slice(0, 31)}`,
+    `call_${body}w`,
+    `callx_${body}`,
+  ]) {
+    expect(withoutRetiredTurnHandles(JSON.stringify({ h: keep }))).toContain(keep);
+  }
 });
 
 test("requires ChatGPT-native rich results to include a safe Markdown answer for Codex", () => {

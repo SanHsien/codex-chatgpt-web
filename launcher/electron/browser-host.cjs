@@ -869,6 +869,24 @@ class BrowserHost {
 
   bindManualTurnContents(tab) {
     const contents = tab.view.webContents;
+    const invalidateConversation = (url, inPlace) => {
+      // History state updates and anchor scrolling keep the same document/context.
+      if (inPlace && url.split("#", 1)[0] === tab.url?.split("#", 1)[0]) return;
+      // Initial login/navigation still carries full context. A later document change
+      // cannot prove that an incremental continuation belongs to the same conversation.
+      if (!tab.conversationKey
+        || (!tab.manualConversationReused && tab.manualState === "awaiting-user")) return;
+      tab.conversationKey = undefined;
+      if (tab.manualConversationReused && tab.status === "running") {
+        tab.status = "error";
+        tab.message = "ChatGPT page changed during a resumed Zero Risk turn. Start a new Codex turn to resend the full context.";
+        this.signalManualTerminal(tab, "failed");
+      }
+      this.logger.info("browser.manual_conversation_invalidated", {
+        tabId: tab.id,
+        traceId: tab.traceId,
+      });
+    };
     contents.setWindowOpenHandler(({ url }) => {
       let parsed;
       try { parsed = new URL(url); } catch { return { action: "deny" }; }
@@ -882,8 +900,9 @@ class BrowserHost {
       }
       return { action: "deny" };
     });
-    contents.on("did-start-navigation", (_event, url, _inPlace, mainFrame) => {
+    contents.on("did-start-navigation", (_event, url, inPlace, mainFrame) => {
       if (!mainFrame) return;
+      invalidateConversation(url, inPlace);
       tab.url = url;
       tab.loading = true;
       this.publishState?.(this.snapshot());
@@ -906,7 +925,10 @@ class BrowserHost {
       this.publishState?.(this.snapshot());
     });
     contents.on("did-navigate-in-page", (_event, url, mainFrame) => {
-      if (mainFrame) tab.url = url;
+      if (mainFrame) {
+        invalidateConversation(url, true);
+        tab.url = url;
+      }
       this.publishState?.(this.snapshot());
     });
     contents.on("did-fail-load", (_event, errorCode, errorDescription, url, mainFrame) => {
@@ -2267,6 +2289,7 @@ class BrowserHost {
     else this.syncViewVisibility();
     this.publishState?.(this.snapshot());
     this.logger.info("browser.tab_created", { tabId: tab.id, traceId, tabCount: this.turnTabs.size });
+    this.writeDescriptor();
     return { surfaceId: tab.surfaceId, tabId: tab.id, reused: false, connectorBound: false };
   }
 
@@ -2819,8 +2842,19 @@ class BrowserHost {
   }
 
   writeDescriptor() {
+    const surfaceTargets = {};
+    if (browserInteractionModeFor(this) === "automatic") {
+      const surfaces = [[this.surfaceId, this.view?.webContents],
+        ...[...this.turnTabs.values()].filter(tab => tab.interactionMode === "automatic")
+          .map(tab => [tab.surfaceId, tab.view.webContents])];
+      for (const [surfaceId, contents] of surfaces) {
+        if (!contents || contents.isDestroyed()) continue;
+        if (Object.hasOwn(surfaceTargets, surfaceId)) throw new Error("Browser surface ownership is duplicated");
+        surfaceTargets[surfaceId] = contents.getOrCreateDevToolsTargetId();
+      }
+    }
     const descriptor = {
-      version: 2,
+      version: 3,
       kind: "codex-web-gpt-launcher",
       profile: this.profile,
       pid: process.pid,
@@ -2830,6 +2864,7 @@ class BrowserHost {
       partition: this.partition,
       idleUrl: IDLE_BROWSER_URL,
       surfaceId: this.surfaceId,
+      surfaceTargets,
       createdAt: new Date().toISOString(),
     };
     writePrivateFileAtomic(this.descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
