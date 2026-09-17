@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -22,7 +23,7 @@ if (bundled.status !== 0) {
 const config = defaultConfig("browser-only");
 config.proAvailable = true;
 const catalog = augmentNativeModelCatalog(JSON.parse(bundled.stdout), config);
-const root = join(tmpdir(), `codex-chatgpt-web-cancel-${process.pid}-${Date.now()}`);
+const root = mkdtempSync(join(tmpdir(), "codex-chatgpt-web-cancel-"));
 const codexHome = join(root, "codex");
 mkdirSync(codexHome, { recursive: true });
 writeFileSync(join(root, "models.json"), `${JSON.stringify(catalog)}\n`);

@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -25,7 +26,7 @@ if (bundled.status !== 0) {
 }
 const nativeCatalog = JSON.parse(bundled.stdout);
 
-const root = join(tmpdir(), `codex-chatgpt-web-interrupt-${process.pid}-${Date.now()}`);
+const root = mkdtempSync(join(tmpdir(), "codex-chatgpt-web-interrupt-"));
 const codexHome = join(root, "codex");
 const appHome = join(root, "app");
 mkdirSync(codexHome, { recursive: true });

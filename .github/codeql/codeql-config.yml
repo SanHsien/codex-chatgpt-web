@@ -6,6 +6,7 @@ queries:
 paths-ignore:
   - "tests/**"
   - "launcher/tests/**"
+  - "scripts/**"
 
 query-filters:
   - exclude:

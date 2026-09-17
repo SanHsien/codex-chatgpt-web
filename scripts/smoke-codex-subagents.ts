@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -30,7 +31,7 @@ catalogConfig.proAvailable = true;
 catalogConfig.subagentProtocol = protocol === "v1" ? "compatibility-v1" : "native";
 const catalog = augmentNativeModelCatalog(sourceCatalog, catalogConfig);
 
-const root = join(tmpdir(), `codex-chatgpt-web-subagents-${process.pid}-${Date.now()}`);
+const root = mkdtempSync(join(tmpdir(), "codex-chatgpt-web-subagents-"));
 const codexHome = join(root, "codex");
 mkdirSync(codexHome, { recursive: true });
 writeFileSync(join(root, "models.json"), `${JSON.stringify(catalog)}\n`);

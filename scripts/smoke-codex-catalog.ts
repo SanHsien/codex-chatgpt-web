@@ -1,4 +1,5 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -26,7 +27,7 @@ if (!sourceCatalog.models?.some(model => model && typeof model === "object" && (
   throw new Error("Bundled Codex catalog has no gpt-5.6-sol template");
 }
 
-const root = join(tmpdir(), `codex-chatgpt-web-codex-smoke-${process.pid}-${Date.now()}`);
+const root = mkdtempSync(join(tmpdir(), "codex-chatgpt-web-codex-smoke-"));
 process.env.CODEX_HOME = join(root, "codex");
 process.env.CODEX_CHATGPT_WEB_HOME = join(root, "app");
 mkdirSync(process.env.CODEX_HOME, { recursive: true });
