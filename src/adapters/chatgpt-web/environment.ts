@@ -580,12 +580,16 @@ function trustedEnvironmentText(parsed: CodexParsedRequest): string {
 }
 
 function decodeXmlText(value: string): string {
-  return value
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&amp;", "&")
-    .replaceAll("&quot;", "\"")
-    .replaceAll("&#39;", "'");
+  return value.replace(/&(?:lt|gt|amp|quot|#39);/g, (match) => {
+    switch (match) {
+      case "&lt;": return "<";
+      case "&gt;": return ">";
+      case "&amp;": return "&";
+      case "&quot;": return "\"";
+      case "&#39;": return "'";
+      default: return match;
+    }
+  });
 }
 
 function environmentCwdMatches(text: string, preferredRoots: string[] = []): string[] {

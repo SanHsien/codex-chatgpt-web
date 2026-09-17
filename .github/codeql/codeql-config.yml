@@ -1,0 +1,22 @@
+name: "CodeQL config"
+
+queries:
+  - uses: security-extended
+
+paths-ignore:
+  - "tests/**"
+  - "launcher/tests/**"
+
+query-filters:
+  - exclude:
+      id: js/insecure-temporary-file
+      paths:
+        - "scripts/**"
+  - exclude:
+      id: js/file-access-to-http
+  - exclude:
+      id: js/http-to-file-access
+  - exclude:
+      id: js/file-system-race
+  - exclude:
+      id: js/log-injection

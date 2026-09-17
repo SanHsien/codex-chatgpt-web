@@ -1077,7 +1077,8 @@ export function buildResponseJSON(
 }
 
 export function formatErrorResponse(status: number, type: string, message: string): Response {
-  return new Response(JSON.stringify({ error: classifyError(status, type, message) }), {
+  const safeMessage = typeof message === "string" ? message.split("\n")[0].slice(0, 1000) : "An error occurred";
+  return new Response(JSON.stringify({ error: classifyError(status, type, safeMessage) }), {
     status, headers: { "Content-Type": "application/json" },
   });
 }
