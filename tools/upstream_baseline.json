@@ -7,9 +7,9 @@
   },
   "reviewed": {
     "mainCommit": "eaf4f09ae92d4dc4429fa597b0861663138f08f8",
-    "latestPullRequest": 569,
-    "latestPullRequestHead": "4af00a2f67e50071f249f3c7da22a6883a2bf9c5",
-    "latestNonPullRequestIssue": 571,
+    "latestPullRequest": 589,
+    "latestPullRequestHead": "534fbefa9a51ec60518561ca937a3b8e51320245",
+    "latestNonPullRequestIssue": 587,
     "branches": [
       { "name": "6.0.0", "commit": "eaf4f09ae92d4dc4429fa597b0861663138f08f8" },
       { "name": "main", "commit": "eaf4f09ae92d4dc4429fa597b0861663138f08f8" }

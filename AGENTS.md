@@ -13,3 +13,7 @@
 - Keep generated maintenance reports, credentials, cookies, profiles, diagnostics, and absolute local
   paths out of Git. Detailed procedures: [development](docs/DEVELOPMENT.md),
   [upstream](docs/UPSTREAM.md), [review](docs/REVIEW.md), and [test plan](docs/TEST_PLAN.md).
+- Use the optional coding loop only for deterministic work after reading `loop-policy.toml` and
+  [loop engineering](docs/loop-engineering.md). It is disabled by default; Quick is feedback only,
+  and only a successful Full gate may create completion evidence. The loop may not auto-merge,
+  push `main`, deploy, authenticate, or perform another approval-bound action.

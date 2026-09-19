@@ -256,3 +256,18 @@ The latest PR is closed #569 (head `4af00a2f67e50071f249f3c7da22a6883a2bf9c5`) a
 | 6-part context transport (commit `eaf4f09ae92d`) | defer | Increases context staging complexity; our Windows overlay maintains stable 3-part transport with thorough test coverage. |
 | Multi-language UI additions & Skills as files (#534 / v5.0.8) | reject | Non-core experimental features that add unnecessary complexity to this Windows-focused, self-contained fork. |
 | Non-Windows distribution & release workflows | reject | Retain strict Windows-only scope; non-Windows scripts and artifacts are excluded. |
+
+## 2026-09-19 — Upstream #570–#589 follow-up
+
+Read-only review covered the complete allocated range; #572–#576, #586, and #588 are unallocated.
+Upstream `main` and branch heads remain unchanged. No upstream fetch, merge, or write occurred.
+
+- Defer #577–#583 and #585 pending upstream acceptance plus bounded Windows lifecycle, visual,
+  replay, and route-ownership evidence. #582 is the strongest Windows adoption candidate but still
+  lacks upstream checks and packaged visual verification.
+- Defer #589: debugger-based runtime rewriting of a changing ChatGPT bundle is too brittle to adopt
+  without green Windows evidence and an explicit fail-safe compatibility contract.
+- Reject #570–#571 as non-Windows, #584 as an unrequested localization expansion, and #587 as an
+  unbounded architecture proposal.
+- Advance the reviewed ledger to PR #589 at `534fbefa9a51ec60518561ca937a3b8e51320245`
+  and non-PR issue #587; neither is a merge target.

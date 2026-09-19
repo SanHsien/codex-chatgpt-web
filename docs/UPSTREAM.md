@@ -333,3 +333,24 @@ The latest PR is closed #569 (head `4af00a2f67e50071f249f3c7da22a6883a2bf9c5`) a
 
 4. **Skills as Files & Multi-language Expansions (Rejected)**:
    - Experimental file uploads for skills (#534) and expanded language packs (Korean) are excluded to maintain this fork's lean Windows-focused distribution.
+
+## 2026-09-19 follow-up: #570–#589
+
+This read-only pass reviewed every allocated item from #570 through #589; #572–#576, #586, and #588
+are unallocated. Upstream `main` and both branches remain at
+`eaf4f09ae92d4dc4429fa597b0861663138f08f8`. No upstream branch was fetched, merged, or written.
+
+| Items | Decision | Windows applicability and re-review trigger |
+| --- | --- | --- |
+| #570–#571 | reject | #570 is macOS-only and #571 is a closed Linux ARM packaging request. Re-review only if a distinct Windows reproduction or packaging requirement appears. |
+| #577, #579–#581 | defer | These change accepted-turn retry, liveness, page ownership, and abandoned-tool cleanup. All are unmerged/unstable with no reported checks; re-review after upstream acceptance plus bounded Windows lifecycle tests. |
+| #578 | defer | Preserving standalone Codex plan tags is Windows-applicable, but the PR is unmerged/unstable with no checks. Re-review after upstream acceptance and focused Markdown/plan-card verification. |
+| #582 | defer, Windows candidate | The small titlebar CSS fix is directly Windows-applicable, but the PR is unmerged/unstable and reports no checks. Re-review after upstream acceptance and a packaged Windows visual regression. |
+| #583 | defer | The replay-boundary tests are useful, but the added troubleshooting contract concerns unsupported external-router composition. Re-review after upstream acceptance and this fork's native replay suite confirms the same boundary. |
+| #584 | reject | Russian localization expands a language surface this Windows-focused fork does not maintain. Reconsider only under an explicit localization requirement with synchronized release docs. |
+| #585 | defer | Session-scoped route restoration changes configuration ownership and shutdown recovery. Require journal rollback, crash recovery, and Windows installer/updater evidence. |
+| #587 | reject | Broad pluggable providers, routing, networking, and automation is an architecture proposal without a bounded Windows requirement. |
+| #589 | defer | Runtime CDP rewriting of ChatGPT's bundled tokenizer is brittle and adds parser dependencies. Re-review only after upstream ships it with green Windows evidence and a fail-safe compatibility contract for bundle changes. |
+
+The reviewed latest PR is #589 at `534fbefa9a51ec60518561ca937a3b8e51320245`; the latest non-PR
+issue is #587. These exact heads are reviewed history, not merge targets.

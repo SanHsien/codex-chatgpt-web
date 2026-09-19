@@ -1,11 +1,19 @@
 [CmdletBinding()]
 param(
-  [string]$BaseRef
+  [string]$BaseRef,
+  [switch]$Quick
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $expectedBun = '1.4.0'
+$summaryDir = Join-Path $repoRoot 'artifacts'
+$summaryPath = Join-Path $summaryDir 'quality-summary.json'
+
+# Any new run invalidates prior Full evidence. Quick never recreates it.
+if (Test-Path -LiteralPath $summaryPath -PathType Leaf) {
+  Remove-Item -LiteralPath $summaryPath -Force
+}
 
 function Invoke-Checked {
   param([string]$FilePath, [string[]]$Arguments, [string]$WorkingDirectory = $repoRoot)
@@ -48,9 +56,14 @@ if (-not (Test-ElectronRuntime -LauncherRoot (Join-Path $repoRoot 'launcher'))) 
 }
 
 Invoke-Checked -FilePath 'bun' -Arguments @('test', 'tests/fork-contract.test.ts', 'tests/upstream-baseline.test.ts', 'tests/dependency-freshness.test.ts')
-Invoke-Checked -FilePath 'bun' -Arguments @('run', 'scripts/check-upstream-baseline.ts', '--strict')
-Invoke-Checked -FilePath 'bun' -Arguments @('run', 'scripts/check-dependency-freshness.ts', '--strict')
-Invoke-Checked -FilePath 'bun' -Arguments @('run', 'verify')
+if (-not $Quick) {
+  Invoke-Checked -FilePath 'bun' -Arguments @('run', 'scripts/check-upstream-baseline.ts', '--strict')
+  Invoke-Checked -FilePath 'bun' -Arguments @('run', 'scripts/check-dependency-freshness.ts', '--strict')
+  Invoke-Checked -FilePath 'bun' -Arguments @('run', 'verify')
+} else {
+  Invoke-Checked -FilePath 'bun' -Arguments @('run', 'check-version')
+  Invoke-Checked -FilePath 'bun' -Arguments @('run', 'typecheck')
+}
 Invoke-Checked -FilePath 'git' -Arguments @('diff', '--check')
 Invoke-Checked -FilePath 'git' -Arguments @('diff', '--cached', '--check')
 if ($BaseRef) {
@@ -61,4 +74,29 @@ if ($BaseRef) {
 } else {
   Invoke-Checked -FilePath 'git' -Arguments @('show', '--check', '--format=', 'HEAD')
 }
-Write-Output "DEV CHECK PASSED: Bun $actualBun, fork contract, upstream/dependency checks, upstream verify, and whitespace."
+
+if (-not $Quick) {
+  if (-not (Test-Path -LiteralPath $summaryDir -PathType Container)) {
+    New-Item -ItemType Directory -Path $summaryDir -Force | Out-Null
+  }
+  $headSha = (& git rev-parse --verify HEAD 2>$null)
+  if ($LASTEXITCODE -ne 0 -or -not $headSha) { throw 'Unable to resolve current git HEAD.' }
+  $summaryPayload = @{
+    schema_version = 1
+    profile = 'full'
+    passed = $true
+    commit = $headSha.Trim()
+    timestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    gates = @{
+      fork_contract = $true
+      upstream_baseline = $true
+      dependency_freshness = $true
+      verify = $true
+      whitespace = $true
+    }
+  } | ConvertTo-Json -Depth 4
+  Set-Content -LiteralPath $summaryPath -Value $summaryPayload -Encoding utf8
+  Write-Output "DEV CHECK PASSED: Bun $actualBun, fork contract, strict upstream/dependency checks, verify, and whitespace."
+} else {
+  Write-Output "QUICK CHECK PASSED: Bun $actualBun, focused fork tests, version, typecheck, and whitespace."
+}

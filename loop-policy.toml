@@ -1,0 +1,46 @@
+version = 1
+
+[loop]
+# Disabled by default: this repository defines the contract, not an unattended runner.
+enabled = false
+max_iterations = 3
+max_parallel_worktrees = 1
+max_elapsed_minutes = 30
+max_tokens_per_run = 100000
+require_isolated_workspace = true
+require_independent_verifier = true
+persist_state = true
+stop_on_repeated_failure = true
+repeated_failure_limit = 2
+allow_auto_merge = false
+allow_direct_main_push = false
+
+[verification]
+quick_gate = "pwsh -NoProfile -File tools/dev_check.ps1 -Quick"
+full_gate = "pwsh -NoProfile -File tools/dev_check.ps1"
+require_machine_evidence = true
+
+[state]
+path = "loop-state/state.json"
+terminal_statuses = [
+  "complete",
+  "needs_human",
+  "budget_exhausted",
+  "verification_failed",
+]
+
+[connectors]
+default_mode = "read-only"
+require_explicit_credentials = true
+
+[human_approval]
+required_for = [
+  "authentication",
+  "authorization",
+  "payments",
+  "personal-data",
+  "deletion",
+  "deployment",
+  "secrets",
+  "dependency-major",
+]

@@ -3,6 +3,14 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-09-20
+
+- Added a disabled-by-default, bounded quality-loop contract. Quick verification is
+  feedback-only; only a successful Full gate can emit schema-v1 evidence bound to
+  the current Git HEAD.
+- Reviewed upstream items #570–#589 and advanced the fail-closed baseline to PR #589
+  and issue #587 without adopting unverified upstream code.
+
 ## 2026-09-13
 
 - Adopted the reviewed upstream `v5.0.6` release identity for this fork's Windows package,
