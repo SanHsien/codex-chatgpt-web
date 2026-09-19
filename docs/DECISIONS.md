@@ -242,3 +242,17 @@ expectations; it is not a bounded Windows defect. Re-review only after an upstre
 green Windows CI and an independently validated fork contract for local-only privacy,
 corruption/recovery, locking, installer/updater data preservation, acceptance-count semantics, and no
 representation as official remaining quota.
+
+## 2026-09-19 — Upstream v5.0.7, v5.0.8, and main@eaf4f09ae92d reconciliation
+
+Read-only revalidation reviewed upstream releases v5.0.7 (`973c287edf53c37d3d9fa2356010d635a6ccf25b`),
+v5.0.8 (`00aab23eb78a0d35ab575ff14044e29c0f80e711`), and latest main commit `eaf4f09ae92d4dc4429fa597b0861663138f08f8`.
+The latest PR is closed #569 (head `4af00a2f67e50071f249f3c7da22a6883a2bf9c5`) and latest non-PR issue is #571.
+
+| Scope / Item | Decision | Windows applicability and rationale |
+| --- | --- | --- |
+| ChatGPT DIL/PUIK response root selector (#538 / v5.0.8) | **adopt** | Fixes unread ChatGPT web responses where the assistant container does not use the legacy `.markdown` class. Directly impacts Windows browser automation stability without altering security boundaries. |
+| Launcher-side system proxy discovery (#535, #438 / v5.0.8) | defer | Windows native loopback proxy routing is already functioning in our overlay; defer deeper runtime refactoring pending concrete Windows reproduction of loopback proxy failure. |
+| 6-part context transport (commit `eaf4f09ae92d`) | defer | Increases context staging complexity; our Windows overlay maintains stable 3-part transport with thorough test coverage. |
+| Multi-language UI additions & Skills as files (#534 / v5.0.8) | reject | Non-core experimental features that add unnecessary complexity to this Windows-focused, self-contained fork. |
+| Non-Windows distribution & release workflows | reject | Retain strict Windows-only scope; non-Windows scripts and artifacts are excluded. |

@@ -310,3 +310,26 @@ queries; it never fetches, merges, pushes, or writes upstream. `--strict` exits 
 or unavailable axes. When it reports attention, review the exact upstream change, record an
 adopt/defer/reject decision here and in [DECISIONS.md](DECISIONS.md), then update the baseline only
 after relevant validation.
+
+## 2026-09-19 reconciliation: Upstream v5.0.7, v5.0.8, and main@eaf4f09ae92d
+
+A comprehensive read-only review was conducted on upstream releases v5.0.7 (`973c287edf53c37d3d9fa2356010d635a6ccf25b`),
+v5.0.8 (`00aab23eb78a0d35ab575ff14044e29c0f80e711`), and the latest upstream commit on branch `main`
+(`eaf4f09ae92d4dc4429fa597b0861663138f08f8`).
+The latest PR is closed #569 (head `4af00a2f67e50071f249f3c7da22a6883a2bf9c5`) and the latest non-PR issue is #571.
+
+### Key Evaluated Areas & Decisions
+
+1. **ChatGPT DIL/PUIK Response Root Extraction (Adopted)**:
+   - **Problem**: Upstream issue #538 identified that ChatGPT responses rendered with newer DIL components lack the traditional `.markdown` CSS class, causing timeouts in response parsing and smoke tests.
+   - **Solution**: Adopt the updated selector `.markdown, [data-message-author-role="assistant"] .puik-root.not-markdown > [class*="_DilResponseRoot"]` in `src/adapters/chatgpt-web/browser-worker.ts`.
+   - **Verification**: Browser worker contract test suite passed with zero regressions.
+
+2. **System Proxy Handling (Deferred)**:
+   - Changes resolving native requests through launcher system proxies are deferred as our current Windows loopback proxy architecture is operating stably without regressions.
+
+3. **6-Part Context Transport (Deferred)**:
+   - Commit `eaf4f09ae92d` transitions context splitting into six parts. This introduces additional complexity to prompt and token accounting without clear necessity for standard Windows workflows; deferred pending upstream stability.
+
+4. **Skills as Files & Multi-language Expansions (Rejected)**:
+   - Experimental file uploads for skills (#534) and expanded language packs (Korean) are excluded to maintain this fork's lean Windows-focused distribution.
