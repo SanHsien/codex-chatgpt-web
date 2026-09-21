@@ -6,7 +6,7 @@ const root = resolve(import.meta.dir, "..");
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 test("maintained-fork manifest documents Windows-only entrypoints and boundaries", () => {
-  for (const path of ["AGENTS.md", "CLAUDE.md", "CHANGELOG.md", "FORK.md", "NOTICE.md", "CODE_OF_CONDUCT.md", "README.en.md", "docs/DEVELOPMENT.md", "docs/DECISIONS.md", "docs/REVIEW.md", "docs/TEST_PLAN.md", "docs/UPSTREAM.md", "docs/loop-engineering.md", "tools/bootstrap_dev.ps1", "tools/dev_check.ps1", "tools/upstream_baseline.json", ".github/dependency-deferrals.json", "scripts/check-dependency-freshness.ts"]) expect(existsSync(resolve(root, path))).toBe(true);
+  for (const path of ["AGENTS.md", "CHANGELOG.md", "FORK.md", "NOTICE.md", "CODE_OF_CONDUCT.md", "README.en.md", "docs/DEVELOPMENT.md", "docs/DECISIONS.md", "docs/REVIEW.md", "docs/TEST_PLAN.md", "docs/UPSTREAM.md", "docs/loop-engineering.md", "tools/bootstrap_dev.ps1", "tools/dev_check.ps1", "tools/upstream_baseline.json", ".github/dependency-deferrals.json", "scripts/check-dependency-freshness.ts"]) expect(existsSync(resolve(root, path))).toBe(true);
   expect(existsSync(resolve(root, "README.zh-CN.md"))).toBe(false);
   expect(existsSync(resolve(root, "README.ja.md"))).toBe(false);
   expect(read("FORK.md")).toContain("reviewed");
@@ -45,9 +45,9 @@ test("maintained-fork manifest documents Windows-only entrypoints and boundaries
   expect(read("docs/DECISIONS.md")).toContain("Issue #359 | open; viewport classification backlog | monitor");
   expect(read("docs/DECISIONS.md")).toContain("PR #361 | open, non-draft, `UNSTABLE`; `c09aa18b8a2a84e3fa3d77dcd4b339d3575cbbe6` | reject macOS Dock/menu-bar mode");
   expect(read("docs/DECISIONS.md")).toContain("PR #362 | open, non-draft, `UNSTABLE`; `80ee0e3eac62067c14dd719d702ae1d7c55fdbe5` | adopt minimal per-part continuation environment parsing");
-  expect(read("tools/upstream_baseline.json")).toContain('"latestPullRequest": 589');
-  expect(read("tools/upstream_baseline.json")).toContain('"latestPullRequestHead": "534fbefa9a51ec60518561ca937a3b8e51320245"');
-  expect(read("tools/upstream_baseline.json")).toContain('"latestNonPullRequestIssue": 587');
+  expect(read("tools/upstream_baseline.json")).toContain('"latestPullRequest": 616');
+  expect(read("tools/upstream_baseline.json")).toContain('"latestPullRequestHead": "64362fd2a802c5fdb2869ea66c0ea055c6451972"');
+  expect(read("tools/upstream_baseline.json")).toContain('"latestNonPullRequestIssue": 620');
   expect(read("docs/DEVELOPMENT.md")).toContain("do **not** sign in to ChatGPT");
   expect(read("docs/TEST_PLAN.md")).toContain("must never be reported as proof");
 });

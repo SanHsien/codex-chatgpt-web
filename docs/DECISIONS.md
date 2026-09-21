@@ -271,3 +271,57 @@ Upstream `main` and branch heads remain unchanged. No upstream fetch, merge, or 
   unbounded architecture proposal.
 - Advance the reviewed ledger to PR #589 at `534fbefa9a51ec60518561ca937a3b8e51320245`
   and non-PR issue #587; neither is a merge target.
+
+## 2026-09-21 — Upstream #590–#618 follow-up
+
+Read-only review covered every allocated PR and issue number from #590 through #618 (25 items;
+`main` remains `eaf4f09ae92d4dc4429fa597b0861663138f08f8`, unchanged since the 2026-09-19 baseline).
+No upstream fetch, merge, cherry-pick, tag, or release occurred; this pass does not merge any code.
+
+| Item | Exact observed state | Decision | Windows applicability and rationale |
+| --- | --- | --- | --- |
+| [#590](https://github.com/miuuyy/codex-chatgpt-web/pull/590) | closed, unmerged, `CLEAN` | reject | Opt-in local Grok CLI compaction is a new third-party-CLI integration surface outside this fork's ChatGPT-web-only scope. |
+| [#593](https://github.com/miuuyy/codex-chatgpt-web/pull/593) | open, non-draft, `UNSTABLE` | defer | Cross-thread follow-up authentication fix is plausibly Windows-relevant but has no upstream review or Windows-specific acceptance yet. |
+| [#596](https://github.com/miuuyy/codex-chatgpt-web/pull/596) | closed, unmerged, `CLEAN` | reject | Recognizing another host's `.codex` visualization root addresses a multi-host bridge topology this fork does not support. |
+| [#597](https://github.com/miuuyy/codex-chatgpt-web/pull/597) | closed, unmerged, `CLEAN` | defer | Broad browser-turn/observation-recovery/launcher-lifecycle stabilization; closed without merge, no isolated Windows regression exists to port piecemeal. |
+| [#598](https://github.com/miuuyy/codex-chatgpt-web/pull/598) | open, non-draft, `UNSTABLE` | reject | New opt-in browser-host-only launcher mode is a product-surface expansion, not a defect fix. |
+| [#600](https://github.com/miuuyy/codex-chatgpt-web/pull/600) | open, non-draft, `UNSTABLE` | defer | Directly targets Windows MCP Setup `tunnel-client` install failures; strongest Windows adoption candidate in this batch, but lacks upstream review/green checks. |
+| [#601](https://github.com/miuuyy/codex-chatgpt-web/pull/601) | open, non-draft, `UNSTABLE` | defer | Reading turn environment across a native compaction summary overlaps this fork's already-adopted #362/#376 environment-authority ports; needs a diff against current source before porting. |
+| [#602](https://github.com/miuuyy/codex-chatgpt-web/pull/602) | open, non-draft, `UNSTABLE` | defer | Explicit unavailable-Pro-effort classification is plausibly Windows-relevant UI state handling, no Windows-specific acceptance evidence yet. |
+| [#603](https://github.com/miuuyy/codex-chatgpt-web/pull/603) | open, non-draft, `UNSTABLE` | defer | Rate-limit dialog classification between multipart stages; same rationale as #602. |
+| [#604](https://github.com/miuuyy/codex-chatgpt-web/pull/604) | open, non-draft, `UNSTABLE` | defer | Preserving replacement broker sockets during shutdown touches launcher lifecycle; no Windows-specific regression evidence yet. |
+| [#611](https://github.com/miuuyy/codex-chatgpt-web/pull/611) | open, non-draft, `UNSTABLE` | defer | Localizing temporary-chat personalization labels overlaps this fork's already-adopted #402 zh-CN labels; related to open issue #609 below. |
+| [#613](https://github.com/miuuyy/codex-chatgpt-web/pull/613) | open, non-draft, `UNSTABLE` | defer | Tolerating reordered Codex interrupt hook state is directly relevant to this fork's #394 interrupt-hook port and open issue #612 below. |
+| [#615](https://github.com/miuuyy/codex-chatgpt-web/pull/615) | closed, unmerged, `DIRTY` | reject | Measured ChatGPT message-budget/resumable-context-handoff feature; closed without merge, no bounded Windows defect. |
+| [#616](https://github.com/miuuyy/codex-chatgpt-web/pull/616) | closed, unmerged, `DIRTY` | reject | Duplicate re-submission of #615; same rationale. |
+| [#594](https://github.com/miuuyy/codex-chatgpt-web/issues/594) | closed, `not_planned` | reject | Maintainer did not plan to fix the persistent-session model-resolution report. |
+| [#595](https://github.com/miuuyy/codex-chatgpt-web/issues/595) | open, `bug` | monitor | Multi-device turn-token invalidation has no Windows-specific reproduction or fix yet. |
+| [#599](https://github.com/miuuyy/codex-chatgpt-web/issues/599) | closed, `not_planned` | reject | Windows localhost-Responses-provider candidate fix for #452 was closed `not_planned`; this fork's own #452 row in the prior register remains the tracked entry. |
+| [#605](https://github.com/miuuyy/codex-chatgpt-web/issues/605) | open, `bug` | monitor | In-app browser stuck loading on resume; no isolated cause or regression yet. |
+| [#606](https://github.com/miuuyy/codex-chatgpt-web/issues/606) | open, no label | reject | Explicitly reproduced on Linux with current main DEV smoke also failing there; no Windows-specific evidence. |
+| [#609](https://github.com/miuuyy/codex-chatgpt-web/issues/609) | open, no label | defer | Hardcoded EN/ZH locale regex in `ensureChatGptPersonalizedConnectorAccess` breaking other locales (e.g. cs-CZ) is a real correctness gap tracked by open PR #611 above. |
+| [#610](https://github.com/miuuyy/codex-chatgpt-web/issues/610) | open, no label | monitor | "Extra High" effort forcing an "Upgrade to Pro" modal on Plus overlaps this fork's already-adopted #436 personalization-preflight port; no Windows-specific regression evidence supplied yet to distinguish this from expected product gating. |
+| [#612](https://github.com/miuuyy/codex-chatgpt-web/issues/612) | open, no label | defer | `doctor` rejecting a semantically unchanged interrupt hook after Codex reorders trust state is tracked by open PR #613 above and relevant to this fork's own #394 fail-closed hook logic. |
+| [#614](https://github.com/miuuyy/codex-chatgpt-web/issues/614) | open, no label | monitor | TROUBLESHOOTING `[agents]` fix producing a "duplicate field" error for `max_threads` on codex-cli 0.155.1 needs a reproduction against this fork's pinned CLI version before any local doc/code change. |
+| [#617](https://github.com/miuuyy/codex-chatgpt-web/issues/617) | open, `bug` | monitor | Windows v5.0.8 Full Harness connected but the Codex Native2 Tunnel connector cannot be created; Windows-relevant but no isolated cause or upstream triage yet. |
+| [#618](https://github.com/miuuyy/codex-chatgpt-web/issues/618) | open, `bug` | monitor | Codex execution succeeding on the first chat then failing on the second message has no isolated cause or Windows-specific regression yet. |
+
+No item in this batch was ported; every `defer`/`monitor` decision needs either upstream review,
+a Windows-specific reproduction, or an owner-authorized porting task before code moves. Advance the
+reviewed ledger to PR #616 at `64362fd2a802c5fdb2869ea66c0ea055c6451972` and non-PR issue #618;
+`main` (`eaf4f09ae92d4dc4429fa597b0861663138f08f8`) and both branch heads (`6.0.0`, `main`) are
+unchanged and remain current. Neither axis is a merge target.
+
+## 2026-09-21 — Upstream #619–#620 follow-up
+
+Read-only review of the two non-PR issues opened after the #590–#618 batch. No new pull request,
+`main` commit or branch head appeared.
+
+| Item | Upstream state | Decision | Reason |
+| --- | --- | --- | --- |
+| [#619](https://github.com/miuuyy/codex-chatgpt-web/issues/619) | open, no label | monitor | Long sessions failing after compaction with `missing cwd in trusted Codex environment context` on v5.0.8 / Codex 0.154; no isolated cause, upstream triage or Windows-specific evidence yet. |
+| [#620](https://github.com/miuuyy/codex-chatgpt-web/issues/620) | closed, no label | monitor | Setup CLI rejecting `--app-name` for the Native2 connector after an upstream CLI change; closed upstream without a linked fix PR, and no reproduction against this fork's setup path yet. |
+
+Nothing was ported. Advance the reviewed non-PR issue ledger to #620; the PR ledger stays at
+#616 (`64362fd2a802c5fdb2869ea66c0ea055c6451972`) and `main` stays at
+`eaf4f09ae92d4dc4429fa597b0861663138f08f8`.
