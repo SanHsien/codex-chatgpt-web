@@ -54,7 +54,17 @@ function sanitizeForExport(value, seen = new WeakSet()) {
 function exportSanitizedLogs({ filePath, destinationPath }) {
   const sourcePaths = [`${filePath}.1`, filePath];
   const destination = path.resolve(destinationPath);
-  if (sourcePaths.some(sourcePath => path.resolve(sourcePath) === destination)) {
+  const destinationStat = fs.statSync(destination, { throwIfNoEntry: false });
+  const destinationRealPath = destinationStat ? fs.realpathSync(destination) : null;
+  if (sourcePaths.some(sourcePath => {
+    if (path.resolve(sourcePath) === destination) return true;
+    if (!destinationStat) return false;
+    const sourceStat = fs.statSync(sourcePath, { throwIfNoEntry: false });
+    if (!sourceStat) return false;
+    return fs.realpathSync(sourcePath) === destinationRealPath
+      || (destinationStat.ino !== 0
+        && sourceStat.dev === destinationStat.dev && sourceStat.ino === destinationStat.ino);
+  })) {
     throw new Error("Refusing to overwrite a launcher source log with an exported diagnostic");
   }
   const records = [];
@@ -111,33 +121,33 @@ function sanitize(value, seen = new WeakSet()) {
 }
 
 function readRecent(filePath) {
-  try {
-    return fs.readFileSync(filePath, "utf8")
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .slice(-MAX_MEMORY_RECORDS)
-      .flatMap((line) => {
-        try {
-          const record = JSON.parse(line);
-          if (!record
-            || typeof record.at !== "string"
-            || !["debug", "info", "warning", "error"].includes(record.level)
-            || typeof record.event !== "string") return [];
-          return [{
-            at: record.at,
-            level: record.level,
-            event: record.event,
-            detail: record.detail && typeof record.detail === "object"
-              ? sanitize(record.detail)
-              : {},
-          }];
-        } catch {
-          return [];
-        }
-      });
-  } catch {
-    return [];
+  const records = [];
+  for (const sourcePath of [`${filePath}.1`, filePath]) {
+    let lines;
+    try {
+      lines = fs.readFileSync(sourcePath, "utf8").split(/\r?\n/).filter(Boolean);
+    } catch {
+      continue;
+    }
+    for (const line of lines.slice(-MAX_MEMORY_RECORDS)) {
+      try {
+        const record = JSON.parse(line);
+        if (!record
+          || typeof record.at !== "string"
+          || !["debug", "info", "warning", "error"].includes(record.level)
+          || typeof record.event !== "string") continue;
+        records.push({
+          at: record.at,
+          level: record.level,
+          event: record.event,
+          detail: record.detail && typeof record.detail === "object"
+            ? sanitize(record.detail)
+            : {},
+        });
+      } catch {}
+    }
   }
+  return records.slice(-MAX_MEMORY_RECORDS);
 }
 
 function createLogger({ filePath, publish }) {

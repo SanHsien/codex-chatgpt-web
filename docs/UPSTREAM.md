@@ -354,3 +354,125 @@ are unallocated. Upstream `main` and both branches remain at
 
 The reviewed latest PR is #589 at `534fbefa9a51ec60518561ca937a3b8e51320245`; the latest non-PR
 issue is #587. These exact heads are reviewed history, not merge targets.
+
+## 2026-09-25 reconciliation: main@75794225, PR #617–#658, issues #621–#662, and branch removal
+
+Read-only review of every upstream `main` commit between the prior reviewed head
+`eaf4f09ae92d4dc4429fa597b0861663138f08f8` and the new head
+`757942251222ee0f71953c35636679c6d92dd636` (six commits: `8bd72e512cec…`, `c8597bf0ae71…`,
+`52f17f3a3f7c…`, `29e748bed643…`, `212ceef2acac…`, `757942251222…`); every allocated PR number
+#617–#658 (`#625`, `#632`, `#641`, `#644` were never allocated); and every allocated non-PR issue
+number #621–#662. No upstream fetch, merge, cherry-pick, tag, or release occurred.
+
+### `main` axis — 6.0.0 feature release, deferred wholesale
+
+The six commits are the squashed `6.0.0` branch merging into `main` (the `6.0.0` branch head was
+identical to the prior reviewed `main` head, so its disappearance from the branch inventory is that
+merge, not data loss) plus four small unreleased follow-ups. `8bd72e512cec` alone adds opt-in Pro
+usage tracking, a new model catalog/logo, saved chats, per-turn browser conversation controls, a
+six-part context transport, native Linux ARM64 packaging, and a staged-release updater — the same
+6-part transport this fork already deferred on 2026-09-19. `212ceef2acac`/`757942251222` add Windows
+interrupt-hook TOML-serialization tolerance and Korean/composer-selector fixes (`Refs #640, #642`).
+
+Decision: **defer** the whole `main` advance. This fork intentionally stays on its own reviewed,
+3-part-transport, Windows-only baseline; adopting `6.0.0` wholesale is a major, cross-cutting product
+change outside this task's bounded scope and outside this worker's file ownership (it touches
+`package.json`/lockfiles, which belong to a separate dependency-owning worker). Re-review when the
+owner authorizes a bounded 6.0.0 adoption plan with its own dependency and packaging review.
+
+### Branch axis — `6.0.0` branch retired
+
+The only branch-inventory change is the disappearance of `6.0.0` (it was squash-merged into `main`
+above); `main` is now the sole upstream branch. This is an inventory change, not a merge target.
+
+### Pull requests #617–#658 (8 allocated; 4 numbers never allocated)
+
+| PR | Head / status | Decision | Windows applicability and rationale |
+| --- | --- | --- | --- |
+| [#623](https://github.com/miuuyy/codex-chatgpt-web/pull/623) | closed, unmerged, draft, `CLEAN`, `3420e522f046a217c4d57cbcad2e4c425232cd79` | reject | Maintainer closed it: the proposed `AbortSignal` was not wired from the worker, and the actual local `6.0` fix propagates acquisition cancellation through a worker/control-server path this fork's launcher does not have. No isolated diff to port. |
+| [#627](https://github.com/miuuyy/codex-chatgpt-web/pull/627) | closed, unmerged, `CLEAN`, `eaeb42ad140b3eae9d01208e93ab96f64edd688f` | reject | Maintainer closed it in favor of a differently worded troubleshooting note shipped locally as part of unreleased `6.0`; not merged, no isolated diff. |
+| [#638](https://github.com/miuuyy/codex-chatgpt-web/pull/638) | closed, unmerged, `CLEAN`, `37677cf79259c60f94fa5f953ca5f75f9b0136f7` | reject | Maintainer explicitly declined: it adds generated `.omx` session/state logs and reverts Linux ARM64 release builds and pre-release-promotion protection. "Not suitable for the project." |
+| [#649](https://github.com/miuuyy/codex-chatgpt-web/pull/649) | closed, unmerged, `CLEAN`, `06dc7b830a978b11828f5fff89a0d19f8cc946c4` | reject | Maintainer declined broad six-language launcher localization as an open-ended maintenance commitment outside project scope, consistent with this fork's own prior localization rejections (#400, #534, #611). The underlying French/Korean model-label correctness gaps remain tracked under issues #640/#642/#648 below. |
+| [#650](https://github.com/miuuyy/codex-chatgpt-web/pull/650) | closed, unmerged, `CLEAN`, `c3dcadf1712b025400a2d1bea6484247c9356d5a` | reject | Maintainer declined: an isolated check against the PR's own parser/compiler path showed the context-reduction dropped a completed tool call's returned result. Too broad and unsafe as designed. |
+| [#654](https://github.com/miuuyy/codex-chatgpt-web/pull/654) | open, non-draft, `UNSTABLE`, `1cb4acb6461a80765e7c1bfb446fc7b16cdf9f5f` | **adopt** | Closes upstream #653. Small (22 additions, 2 files), Windows-applicable multi-monitor window-restore fix: `overlapsDisplay()` in `launcher/electron/window-state.cjs` treated any single overlapping pixel as "on screen," letting a saved window restore almost entirely off a disconnected monitor's remaining display. Ported verbatim: require at least 96px of width and 32px of title-bar height inside a display's work area before keeping saved coordinates. Regression test ported into `launcher/tests/window-state.test.cjs`; `node --test` passes. |
+| [#656](https://github.com/miuuyy/codex-chatgpt-web/pull/656) | open, non-draft, `UNSTABLE`, `90adf9dc9f37349cfef85448536bb9d72d4449b7` | **adopt** | Closes upstream #655. Small (60 additions, 2 files) correctness fix: `readRecent()` in `launcher/electron/logging.cjs` only read the current `launcher.jsonl`, so restarting right after log rotation lost Activity history preserved in `launcher.jsonl.1`. Ported verbatim: read the rotated file before the current file and cap the merged result at 300 records. Regression tests ported; `node --test` passes. |
+| [#658](https://github.com/miuuyy/codex-chatgpt-web/pull/658) | open, non-draft, `UNSTABLE`, `f3173055eea2976aebdd4cb3c62faeb3ac0f489c` | **adopt** | Security-relevant. Closes upstream #657. Small (45 additions, 2 files): `exportSanitizedLogs()` in `launcher/electron/logging.cjs` compared only resolved path strings, so a hard link (or, off-Windows, a symlink) at another name pointing back at a source log let a diagnostics export overwrite `launcher.jsonl`/`launcher.jsonl.1`. Ported verbatim: also compare `fs.realpathSync()` output and, as a fallback, device/inode identity, before writing. Regression test (hard-link case runs on Windows; the symlink case is skipped there, matching upstream) ported; `node --test` passes. |
+
+### Re-evaluated Windows rollout-path identity candidate (#376/#365/#399)
+
+Re-examined the `pathIdentity()` triplication in `environment.ts`, `codex-rollout-environment.ts`,
+and `thread-environment.ts` (`resolve(value)` then, on `win32`, `toNamespacedPath(...).toLowerCase()`)
+for the concern that it does not strip an incoming `\\?\` / `\\?\UNC\` extended-length prefix before
+calling `resolve()`. Built an isolated reproduction and a codebase-level regression fixture (an
+`extractChatGptTurnEnvironment` request whose canonical XML `<cwd>`/`<root>` values were
+pre-`toNamespacedPath()`-prefixed while the client-metadata workspace key stayed a plain path) and ran
+it against the current, unmodified source under both `node` and `bun` (1.4.2) on this Windows host.
+
+Result: **no defect reproduces**. `path.resolve()` and `path.toNamespacedPath()` already treat an
+input that already carries `\\?\` or `\\?\UNC\` as an absolute Windows path and normalize it to the
+same namespaced, lower-cased identity as the un-prefixed form; an earlier informal reproduction that
+suggested otherwise was an artifact of shell/heredoc backslash-escaping corruption in the diagnostic
+script itself, not a defect in this codebase. No source change was made; a drafted fix and regression
+test were written, verified to have no observable effect (pass/fail identical with and without it),
+and reverted rather than kept as unexplained no-op complexity. This closes out the #376/#365/#399
+re-evaluation instructed for this round; the 2026-09-11 `#376` `adopt` decision (`toNamespacedPath()`
+normalization itself) stands unchanged and remains verified by `tests/environment.test.ts`'s existing
+`win32`-only namespace test.
+
+### Non-PR issues #621–#662 (30 allocated; #625/#632/#641/#644 were never allocated, see above)
+
+| Item | State / labels | Decision | Windows applicability and rationale |
+| --- | --- | --- | --- |
+| [#621](https://github.com/miuuyy/codex-chatgpt-web/issues/621) | closed, `not_planned`; P1/macOS | reject | macOS-only compaction/model report; no Windows reproduction. |
+| [#622](https://github.com/miuuyy/codex-chatgpt-web/issues/622) | open; P2/cross-platform, tracking | monitor | Cross-platform tracking issue for ChatGPT safety-block/tool-failure reports; no bounded Windows defect yet. |
+| [#624](https://github.com/miuuyy/codex-chatgpt-web/issues/624) | closed, `completed`; P2/Linux | reject | Linux-only tab-close abort; outside this Windows-only fork's scope. |
+| [#626](https://github.com/miuuyy/codex-chatgpt-web/issues/626) | closed, `not_planned`; P1/Windows | monitor | Windows Full Harness setup false-positive detecting `psmux` as `tmux`; closed upstream without a fix. Watch for a reproduction against this fork's own setup detection. |
+| [#628](https://github.com/miuuyy/codex-chatgpt-web/issues/628) | closed, `completed`; P1/Linux | reject | Linux-only (Arch/CachyOS) sign-in page load failure. |
+| [#629](https://github.com/miuuyy/codex-chatgpt-web/issues/629) | open; P1/Windows | monitor | Intermittent Native2 tunnel turn-token failure on Windows Full Harness; no isolated cause or regression yet. |
+| [#630](https://github.com/miuuyy/codex-chatgpt-web/issues/630) | open; P2/macOS | reject | macOS-only local-file-attachment report. |
+| [#631](https://github.com/miuuyy/codex-chatgpt-web/issues/631) | open; P1/macOS | reject | macOS-only stream-abort report. |
+| [#633](https://github.com/miuuyy/codex-chatgpt-web/issues/633) | closed, `not_planned`; P1/Windows | monitor | Native2 tools disappearing from `ALL_TOOLS` on follow-up turns is Windows-relevant; closed upstream without a fix, not evidence it cannot recur here. |
+| [#634](https://github.com/miuuyy/codex-chatgpt-web/issues/634) | closed, `not_planned`; `bug`, no body | reject | No reproduction evidence of any kind. |
+| [#635](https://github.com/miuuyy/codex-chatgpt-web/issues/635) | closed, `completed`; P2/Windows/`fix: released` | defer | Inline hyperlink destinations lost before Codex receives the final answer; fixed in an upstream release this fork has not adopted (still on its own pre-6.0 baseline). Re-review by checking this fork's own hyperlink-preservation path against a Windows reproduction before deciding adopt/reject. |
+| [#636](https://github.com/miuuyy/codex-chatgpt-web/issues/636) | closed, `not_planned`; `bug`, no body | reject | No reproduction evidence. |
+| [#637](https://github.com/miuuyy/codex-chatgpt-web/issues/637) | closed, `completed`; no label | defer | Automatic routes could not pin GPT-5.6 Sol independently of effort; closed completed, implying an upstream release fix this fork has not adopted. Re-review against this fork's own automatic-route/effort-pinning logic. |
+| [#639](https://github.com/miuuyy/codex-chatgpt-web/issues/639) | closed, `not_planned`; `bug` | reject | Specific to `v6.0.0`'s new model-capacity/`turn_id` conflict path, which this fork has not adopted (see `main` axis above); closed `not_planned` upstream. |
+| [#640](https://github.com/miuuyy/codex-chatgpt-web/issues/640) | open; P1/Windows/`fix: committed-unreleased` | monitor | "Something went wrong" installing/uninstalling models after the `6.0.0` update; the fix is committed on `main` (`Refs #640` in `757942251222`) but entangled with the deferred `6.0.0` base and unreleased. Re-review only alongside a bounded `6.0.0` adoption decision. |
+| [#642](https://github.com/miuuyy/codex-chatgpt-web/issues/642) | closed, `completed`; P1/`fix: committed-unreleased`/cross-platform | defer | Korean model-family label omission in validation; the fix is committed (`Refs #642` in `757942251222`) but only as part of the same combined commit that also adds the 6.0.0 Korean UI label — no isolated diff exists to port without adopting rejected localization scope. Re-review if the fix is ever isolated from the localization expansion. |
+| [#643](https://github.com/miuuyy/codex-chatgpt-web/issues/643) | closed, `duplicate`; `bug` | reject | Duplicate of another report. |
+| [#645](https://github.com/miuuyy/codex-chatgpt-web/issues/645) | closed, `not_planned`; `bug`, no body | reject | No reproduction evidence. |
+| [#646](https://github.com/miuuyy/codex-chatgpt-web/issues/646) | open; P1/macOS | reject | macOS-only compact-and-resume stream stop. |
+| [#647](https://github.com/miuuyy/codex-chatgpt-web/issues/647) | open; P2/macOS | reject | macOS-only "ChatGPT Pro 5x" plan-recognition report. |
+| [#648](https://github.com/miuuyy/codex-chatgpt-web/issues/648) | closed, `not_planned`; P2/Windows | reject | French "Le plus récent" label blocking GPT-6 Pro selection; Windows-labeled but explicitly declined upstream (`fix: not-planned`) together with the declined PR #649 above. |
+| [#651](https://github.com/miuuyy/codex-chatgpt-web/issues/651) | closed, `completed`; `bug`, no platform info | reject | No platform evidence and closed completed elsewhere; nothing to port. |
+| [#652](https://github.com/miuuyy/codex-chatgpt-web/issues/652) | open; P2/Linux | reject | Linux-only missing-dependency update failure. |
+| [#653](https://github.com/miuuyy/codex-chatgpt-web/issues/653) | open; P2/cross-platform | adopt-linked | Tracked by adopted PR #654 above; ported. |
+| [#655](https://github.com/miuuyy/codex-chatgpt-web/issues/655) | open; P3/cross-platform | adopt-linked | Tracked by adopted PR #656 above; ported. |
+| [#657](https://github.com/miuuyy/codex-chatgpt-web/issues/657) | open; P3/cross-platform | adopt-linked | Tracked by adopted PR #658 above; ported. |
+| [#659](https://github.com/miuuyy/codex-chatgpt-web/issues/659) | open; P2/Windows | defer | Installer fails on a GitHub API rate limit (403) and retries too quickly; Windows-relevant and a plausible adopt candidate, but needs a bounded backoff design before porting — not a minimal, isolated diff yet. |
+| [#660](https://github.com/miuuyy/codex-chatgpt-web/issues/660) | closed, `not_planned`; P1/cross-platform | reject | Declined upstream (`fix: not-planned`). |
+| [#661](https://github.com/miuuyy/codex-chatgpt-web/issues/661) | open; P1/Windows | monitor | `v6.0.0`-specific Temporary Chat composer/session-detection timeout; specific to the deferred `6.0.0` base, no isolated cause yet. |
+| [#662](https://github.com/miuuyy/codex-chatgpt-web/issues/662) | open; P1/Windows | monitor | `launcher:browser-smoke` "ChatGPT web login is expired" error; Windows-relevant, no isolated cause or regression yet. |
+
+### Late-arriving items during this review: PR #664, issues #663/#665–#667
+
+Five more items appeared upstream while this review was in progress; `main` and the branch inventory
+did not move again. Reviewed read-only, same pass:
+
+| Item | State / labels | Decision | Windows applicability and rationale |
+| --- | --- | --- | --- |
+| [#663](https://github.com/miuuyy/codex-chatgpt-web/issues/663) | open; `bug`, no body | reject | No reproduction evidence. |
+| [#664](https://github.com/miuuyy/codex-chatgpt-web/pull/664) | open, draft, `UNSTABLE`, `39dbceaee47f8821a5df0bc06a9785bb1b9e9cfc` | defer | Directly Windows-relevant: adapts browser-worker selectors (composer, reasoning picker, submit button, conversation markup) to ChatGPT's September 24 interface change, addressing the same DOM-drift class as the adopted #538 selector fix. Draft, no reviews/checks, 9 files/337 additions — too large and unstable to port this round without upstream stabilization. Re-review once it leaves draft with green checks, or if this fork's own browser-worker smoke test reproduces the composer/send failure independently. Head advanced during the review from `cdc3d980` to `39dbceae` (one commit, "upload attachments through the current ChatGPT composer", +62/-56 in `browser-worker.ts` and its contract test); still draft and `UNSTABLE`, so the decision is unchanged. |
+| [#665](https://github.com/miuuyy/codex-chatgpt-web/issues/665) | open; `bug`, no label | reject | Linux x64-only Google-login smoke-test failure. |
+| [#666](https://github.com/miuuyy/codex-chatgpt-web/issues/666) | open; no label | monitor | Documentation/clarification request about GPT-6 (Web) model and effort coverage, not a defect. |
+| [#667](https://github.com/miuuyy/codex-chatgpt-web/issues/667) | open; no label | defer | Root-caused by the same ChatGPT DOM change as #664 above; tracked by that open draft PR. |
+
+### One more late-arriving issue: #668
+
+| Item | State / labels | Decision | Windows applicability and rationale |
+| --- | --- | --- | --- |
+| [#668](https://github.com/miuuyy/codex-chatgpt-web/issues/668) | open; `bug`, Windows 10, `v6.0.0` | defer | Same "login is expired or new chat surface unavailable" symptom class as #662 (monitor) and #667 (defer); on `v6.0.0`, which this fork has not adopted. Tracked alongside #667 by draft PR #664 above pending its stabilization. |
+
+Advance the reviewed ledger to `main` `757942251222ee0f71953c35636679c6d92dd636`, PR #664 at
+`39dbceaee47f8821a5df0bc06a9785bb1b9e9cfc`, non-PR issue #668, and branch inventory `main` only
+(the `6.0.0` branch was merged and removed). Neither axis is a merge target.
