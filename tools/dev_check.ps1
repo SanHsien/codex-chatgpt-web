@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$expectedBun = '1.4.0'
+$expectedBun = '1.4.2'
 $summaryDir = Join-Path $repoRoot 'artifacts'
 $summaryPath = Join-Path $summaryDir 'quality-summary.json'
 

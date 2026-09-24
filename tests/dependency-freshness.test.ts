@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { checkFailure, checkFreshness, evaluateFreshness, parseBunOutdated, renderReport, validateDeferrals } from "../scripts/check-dependency-freshness";
 
-const table = "bun outdated v1.4.0 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n| pkg (dev) | 1.0.0 | 1.1.0 | 2.0.0 |\n";
+const table = "bun outdated v1.4.2 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n| pkg (dev) | 1.0.0 | 1.1.0 | 2.0.0 |\n";
 const deferrals = { schemaVersion: 1, deferrals: [{ workspace: "root", package: "pkg", latest: "2.0.0", reviewed: "2026-09-06", reason: "Requires packaged desktop verification." }] } as const;
 
 test("parses Bun 1.4 text tables and applies exact-version deferrals", () => {
@@ -11,7 +11,7 @@ test("parses Bun 1.4 text tables and applies exact-version deferrals", () => {
 });
 
 test("checks both workspaces and audits with an injected command runner", () => {
-  const clean = "bun outdated v1.4.0 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n";
+  const clean = "bun outdated v1.4.2 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n";
   const result = checkFreshness("/repo", validateDeferrals(deferrals), (_command, args, cwd) => ({ exitCode: 0, stdout: args[0] === "audit" ? "No vulnerabilities" : (cwd === "/repo" ? table : clean), stderr: "" }));
   expect(result.status).toBe("current");
   expect(result.outdatedChecks).toHaveLength(2);

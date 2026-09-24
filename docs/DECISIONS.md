@@ -2,7 +2,7 @@
 
 ## 2026-09-06 — Windows-only maintenance boundary
 
-Maintain Windows behavior, Bun 1.4.0, tests, license, and Traditional Chinese/English docs. Remove
+Maintain Windows behavior, Bun 1.4.2, tests, license, and Traditional Chinese/English docs. Remove
 public macOS/Linux distribution, packaging, autostart, updater, release, and developer-support surfaces.
 Keep shared internal platform abstractions when they support Windows or removing them would broaden the
 product refactor. Source and development use this fork; until it has a release, packaged installation

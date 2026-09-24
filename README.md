@@ -102,7 +102,7 @@ Set-Location codex-chatgpt-web
 bun run app
 ```
 
-原始碼方式需要 Bun 1.4.0。該命令會安裝鎖定版本的依賴並開啟應用。
+原始碼方式需要 Bun 1.4.2。該命令會安裝鎖定版本的依賴並開啟應用。
 
 ## 模式
 

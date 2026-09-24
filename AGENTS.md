@@ -1,6 +1,6 @@
 # Repository guidance
 
-- Preserve Windows product behavior, CLI names, Bun `1.4.0`, both lockfiles, Windows release
+- Preserve Windows product behavior, CLI names, Bun `1.4.2`, both lockfiles, Windows release
   packaging, MIT attribution, the PowerShell installer URL, and the Traditional Chinese/English READMEs.
 - Fork writes belong only to `SanHsien/codex-chatgpt-web`. Upstream `miuuyy/codex-chatgpt-web` is
   read-only unless the owner explicitly authorizes contribution in this task.

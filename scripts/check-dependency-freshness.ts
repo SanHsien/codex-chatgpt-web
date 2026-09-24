@@ -35,7 +35,7 @@ export function parseBunOutdated(output: string): OutdatedDependency[] {
     if (!cells.every(isText)) throw new Error("Bun outdated returned a malformed table row.");
     rows.push({ package: cells[0].replace(/ \(dev\)$/, ""), current: cells[1], update: cells[2], latest: cells[3] });
   }
-  if (!/bun outdated v1\.4\.0/.test(output)) throw new Error("Bun outdated output is unavailable or not from pinned Bun 1.4.0.");
+  if (!/bun outdated v1\.4\.2/.test(output)) throw new Error("Bun outdated output is unavailable or not from pinned Bun 1.4.2.");
   return rows;
 }
 

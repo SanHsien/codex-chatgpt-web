@@ -7,7 +7,7 @@ pwsh -NoProfile -File tools\bootstrap_dev.ps1
 pwsh -NoProfile -File tools\dev_check.ps1
 ```
 
-Bootstrap requires Bun `1.4.0`, installs root and launcher with `--frozen-lockfile`, and never
+Bootstrap requires Bun `1.4.2`, installs root and launcher with `--frozen-lockfile`, and never
 changes either lockfile. It also requires the GitHub CLI with authenticated GitHub access because
 the canonical gate performs strict read-only upstream tracking; bootstrap never starts a login flow.
 Use `pwsh -NoProfile -File tools\bootstrap_dev.ps1 -CheckOnly` to check those prerequisites. It validates Electron's contained `path.txt` runtime and safely runs the
@@ -27,7 +27,7 @@ See [TEST_PLAN.md](TEST_PLAN.md), [REVIEW.md](REVIEW.md), and [UPSTREAM.md](UPST
 ## Dependency freshness
 
 `bun run check:dependencies` checks root and launcher using Bun `outdated` and `audit` without
-installing or editing manifests. Bun 1.4.0 emits a text table even with `--json`; the checker parses
+installing or editing manifests. Bun 1.4.2 emits a text table even with `--json`; the checker parses
 that pinned format defensively. Exact latest-version deferrals in
 `.github/dependency-deferrals.json` require reviewed upstream or packaged desktop verification and
 must be renewed when a newer release appears.
