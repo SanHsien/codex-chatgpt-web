@@ -64,6 +64,74 @@ test("launcher activity restores valid records from the previous process", () =>
   }
 });
 
+test("launcher activity restores records from the rotated log after a restart", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-web-gpt-logging-rotated-"));
+  const filePath = path.join(root, "launcher.jsonl");
+  const record = (event) => `${JSON.stringify({
+    at: "2026-09-23T00:00:00.000Z", level: "info", event, detail: {},
+  })}\n`;
+  try {
+    fs.writeFileSync(`${filePath}.1`, record("before-rotation"));
+    fs.writeFileSync(filePath, record("after-rotation"));
+    const logger = createLogger({ filePath });
+    assert.deepEqual(logger.recent().map(({ event }) => event), ["before-rotation", "after-rotation"]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rotated activity stays bounded to the most recent 300 records", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-web-gpt-logging-history-"));
+  const filePath = path.join(root, "launcher.jsonl");
+  const record = (index) => JSON.stringify({
+    at: "2026-09-23T00:00:00.000Z", level: "info", event: `entry-${index}`, detail: {},
+  });
+  try {
+    fs.writeFileSync(`${filePath}.1`, Array.from({ length: 290 }, (_, index) => record(index)).join("\n"));
+    fs.writeFileSync(filePath, Array.from({ length: 20 }, (_, index) => record(index + 290)).join("\n"));
+    const records = createLogger({ filePath }).recent(300);
+    assert.equal(records.length, 300);
+    assert.equal(records[0].event, "entry-10");
+    assert.equal(records.at(-1).event, "entry-309");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("exporting diagnostics cannot overwrite source logs through filesystem links", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-web-gpt-export-alias-"));
+  const filePath = path.join(root, "launcher.jsonl");
+  const rotatedPath = `${filePath}.1`;
+  const original = `${JSON.stringify({
+    at: "2026-09-24T00:00:00.000Z", level: "info", event: "launcher.started",
+    detail: { url: "https://chatgpt.com/c/private-conversation" },
+  })}\nnot-json\n`;
+  try {
+    fs.writeFileSync(filePath, original);
+    fs.writeFileSync(rotatedPath, original);
+    for (const [name, source] of [["current", filePath], ["rotated", rotatedPath]]) {
+      const destinationPath = path.join(root, `${name}-alias.jsonl`);
+      fs.linkSync(source, destinationPath);
+      assert.throws(
+        () => exportSanitizedLogs({ filePath, destinationPath }),
+        /Refusing to overwrite a launcher source log/,
+      );
+      assert.equal(fs.readFileSync(source, "utf8"), original);
+    }
+    if (process.platform !== "win32") {
+      const destinationPath = path.join(root, "symbolic-alias.jsonl");
+      fs.symlinkSync(filePath, destinationPath);
+      assert.throws(
+        () => exportSanitizedLogs({ filePath, destinationPath }),
+        /Refusing to overwrite a launcher source log/,
+      );
+      assert.equal(fs.readFileSync(filePath, "utf8"), original);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("exported launcher logs remove local usernames, private ChatGPT titles, and URL paths", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-web-gpt-export-"));
   const filePath = path.join(root, "launcher.jsonl");

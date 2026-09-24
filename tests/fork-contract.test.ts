@@ -45,9 +45,9 @@ test("maintained-fork manifest documents Windows-only entrypoints and boundaries
   expect(read("docs/DECISIONS.md")).toContain("Issue #359 | open; viewport classification backlog | monitor");
   expect(read("docs/DECISIONS.md")).toContain("PR #361 | open, non-draft, `UNSTABLE`; `c09aa18b8a2a84e3fa3d77dcd4b339d3575cbbe6` | reject macOS Dock/menu-bar mode");
   expect(read("docs/DECISIONS.md")).toContain("PR #362 | open, non-draft, `UNSTABLE`; `80ee0e3eac62067c14dd719d702ae1d7c55fdbe5` | adopt minimal per-part continuation environment parsing");
-  expect(read("tools/upstream_baseline.json")).toContain('"latestPullRequest": 616');
-  expect(read("tools/upstream_baseline.json")).toContain('"latestPullRequestHead": "64362fd2a802c5fdb2869ea66c0ea055c6451972"');
-  expect(read("tools/upstream_baseline.json")).toContain('"latestNonPullRequestIssue": 620');
+  expect(read("tools/upstream_baseline.json")).toContain('"latestPullRequest": 664');
+  expect(read("tools/upstream_baseline.json")).toContain('"latestPullRequestHead": "39dbceaee47f8821a5df0bc06a9785bb1b9e9cfc"');
+  expect(read("tools/upstream_baseline.json")).toContain('"latestNonPullRequestIssue": 668');
   expect(read("docs/DEVELOPMENT.md")).toContain("do **not** sign in to ChatGPT");
   expect(read("docs/TEST_PLAN.md")).toContain("must never be reported as proof");
 });

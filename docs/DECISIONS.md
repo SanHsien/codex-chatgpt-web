@@ -325,3 +325,86 @@ Read-only review of the two non-PR issues opened after the #590–#618 batch. No
 Nothing was ported. Advance the reviewed non-PR issue ledger to #620; the PR ledger stays at
 #616 (`64362fd2a802c5fdb2869ea66c0ea055c6451972`) and `main` stays at
 `eaf4f09ae92d4dc4429fa597b0861663138f08f8`.
+
+## 2026-09-25 — main@75794225, PR #617–#658, issues #621–#662, and branch removal
+
+`main` advanced `eaf4f09ae92d…` → `757942251222…` via six commits, the largest being a squashed
+`6.0.0` feature release (opt-in Pro usage tracking, new model catalog, saved chats, 6-part context
+transport, native Linux ARM64 packaging, staged updater). The `6.0.0` branch (previously at the old
+`main` head) is gone — it was merged, not lost. Decision: **defer** the whole `main`/`6.0.0` advance;
+this fork stays on its own reviewed 3-part-transport Windows-only baseline, and any adoption is a
+bounded, separately owned task (touches dependency files outside this worker's scope).
+
+Re-evaluated the Windows rollout-path identity candidate (#376/#365/#399): built an isolated
+reproduction and a codebase-level regression fixture for `pathIdentity()` not stripping an incoming
+`\\?\`/`\\?\UNC\` extended-length prefix before `resolve()`. Under both `node` and `bun` 1.4.2 on this
+Windows host, `resolve()` + `toNamespacedPath()` + `toLowerCase()` already normalize prefixed and
+un-prefixed forms of the same path to the same identity — no defect reproduces. No source change was
+kept; a drafted no-op fix and test were verified inert and reverted. The 2026-09-11 `#376` `adopt`
+decision (`toNamespacedPath()` itself) is unchanged.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| `main`/`6.0.0` (commits `8bd72e512cec`…`757942251222`) | squashed 6.0.0 release + 3 follow-ups | defer | Owner authorizes a bounded 6.0.0 adoption plan with its own dependency/packaging review. |
+| Branch `6.0.0` removed | merged into `main` | n/a, inventory change | — |
+| pathIdentity() extended-prefix candidate (#376/#365/#399) | re-evaluated, no defect found | reject (no port needed) | A concrete Windows reproduction demonstrates `resolve()`/`toNamespacedPath()` mishandling a `\\?\`/`\\?\UNC\` input on the fork's actual pinned Bun version. |
+| PR #623 | closed/unmerged, draft, `3420e522f046a217c4d57cbcad2e4c425232cd79` | reject | A worker/control-server-based lease-cancellation design (matching this fork's own architecture) is proposed and tested. |
+| PR #627 | closed/unmerged, `eaeb42ad140b3eae9d01208e93ab96f64edd688f` | reject | Superseded by an unreleased, differently worded local fix upstream; no isolated diff exists. |
+| PR #638 | closed/unmerged, `37677cf79259c60f94fa5f953ca5f75f9b0136f7` | reject | Maintainer declined it outright (unwanted `.omx` logs, reverted release protections). |
+| PR #649 | closed/unmerged, `06dc7b830a978b11828f5fff89a0d19f8cc946c4` | reject | Declined as out-of-scope six-language localization; related correctness gaps tracked under #640/#642/#648. |
+| PR #650 | closed/unmerged, `c3dcadf1712b025400a2d1bea6484247c9356d5a` | reject | Declined: shown to drop a completed tool-call result in the PR's own isolated check. |
+| PR #654 | open, `1cb4acb6461a80765e7c1bfb446fc7b16cdf9f5f` | **adopt** | Ported 2026-09-25: `overlapsDisplay()` in `launcher/electron/window-state.cjs` now requires 96px width / 32px title-bar height inside a display's work area before keeping saved window coordinates. `launcher/tests/window-state.test.cjs` covers it; `node --test` passes. Re-review if Electron's display/work-area geometry contract changes. |
+| PR #656 | open, `90adf9dc9f37349cfef85448536bb9d72d4449b7` | **adopt** | Ported 2026-09-25: `readRecent()` in `launcher/electron/logging.cjs` now reads the rotated `launcher.jsonl.1` before the current file, capped at 300 records. `launcher/tests/logging.test.cjs` covers it; `node --test` passes. Re-review if the log-rotation file-naming contract changes. |
+| PR #658 | open, `f3173055eea2976aebdd4cb3c62faeb3ac0f489c` | **adopt** | Security-relevant; ported 2026-09-25: `exportSanitizedLogs()` in `launcher/electron/logging.cjs` now also compares `fs.realpathSync()` output and device/inode identity, not just resolved path strings, before writing — closing a hard-link/symlink overwrite of source logs. `launcher/tests/logging.test.cjs` covers it (symlink case skipped on Windows, matching upstream); `node --test` passes. Re-review if the export destination-identity check changes. |
+| #621 | closed, macOS | reject | A Windows reproduction. |
+| #622 | open, cross-platform tracking | monitor | A bounded Windows-specific defect is isolated from the tracking issue. |
+| #624 | closed, Linux | reject | Outside Windows-only scope. |
+| #626 | closed `not_planned`, Windows | monitor | A reproduction against this fork's own `psmux`/`tmux` detection. |
+| #628 | closed, Linux | reject | Outside Windows-only scope. |
+| #629 | open, Windows | monitor | An isolated cause for the intermittent Native2 turn-token failure. |
+| #630 | open, macOS | reject | A Windows reproduction. |
+| #631 | open, macOS | reject | A Windows reproduction. |
+| #633 | closed `not_planned`, Windows | monitor | A reproduction against this fork's own `ALL_TOOLS` follow-up-turn handling. |
+| #634 | closed `not_planned`, no body | reject | Any reproduction evidence at all. |
+| #635 | closed `completed`, `fix: released`, Windows | defer | This fork's own hyperlink-preservation path is checked against a Windows reproduction. |
+| #636 | closed `not_planned`, no body | reject | Any reproduction evidence at all. |
+| #637 | closed `completed`, no label | defer | This fork's automatic-route/effort-pinning logic is checked against a reproduction. |
+| #639 | closed `not_planned` | reject | Specific to the deferred `v6.0.0` model-capacity path. |
+| #640 | open, `fix: committed-unreleased`, Windows | monitor | A bounded `6.0.0` adoption decision is made (fix is entangled with the deferred base). |
+| #642 | closed `completed`, `fix: committed-unreleased`, cross-platform | defer | The Korean-label fix is isolated from the rejected six-language localization expansion it ships with. |
+| #643 | closed `duplicate` | reject | — |
+| #645 | closed `not_planned`, no body | reject | Any reproduction evidence at all. |
+| #646 | open, macOS | reject | A Windows reproduction. |
+| #647 | open, macOS | reject | A Windows reproduction. |
+| #648 | closed `not_planned`, Windows | reject | Declined upstream alongside PR #649. |
+| #651 | closed `completed`, no platform info | reject | Any Windows-specific reproduction. |
+| #652 | open, Linux | reject | Outside Windows-only scope. |
+| #653 | open, cross-platform | adopt-linked | Tracked by adopted PR #654; ported. |
+| #655 | open, cross-platform | adopt-linked | Tracked by adopted PR #656; ported. |
+| #657 | open, cross-platform | adopt-linked | Tracked by adopted PR #658; ported. |
+| #659 | open, Windows | defer | A bounded installer-retry/backoff design is drafted. |
+| #660 | closed `not_planned` | reject | Declined upstream. |
+| #661 | open, Windows | monitor | Specific to the deferred `v6.0.0` base; an isolated cause on this fork's own baseline. |
+| #662 | open, Windows | monitor | An isolated cause for the `launcher:browser-smoke` login-expired error. |
+
+Five more items (PR #664, issues #663/#665–#667) appeared upstream while this review was in
+progress; `main` did not move again. #664 (draft, `UNSTABLE`) adapts browser-worker selectors to
+ChatGPT's September 24 interface change — the same DOM-drift class as the adopted #538 fix — but is
+too large/unstable to port this round.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| #663 | open, `bug`, no body | reject | Any reproduction evidence at all. |
+| PR #664 | open, draft, `UNSTABLE`, `39dbceaee47f8821a5df0bc06a9785bb1b9e9cfc` | defer | It leaves draft with green checks, or this fork's own browser-worker smoke test reproduces the composer/send failure independently. |
+| #665 | open, Linux x64 | reject | Outside Windows-only scope. |
+| #666 | open, feature request | monitor | It becomes a bounded, owner-authorized Windows-scoped documentation/UI task. |
+| #667 | open | defer | Same trigger as PR #664 above (tracks it). |
+
+One more issue (#668) appeared during verification; same symptom class as #662/#667, on `v6.0.0`.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| #668 | open, `bug`, Windows 10, `v6.0.0` | defer | Same trigger as #667/PR #664 above. |
+
+Advance the reviewed ledger to `main` `757942251222ee0f71953c35636679c6d92dd636`, PR #664 at
+`39dbceaee47f8821a5df0bc06a9785bb1b9e9cfc`, non-PR issue #668, and branch inventory `main` only.
