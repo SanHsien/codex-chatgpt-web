@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "deferrals": [
+    { "workspace": "root", "package": "chromium-bidi", "latest": "17.0.2", "reviewed": "2026-09-06", "reason": "Major browser-protocol upgrade awaits reviewed upstream or packaged desktop verification." },
+    { "workspace": "root", "package": "playwright-core", "latest": "1.63.0", "reviewed": "2026-09-06", "reason": "Patch/minor lag remains upstream-managed pending a reviewed upstream change." },
+    { "workspace": "root", "package": "turndown", "latest": "7.2.4", "reviewed": "2026-09-06", "reason": "Patch/minor lag remains upstream-managed pending a reviewed upstream change." },
+    { "workspace": "root", "package": "zod", "latest": "4.6.5", "reviewed": "2026-09-19", "reason": "zod 4.6.5 makes the current @modelcontextprotocol/sdk tool-schema types incompatible with the project's zod/v4 schemas (TS2322). Defer until that integration can be upgraded and validated together." },
+    { "workspace": "root", "package": "@types/turndown", "latest": "5.0.6", "reviewed": "2026-09-06", "reason": "Patch/minor lag remains upstream-managed pending a reviewed upstream change." },
+    { "workspace": "root", "package": "typescript", "latest": "7.0.2", "reviewed": "2026-09-06", "reason": "Major compiler upgrade requires review before changing the pinned toolchain." },
+    { "workspace": "launcher", "package": "motion", "latest": "13.4.3", "reviewed": "2026-09-25", "reason": "Re-reviewed 2026-09-25: took the in-range 12.43.0 update; 13.x is a major UI-animation runtime change whose effects are visual, so it needs a packaged launcher run with manual UI inspection, which offline gates and the package smoke test do not cover." },
+    { "workspace": "launcher", "package": "@types/node", "latest": "26.6.2", "reviewed": "2026-09-25", "reason": "Electron 44.4.5 bundles Node 24.21.0, so @types/node tracks the 24.x line to match the desktop runtime rather than Node 26 types. Reconsider when the Electron pin moves to a release that bundles a newer Node major." },
+    { "workspace": "launcher", "package": "@vitejs/plugin-react", "latest": "6.1.1", "reviewed": "2026-09-06", "reason": "Major build-plugin upgrade requires packaged desktop verification." },
+    { "workspace": "launcher", "package": "typescript", "latest": "7.0.2", "reviewed": "2026-09-06", "reason": "Major compiler upgrade requires review before changing desktop tooling." },
+    { "workspace": "launcher", "package": "vite", "latest": "8.3.1", "reviewed": "2026-09-25", "reason": "Re-reviewed 2026-09-25: two majors ahead (6 -> 8) with @vitejs/plugin-react also held at 5.x; upgrade them together in a dedicated pass verified by launcher build, package, and smoke rather than in a maintenance sweep." }
+  ]
+}

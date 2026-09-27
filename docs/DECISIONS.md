@@ -1,0 +1,410 @@
+# Decisions
+
+## 2026-09-06 — Windows-only maintenance boundary
+
+Maintain Windows behavior, Bun 1.4.2, tests, license, and Traditional Chinese/English docs. Remove
+public macOS/Linux distribution, packaging, autostart, updater, release, and developer-support surfaces.
+Keep shared internal platform abstractions when they support Windows or removing them would broaden the
+product refactor. Source and development use this fork; until it has a release, packaged installation
+and auto-update use the pinned, reviewed upstream Windows release `v5.0.4`.
+
+## 2026-09-07 — Upstream baseline and complete decision register
+
+`main` remains reviewed at `c648c09501bb1b704c7ad5273fb5f5d6b8992dd2`; that initial read-only GitHub inventory
+recorded latest PR #355 (`1108fa6298fab765dce6a052b7edc2510c0bad17`, closed/unmerged draft) and
+latest non-PR issue #359. The baseline is history, never a merge target. Every listed open item has a
+Windows-applicability decision; implementation detail and links are in [UPSTREAM.md](UPSTREAM.md).
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| PR #347 | `df0224756d639edfa2124ed96c1dad75e05e06df` | adopt authenticated parent visualization-root lineage | Codex changes root shape or parent metadata. |
+| PR #343 | `96070ea6f8c4a181b624a0f626e174107b5874d4` | defer Japanese diagnostics | Windows regression plus checks. |
+| PR #340 / issue #314 | `ffef4f335c48b521562d4d21c26bb1c89e12f64e` | adopt V1 null-agent-path compatibility | Post-port Windows regression. |
+| PR #338 | `37dbecce686bb19fe8871699e205d43ca0dbe5f8` | defer | Committed regression tests and checks. |
+| PR #329 | `c55b5cef7f7a6d1b8c0759d7806a94f06d10ce77` | defer | Clean merge plus focused checks. |
+| Issue #348 | closed; Windows 10 Full Harness interrupt-hook marker ordering; no verified fix | monitor | Upstream regression plus safe marker-normalization fix. |
+| Issue #346 | Windows report; no verified fix | monitor | Safe reproduction or a tested fix. |
+| Issue #345 | WSL-backed workspace feature | defer | Security design and integration tests. |
+| Issue #344 | Windows launcher/WSL feature | defer | Security design and integration tests. |
+| Issue #339 | macOS-only retired binding | reject | A Windows reproduction. |
+| Issue #332 | usage-estimation enhancement | defer | Verified Windows need and bounded design. |
+| Issue #328 | connector investigation | monitor | Safe logs and a regression. |
+| Issue #326 | Cloudflare Tunnel feature | reject | Separate owner-authorized design. |
+| Issue #323 | macOS-only stream behavior | reject | A Windows reproduction. |
+| Issue #321 | Windows report; no verified fix | monitor | Safe reproduction or a tested fix. |
+| Issue #319 | macOS arm64 report | reject | A Windows reproduction and a bounded Windows fix. |
+| Issue #314 | linked to adopted PR #340 | adopt-linked | Post-port Windows regression. |
+| Issue #312 | account-safety investigation | defer | Verified Windows need and bounded design. |
+| Issue #308 | Windows report; no verified fix | monitor | Safe reproduction or a tested fix. |
+| Issue #297 | native V2 encrypted enhancement | defer | Verified Windows need and bounded design. |
+| Issue #286 | macOS Dock behavior | reject | A Windows reproduction. |
+| Issue #278 | Windows report; no verified fix | monitor | Safe reproduction or a tested fix. |
+
+## 2026-09-07 — Upstream #349–#359 reconciliation
+
+The baseline moved only after a read-only review of every item. No PR was merged or copied. The
+closed/unmerged PRs are not endorsements, and draft/macOS-only evidence does not establish a Windows
+release fix.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| PR #349 | closed/unmerged `f9619efd69bf397fec19edcdec53156762a88c92` | reject | Windows trace distinguishes manual Stop from upstream interruption and a no-replay classification regression passes. |
+| Issue #350 | closed; macOS arm64 | reject | Current Windows reproduction with bounded local cause. |
+| Issue #351 | open; macOS arm64 reports | reject | Windows safe-log trace identifies the post-submit state without replay. |
+| Issue #352 | open; symlinked config checkpoint | defer | Windows link capture/setup/rollback/removal tests preserve link and target bytes. |
+| Issue #353 | open; legacy compact 404 plus Web size work | defer | Windows test isolates legacy fallback and validates a bounded local error/route. |
+| PR #354 | open draft `466d682f0a054ed2699c65e86465e81815c141ce` | defer | Windows packaged false-green reproduction; port only supervisor behavior and regression. |
+| PR #355 | closed/unmerged draft `1108fa6298fab765dce6a052b7edc2510c0bad17` | monitor | Windows geometry/lifecycle trace plus installed no-replay/cancellation regression. |
+| Issue #356 | open; Chinese per-call approval | monitor | Supported Windows flow provides observed labels/DOM and approval-mode regression. |
+| Issue #357 | open; Windows Go/Think Full mode | defer | Fresh/retained Full-mode reproduction preserves connector, Luna, and explicit Think enforcement. |
+| Issue #358 | open; Japanese diagnostics enhancement | reject | Owner authorizes Japanese UI support and literal dynamic-value formatter tests pass. |
+| Issue #359 | open; viewport classification backlog | monitor | Windows cause is identified and a focused policy proves no replay after submit. |
+
+Strict tracking fails on changed or unavailable main/PR/issue/branch axes; update this register before
+updating `tools/upstream_baseline.json`. Dependency checks remain read-only and exact-version
+deferrals must be revisited when newer releases appear.
+
+## 2026-09-07 — Upstream #360–#361 reconciliation
+
+The read-only inventory still reports `main` and its only branch at
+`c648c09501bb1b704c7ad5273fb5f5d6b8992dd2`, latest non-PR issue #359, and latest PR #361 at
+`c09aa18b8a2a84e3fa3d77dcd4b339d3575cbbe6`. No application code was imported.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| PR #360 | open, non-draft, `UNSTABLE`; `a4cd7012150bd76789fc818bd04d55cfa90a2744`; no upstream review/comments | defer external-provider mode | Concrete Windows external-router use, upstream-reviewed stabilization without an uncommitted handoff, and bounded Windows compatibility/security acceptance of fail-closed config, journal, native-turn, launcher/setup, and subagent ownership. |
+| PR #361 | open, non-draft, `UNSTABLE`; `c09aa18b8a2a84e3fa3d77dcd4b339d3575cbbe6` | reject macOS Dock/menu-bar mode | Owner-authorized, separately bounded Windows requirement with Windows-applicable design and regression evidence. |
+
+## 2026-09-08 — Upstream #362 Windows Full-mode adoption
+
+Read-only review of [#362](https://github.com/miuuyy/codex-chatgpt-web/pull/362) at
+`80ee0e3eac62067c14dd719d702ae1d7c55fdbe5` confirmed the Windows v5.0.4 Full-mode compaction
+failure: a rebuilt user preamble can place `<environment_context>` beside recommended-plugin and
+AGENTS.md parts, hiding it from joined-text recognition. The minimal local port reads array parts,
+deduplicates identical continuation claims, rejects conflicting claims, and leaves bare-string
+content non-authority-bearing on primary paths. Continuation-only string claims remain subject to
+native rollout cross-checking. No upstream branch was fetched or merged.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| PR #362 | open, non-draft, `UNSTABLE`; `80ee0e3eac62067c14dd719d702ae1d7c55fdbe5` | adopt minimal per-part continuation environment parsing | PR head/content-part/rollout-authority shape changes, or a Windows Full-mode continuation regression fails. `contextualUserMessage` joined-text classification remains excluded pending a separately bounded vocabulary/ordering review. |
+
+## 2026-09-10 — Upstream #417–#418 reconciliation
+
+Only the non-PR issue axis moved since the #363–#416 register. Read-only GitHub inventory; no upstream
+write, fetch, merge, or release action.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| #417 | never allocated; API returns 404 | reject | The number is ever allocated. |
+| Issue #418 | open, label `bug`, no PR; opened 2026-09-09 | defer | Platform fields contradict each other (`macOS arm64` vs `Windows 11`); a Windows reproduction with privacy-safe diagnostics identifies the empty native-tool discovery step, and a regression separates "no tool registered" from "tool registered but not selected". |
+
+## 2026-09-09 — Upstream #363–#416 reconciliation
+
+This register covers every PR and issue number from #363 through #416 (54 numbers; 14 were never
+allocated — #382–#393, #401, #409). The read-only GitHub inventory on 2026-09-09 found upstream
+`main` advanced to `e85e3693fdb4e3e033348c08df0298c20fcdb612`. No code was ported this round; items
+marked `defer` are adoption candidates pending further review, not changes already applied to this fork.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| Issue #363 | closed issue, `not_planned`, `bug` | reject | A bounded Windows reproduction shows **Keep running on close** genuinely fails to keep the bridge alive. |
+| Issue #364 | closed issue, `completed`, locked, converted to Discussion | defer | The retained Discussion produces a bounded design and a Windows-reproducible size-rejection retry case this fork can verify. |
+| PR #365 | closed/unmerged draft `c98cf139e185cc39d582c43b45aabd8603fde6a9` | reject | The PR is reopened or its head changes, or #376's adoption candidacy below is resolved. |
+| PR #366 | closed/unmerged `6337889e8bc8ea33129f7edf931f35a9b82a9578` | reject | This fork's own verify/typecheck scripts start failing on a packaged Bun runtime without a `bunx` shim, or PowerShell fails to expand a test-file glob. |
+| PR #367 | closed/unmerged `e3e230deebb796079b1cc87be21dbe64cd64ba33` | reject | #379's re-review trigger below fires. |
+| PR #368 | closed/unmerged `7d63cc92ee884ef0a68674720adfdbecd86671a3` | reject | #377's re-review trigger below fires. |
+| PR #369 | closed/unmerged `a3c9c4ebbed77c6b7ef6cf47e6cb951f050e4f09` | reject | A stricter, boundary-preserving design (per the #380 follow-up comment) is implemented and reviewed. |
+| PR #370 | closed/unmerged `5a7abe344a4bccdbe34dde649fb2f5d50d6d581a` | reject | A fresh native trace reproduces the failure against current `main` behavior. |
+| PR #371 | closed/unmerged `a83a5472c8969f5c626e652c0a082e9af18d7d14` | reject | A handoff design proven safe across cancellation, cleanup, and retention is reviewed. |
+| Issue #372 | closed issue, `completed`, `bug`/`P2`/`fix: released` | defer | Escalated as an adopt candidate pending source confirmation against this fork's tunnel-monitoring startup path. |
+| PR #373 | closed/unmerged `29d9c2da3b57770ce49645f02319ffd580c4cfde` | reject | #381's re-review trigger below fires with a controlled-workload comparison. |
+| Issue #374 | open issue, `bug`/`enhancement`/`P2`/`investigation` | reject | The owner authorizes a bounded, Windows-scoped connector-naming design distinct from the declined redesign. |
+| PR #375 | closed/unmerged `9b62e1264d91f1f922c869d1d10501104ede8c0f` | reject | A page-capacity limit is established with evidence beyond this PR and reconciled with #346/#353. |
+| Issue #376 | closed issue, `completed`, `bug`/`P2`/`Windows`/`fix: released` | defer | Escalated as an adopt candidate in this round's report; port `toNamespacedPath()`-equivalent normalization into all three `pathIdentity()` copies with a Windows regression test, then update this row to `adopt`. |
+| Issue #377 | closed issue, `completed`, `bug`/`P2`/`fix: released` | defer | Escalated as an adopt candidate pending source confirmation; if this fork's browser-host navigation handling lacks the same invalidation, port it with a focused regression, then update this row. |
+| Issue #378 | closed issue, `completed`, locked, `enhancement`/`P3`/`backlog` | reject | Same trigger as #366 above. |
+| Issue #379 | closed issue, `completed`, `bug`/`P3`/`fix: released` | defer | Escalated as a low-priority adopt candidate; confirm whether this fork's `installedLauncherCandidates()`-equivalent has the same impurity before porting. |
+| Issue #380 | closed issue, `completed`, locked, `enhancement`/`P2`/`backlog` | defer | The stricter design is implemented and reviewed upstream, or the owner authorizes this fork to design it independently. |
+| Issue #381 | closed issue, `completed`, locked, `enhancement`/`P2`/`backlog` | defer | A measurement-only diagnostic patch or #397's shipped fix is reviewed against this fork. |
+| Issue #394 | closed issue, `completed`, `bug`/`P1`/`fix: released`/`investigation`/`awaiting retest` | defer | Escalated as an adopt candidate; audit `launcher:setup-core` handling for a removed hook and, if the harsh failure persists, port a bounded recovery path with a regression test. |
+| PR #395 | closed/unmerged `9be751b3274a2aca43453608d4d9d666e6641737` | reject | A Windows safe-log trace of a stale-"Stopped thinking" cancellation is captured against current `main` behavior. |
+| PR #396 | closed/unmerged `6a52fd00aed7c28bc74d3b48cca93ba528580afa` | reject | The deferral notice is confirmed on-screen during an actual failing turn with a privacy-safe capture. |
+| Issue #397 | open issue, `bug`/`P1`/`fix: released`/`investigation`/`awaiting retest` | defer | Escalated as an adopt candidate; confirm this fork's page-selection logic against native browser target identity, and re-check once upstream closes #397 after retest. |
+| Issue #398 | closed issue, `completed`, `bug`/`awaiting retest` | monitor | This fork reproduces the same `Compaction continuation requires one current native environment claim` failure despite the #362 port. |
+| PR #399 | closed/unmerged `dirty` `31ba066893b8f7b3d64ec3e135f05db7f3dedbe5` | reject | Same trigger as #376 above. |
+| PR #400 | closed/unmerged `0d389e9837e8df6f4b81ac5e326cc9f2e75bc0c5` | reject | A combined localization implementation ships in a release and the owner authorizes non-English launcher-diagnostics support for this Windows-only fork. |
+| PR #402 | closed/merged `f69ec84c7b9c9fc8c21c4be4d67538e43ca3afdf` | defer | Escalated as an adopt candidate; diff this fork's personalization preflight against the merged commit and port with the included regression tests. |
+| PR #403 | closed/unmerged `dirty` `d7249d5a8a4f23ac044120a595d5517113829561` | reject | #405's re-review trigger below fires with a reproducible failure on the pinned Bun 1.4.0. |
+| PR #404 | closed/unmerged `451b8a372094c8594e3a9c6cfb7b7ab1de0f1394` | monitor | The fix ships in a release; then treat as a fresh adoption candidate against this fork's collaboration-wait guard. |
+| Issue #405 | open issue, no labels | monitor | The requested reproduction evidence (or this fork's own login timeout on Bun 1.4.0) appears. |
+| Issue #406 | open issue, `bug` | reject | The reporter retests on v5.0.6 in Full harness mode and the failure persists with a safe-log export. |
+| Issue #407 | open issue, no labels | monitor | A privacy-safe safe-log export is supplied and correlates the two error timestamps to a specific launcher-side cause. |
+| Issue #408 | open issue, no labels | monitor | Maintainer triage or a privacy-safe reproduction narrows the cause. |
+| Issue #410 | open issue, `bug` | reject | It becomes Windows-reproducible with an actual diagnostic report. |
+| Issue #411 | open issue, no labels | defer | #412/#413's re-review trigger below fires. |
+| PR #412 | open, non-draft, `unstable` `e73e910bdf2fd36bf7e0cde92d27930b26660440` | defer | Escalated as a low-risk adopt candidate; port the issue-form and troubleshooting wording into this fork's own docs. |
+| PR #413 | open, non-draft, `unstable` `210174707702bc64f872eff080c526295e5b5efb` | defer | Escalated as a low-risk adopt candidate alongside #412. |
+| Issue #414 | open issue, `bug`, very fresh (2026-09-09) | monitor | Maintainer triage or a translated, itemized reproduction narrows the cause. |
+| PR #415 | open, non-draft, `unstable` `826f8804f59cf8972571018cfb8b15b5166c3a8b` | adopt dependency advisory fixes | Ported 2026-09-10 without fetching the branch: `js-yaml` 4.3.1 → 4.3.2 in `launcher`, and root `overrides` to `@hono/node-server@2.1.1` / `hono@4.13.7` because `@hono/node-server@2.0.12` pinned `hono@4.12.34` exactly. `bun audit` clean in both workspaces; 947 tests pass. Re-review if a later advisory names either package. |
+| Issue #416 | open issue, no labels, very fresh (2026-09-09) | defer | This fork independently reproduces the Extra-High/Pro coupling defect on its own installed v5.0.6-equivalent build and verifies the patch with its own regression run, or upstream reviews and accepts a version of it. |
+
+## 2026-09-11 reconciliation: #419–#424 and bounded v5.0.6 ports
+
+The #419–#424 reconciliation remains authoritative: #419 and #421 are unallocated, #420 and #423
+remain deferred Windows reports without a bounded root cause, #422 remains monitored, and #424 remains
+rejected as macOS-only. After that reconciliation, the fork used one exact read-only fetch of
+`e85e3693fdb4e3e033348c08df0298c20fcdb612`; there was no upstream write, merge, release, or tag.
+The following independently minimal ports supersede the earlier decision rows for these items only.
+
+| Item | Decision | Boundary and evidence | Re-review trigger |
+| --- | --- | --- | --- |
+| #376 | adopt | `toNamespacedPath()` now normalizes each of the three owned Windows `pathIdentity()` copies before case folding; `tests/environment.test.ts` exercises indexed rollout/home namespace combinations without altering #362 authority behavior. | Codex changes rollout/state path conventions. |
+| #379 | adopt | Live Windows registry discovery now requires `environment === process.env`; injected and explicit roots remain pure, covered by `tests/dev-profile.test.ts`. | Discovery injection or registry contract changes. |
+| #394 | adopt | Setup recovery accepts only a fully absent managed interrupt hook; partial, changed, owned-state, and malformed TOML remain fail-closed, covered by `tests/codex-integration.test.ts`. | Hook journal/TOML ownership changes. |
+| #402 | adopt | Merged source `509cfc97285cc6793af5c0e161153db0b405a767` (head `f69ec84c7b9c9fc8c21c4be4d67538e43ca3afdf`) supplied only Simplified Chinese personalization labels and parameterized `tests/personalization-connector-preflight.test.ts`; anchored control, owned-menu, deadline, cleanup, and rollback invariants remain. | ChatGPT changes localized control/menu semantics. |
+| #404 | adopt | Used the v5.0.6 maintainer-local implementation, not unmerged head `451b8a372094c8594e3a9c6cfb7b7ab1de0f1394`: direct/raw guards include `collaboration__wait_agent`, retain native arguments/results, remove inherited schema default, and require the native 30,000 ms interval. `tests/chatgpt-web-harness.test.ts` covers wrong interval, direct/raw paths, and timeout-not-completion. | Native wait tool names/schema/defaults change. |
+
+Focused suite passed on Windows/Bun 1.4.0:
+`bun test tests/environment.test.ts tests/dev-profile.test.ts tests/codex-integration.test.ts tests/personalization-connector-preflight.test.ts tests/chatgpt-web-harness.test.ts`.
+
+## 2026-09-11 selective port reconciliation: #372, #377, #397
+
+The #419–#424 reconciliation and the first five selective ports remain unchanged. This later,
+separate addendum supersedes only the older defer rows for #372, #377, and #397. It inspected the
+exact read-only v5.0.5 `0b053b6750b1d4f127619765388eb43c6d212ca2` and v5.0.6
+`e85e3693fdb4e3e033348c08df0298c20fcdb612` objects; no upstream write, merge, cherry-pick,
+tag, or release occurred.
+
+| Item | Decision | Boundary and evidence | Re-review trigger |
+| --- | --- | --- | --- |
+| #372 | adopt | Managed-tunnel adoption and fresh starts both require local MCP diagnostics proof before monitoring; unknown remains non-ready, fatal diagnostics fail closed, and startup failure runs managed cleanup. `launcher/tests/runtime-supervisor.test.cjs` covers proof/ordering/adoption/cleanup. | Tunnel diagnostics or monitor lifecycle changes. |
+| #377 | adopt | Main-frame document navigation retires a retained Zero Risk binding; same-document/hash/history and child-frame navigation do not. Active resumed turns fail explicitly and require a full-context retry. `launcher/tests/browser-host.test.cjs` covers the boundary and recovery. | Electron navigation semantics or retained-turn lifecycle changes. |
+| #397 | adopt | Browser-host descriptor v3 publishes native target identities for automatic surfaces, and the TypeScript consumer selects with `Target.getTargetInfo`, rejecting malformed/duplicate/retired targets and respecting abort. `launcher/tests/browser-host.test.cjs` plus `tests/launcher-browser-host.test.ts` cover producer/consumer coherence. | DevTools target identity or descriptor schema changes. |
+
+## 2026-09-12 — Upstream #425–#458 reconciliation
+
+Read-only inventory reviewed all 34 numbers; #440 is unallocated. Upstream `main` and its only branch
+remain `e85e3693fdb4e3e033348c08df0298c20fcdb612`; latest PR is closed #456 at
+`24641d5cea83693fa0a2feddb29a690f297ad1c2`, and latest non-PR issue is #458. No upstream write,
+fetch, merge, cherry-pick, tag, or release occurred.
+
+| Items | Decision | Continuation record |
+| --- | --- | --- |
+| #428 | adopt | Retained local-tool turns re-prove and, if absent, reselect the exact connector before prompt insertion; focused regression covers ordering and fail-closed behavior. |
+| #436 | adopt | Structural personalization discovery is bounded to five seconds after label proof fails; the absolute deadline, exact selectors, cleanup, and 424 fail-closed contract remain. |
+| #442 | adopt independently | Scrub all six known exact 32-character broker capabilities, including JSON-escaped boundaries; near matches remain untouched. |
+| #452 | defer, acceptance gap | Actual install does not write a static model catalog, while the native smoke does. Offline tests cannot prove live Desktop picker/503 behavior; require catalog counters, `/v1/models` ingress, and 503 diagnostics before any live-usability claim. |
+| #416, #418, #422–#424, #426, #430, #432, #435, #437–#439, #443–#444, #446–#451, #457 | defer/monitor | Windows or cross-platform relevance exists, but evidence is missing, non-Windows-only, unstable, or crosses a separately governed boundary. Detailed triggers are in `docs/UPSTREAM.md`. |
+| #425, #427, #429, #431, #433–#434, #440–#441, #445, #453–#456, #458 | reject | Missing/unallocated, non-Windows, duplicate, broad unauthorized capability, closed failed stack, or lacks a bounded safety contract. |
+| #420 | reject, supersedes prior defer | Reporter resolved it as local MCP/connector configuration rather than an upstream defect. |
+
+Do not re-open #452 by adding `model_catalog_json` as a one-line workaround: a valid change needs
+reversible journal ownership, cache invalidation, catalog provenance, and current Codex compatibility.
+
+## 2026-09-13 — Upstream #459–#470 and dependency freshness
+
+- #459–#461, #463, #465, #468, #470: defer pending isolated, rebased Windows contracts and tests.
+- #462, #464, #467, #469: reject as unauthorized broad sub-agent capability, POSIX-only work,
+  non-defect question, or a no-Windows-evidence PAC change.
+- #466: monitor; it is a fresh Windows retained-follow-up report without enough evidence to distinguish
+  it from #428, so do not claim universal live-account resolution.
+- Dependency gate: update launcher React/React DOM and their Node/React type packages to the current
+  compatible versions; keep zod 4.4.3 deferred at reviewed latest 4.6.4 because the current MCP SDK
+  schema types fail against zod 4.6.4. Keep Vite 6.4.3 deferred at reviewed latest 8.3.0 pending a
+  packaged Windows major-upgrade acceptance. Strict freshness and both audits must remain green.
+
+## 2026-09-13 — Fork `v5.0.6` release identity revalidation
+
+Read-only revalidation confirmed that upstream `main` remains
+`e85e3693fdb4e3e033348c08df0298c20fcdb612`, open PR #469 remains at
+`79be7ff23b16ba49cf680ebcba3b3cc6c395bbcf`, the latest non-PR issue remains #467, and no #471-or-
+later item exists. Annotated tags remain `v5.0.5` at
+`0b053b6750b1d4f127619765388eb43c6d212ca2` (tag-object prefix `dd254f2e`) and `v5.0.6` at
+`e85e3693fdb4e3e033348c08df0298c20fcdb612` (tag-object prefix `24250dcf`). No new main, PR, or
+non-PR issue code exists beyond the reviewed baseline; #470 remains unmerged and deferred.
+
+Decision: use `v5.0.6` as the maintained fork's Windows release identity. Root and launcher
+metadata, installer, updater, user-facing download links, and contracts point only to
+`SanHsien/codex-chatgpt-web`. This is a release-identity and routing decision, not an upstream merge
+or a claim that the fork's source or published artifacts are byte-equivalent to upstream.
+
+## 2026-09-13 — Upstream PR #470 local usage dashboard
+
+Read-only revalidation found open, non-draft PR #470, `feat: local usage dashboard with per-tier and
+Pro version counts`, based on `e85e3693fdb4e3e033348c08df0298c20fcdb612` at head
+`79be7ff23b16ba49cf680ebcba3b3cc6c395bbcf`. It is `MERGEABLE` but `UNSTABLE`, has 32 changed files,
+no maintainer review or comments, actionlint success, and failing Windows/macOS/Linux verify jobs.
+
+Decision: defer without code adoption. This optional feature broadens local storage, locking,
+backup/retention, browser acceptance/outcome telemetry, launcher UI/i18n/styles/types, and upgrade
+expectations; it is not a bounded Windows defect. Re-review only after an upstream merge/release with
+green Windows CI and an independently validated fork contract for local-only privacy,
+corruption/recovery, locking, installer/updater data preservation, acceptance-count semantics, and no
+representation as official remaining quota.
+
+## 2026-09-19 — Upstream v5.0.7, v5.0.8, and main@eaf4f09ae92d reconciliation
+
+Read-only revalidation reviewed upstream releases v5.0.7 (`973c287edf53c37d3d9fa2356010d635a6ccf25b`),
+v5.0.8 (`00aab23eb78a0d35ab575ff14044e29c0f80e711`), and latest main commit `eaf4f09ae92d4dc4429fa597b0861663138f08f8`.
+The latest PR is closed #569 (head `4af00a2f67e50071f249f3c7da22a6883a2bf9c5`) and latest non-PR issue is #571.
+
+| Scope / Item | Decision | Windows applicability and rationale |
+| --- | --- | --- |
+| ChatGPT DIL/PUIK response root selector (#538 / v5.0.8) | **adopt** | Fixes unread ChatGPT web responses where the assistant container does not use the legacy `.markdown` class. Directly impacts Windows browser automation stability without altering security boundaries. |
+| Launcher-side system proxy discovery (#535, #438 / v5.0.8) | defer | Windows native loopback proxy routing is already functioning in our overlay; defer deeper runtime refactoring pending concrete Windows reproduction of loopback proxy failure. |
+| 6-part context transport (commit `eaf4f09ae92d`) | defer | Increases context staging complexity; our Windows overlay maintains stable 3-part transport with thorough test coverage. |
+| Multi-language UI additions & Skills as files (#534 / v5.0.8) | reject | Non-core experimental features that add unnecessary complexity to this Windows-focused, self-contained fork. |
+| Non-Windows distribution & release workflows | reject | Retain strict Windows-only scope; non-Windows scripts and artifacts are excluded. |
+
+## 2026-09-19 — Upstream #570–#589 follow-up
+
+Read-only review covered the complete allocated range; #572–#576, #586, and #588 are unallocated.
+Upstream `main` and branch heads remain unchanged. No upstream fetch, merge, or write occurred.
+
+- Defer #577–#583 and #585 pending upstream acceptance plus bounded Windows lifecycle, visual,
+  replay, and route-ownership evidence. #582 is the strongest Windows adoption candidate but still
+  lacks upstream checks and packaged visual verification.
+- Defer #589: debugger-based runtime rewriting of a changing ChatGPT bundle is too brittle to adopt
+  without green Windows evidence and an explicit fail-safe compatibility contract.
+- Reject #570–#571 as non-Windows, #584 as an unrequested localization expansion, and #587 as an
+  unbounded architecture proposal.
+- Advance the reviewed ledger to PR #589 at `534fbefa9a51ec60518561ca937a3b8e51320245`
+  and non-PR issue #587; neither is a merge target.
+
+## 2026-09-21 — Upstream #590–#618 follow-up
+
+Read-only review covered every allocated PR and issue number from #590 through #618 (25 items;
+`main` remains `eaf4f09ae92d4dc4429fa597b0861663138f08f8`, unchanged since the 2026-09-19 baseline).
+No upstream fetch, merge, cherry-pick, tag, or release occurred; this pass does not merge any code.
+
+| Item | Exact observed state | Decision | Windows applicability and rationale |
+| --- | --- | --- | --- |
+| [#590](https://github.com/miuuyy/codex-chatgpt-web/pull/590) | closed, unmerged, `CLEAN` | reject | Opt-in local Grok CLI compaction is a new third-party-CLI integration surface outside this fork's ChatGPT-web-only scope. |
+| [#593](https://github.com/miuuyy/codex-chatgpt-web/pull/593) | open, non-draft, `UNSTABLE` | defer | Cross-thread follow-up authentication fix is plausibly Windows-relevant but has no upstream review or Windows-specific acceptance yet. |
+| [#596](https://github.com/miuuyy/codex-chatgpt-web/pull/596) | closed, unmerged, `CLEAN` | reject | Recognizing another host's `.codex` visualization root addresses a multi-host bridge topology this fork does not support. |
+| [#597](https://github.com/miuuyy/codex-chatgpt-web/pull/597) | closed, unmerged, `CLEAN` | defer | Broad browser-turn/observation-recovery/launcher-lifecycle stabilization; closed without merge, no isolated Windows regression exists to port piecemeal. |
+| [#598](https://github.com/miuuyy/codex-chatgpt-web/pull/598) | open, non-draft, `UNSTABLE` | reject | New opt-in browser-host-only launcher mode is a product-surface expansion, not a defect fix. |
+| [#600](https://github.com/miuuyy/codex-chatgpt-web/pull/600) | open, non-draft, `UNSTABLE` | defer | Directly targets Windows MCP Setup `tunnel-client` install failures; strongest Windows adoption candidate in this batch, but lacks upstream review/green checks. |
+| [#601](https://github.com/miuuyy/codex-chatgpt-web/pull/601) | open, non-draft, `UNSTABLE` | defer | Reading turn environment across a native compaction summary overlaps this fork's already-adopted #362/#376 environment-authority ports; needs a diff against current source before porting. |
+| [#602](https://github.com/miuuyy/codex-chatgpt-web/pull/602) | open, non-draft, `UNSTABLE` | defer | Explicit unavailable-Pro-effort classification is plausibly Windows-relevant UI state handling, no Windows-specific acceptance evidence yet. |
+| [#603](https://github.com/miuuyy/codex-chatgpt-web/pull/603) | open, non-draft, `UNSTABLE` | defer | Rate-limit dialog classification between multipart stages; same rationale as #602. |
+| [#604](https://github.com/miuuyy/codex-chatgpt-web/pull/604) | open, non-draft, `UNSTABLE` | defer | Preserving replacement broker sockets during shutdown touches launcher lifecycle; no Windows-specific regression evidence yet. |
+| [#611](https://github.com/miuuyy/codex-chatgpt-web/pull/611) | open, non-draft, `UNSTABLE` | defer | Localizing temporary-chat personalization labels overlaps this fork's already-adopted #402 zh-CN labels; related to open issue #609 below. |
+| [#613](https://github.com/miuuyy/codex-chatgpt-web/pull/613) | open, non-draft, `UNSTABLE` | defer | Tolerating reordered Codex interrupt hook state is directly relevant to this fork's #394 interrupt-hook port and open issue #612 below. |
+| [#615](https://github.com/miuuyy/codex-chatgpt-web/pull/615) | closed, unmerged, `DIRTY` | reject | Measured ChatGPT message-budget/resumable-context-handoff feature; closed without merge, no bounded Windows defect. |
+| [#616](https://github.com/miuuyy/codex-chatgpt-web/pull/616) | closed, unmerged, `DIRTY` | reject | Duplicate re-submission of #615; same rationale. |
+| [#594](https://github.com/miuuyy/codex-chatgpt-web/issues/594) | closed, `not_planned` | reject | Maintainer did not plan to fix the persistent-session model-resolution report. |
+| [#595](https://github.com/miuuyy/codex-chatgpt-web/issues/595) | open, `bug` | monitor | Multi-device turn-token invalidation has no Windows-specific reproduction or fix yet. |
+| [#599](https://github.com/miuuyy/codex-chatgpt-web/issues/599) | closed, `not_planned` | reject | Windows localhost-Responses-provider candidate fix for #452 was closed `not_planned`; this fork's own #452 row in the prior register remains the tracked entry. |
+| [#605](https://github.com/miuuyy/codex-chatgpt-web/issues/605) | open, `bug` | monitor | In-app browser stuck loading on resume; no isolated cause or regression yet. |
+| [#606](https://github.com/miuuyy/codex-chatgpt-web/issues/606) | open, no label | reject | Explicitly reproduced on Linux with current main DEV smoke also failing there; no Windows-specific evidence. |
+| [#609](https://github.com/miuuyy/codex-chatgpt-web/issues/609) | open, no label | defer | Hardcoded EN/ZH locale regex in `ensureChatGptPersonalizedConnectorAccess` breaking other locales (e.g. cs-CZ) is a real correctness gap tracked by open PR #611 above. |
+| [#610](https://github.com/miuuyy/codex-chatgpt-web/issues/610) | open, no label | monitor | "Extra High" effort forcing an "Upgrade to Pro" modal on Plus overlaps this fork's already-adopted #436 personalization-preflight port; no Windows-specific regression evidence supplied yet to distinguish this from expected product gating. |
+| [#612](https://github.com/miuuyy/codex-chatgpt-web/issues/612) | open, no label | defer | `doctor` rejecting a semantically unchanged interrupt hook after Codex reorders trust state is tracked by open PR #613 above and relevant to this fork's own #394 fail-closed hook logic. |
+| [#614](https://github.com/miuuyy/codex-chatgpt-web/issues/614) | open, no label | monitor | TROUBLESHOOTING `[agents]` fix producing a "duplicate field" error for `max_threads` on codex-cli 0.155.1 needs a reproduction against this fork's pinned CLI version before any local doc/code change. |
+| [#617](https://github.com/miuuyy/codex-chatgpt-web/issues/617) | open, `bug` | monitor | Windows v5.0.8 Full Harness connected but the Codex Native2 Tunnel connector cannot be created; Windows-relevant but no isolated cause or upstream triage yet. |
+| [#618](https://github.com/miuuyy/codex-chatgpt-web/issues/618) | open, `bug` | monitor | Codex execution succeeding on the first chat then failing on the second message has no isolated cause or Windows-specific regression yet. |
+
+No item in this batch was ported; every `defer`/`monitor` decision needs either upstream review,
+a Windows-specific reproduction, or an owner-authorized porting task before code moves. Advance the
+reviewed ledger to PR #616 at `64362fd2a802c5fdb2869ea66c0ea055c6451972` and non-PR issue #618;
+`main` (`eaf4f09ae92d4dc4429fa597b0861663138f08f8`) and both branch heads (`6.0.0`, `main`) are
+unchanged and remain current. Neither axis is a merge target.
+
+## 2026-09-21 — Upstream #619–#620 follow-up
+
+Read-only review of the two non-PR issues opened after the #590–#618 batch. No new pull request,
+`main` commit or branch head appeared.
+
+| Item | Upstream state | Decision | Reason |
+| --- | --- | --- | --- |
+| [#619](https://github.com/miuuyy/codex-chatgpt-web/issues/619) | open, no label | monitor | Long sessions failing after compaction with `missing cwd in trusted Codex environment context` on v5.0.8 / Codex 0.154; no isolated cause, upstream triage or Windows-specific evidence yet. |
+| [#620](https://github.com/miuuyy/codex-chatgpt-web/issues/620) | closed, no label | monitor | Setup CLI rejecting `--app-name` for the Native2 connector after an upstream CLI change; closed upstream without a linked fix PR, and no reproduction against this fork's setup path yet. |
+
+Nothing was ported. Advance the reviewed non-PR issue ledger to #620; the PR ledger stays at
+#616 (`64362fd2a802c5fdb2869ea66c0ea055c6451972`) and `main` stays at
+`eaf4f09ae92d4dc4429fa597b0861663138f08f8`.
+
+## 2026-09-25 — main@75794225, PR #617–#658, issues #621–#662, and branch removal
+
+`main` advanced `eaf4f09ae92d…` → `757942251222…` via six commits, the largest being a squashed
+`6.0.0` feature release (opt-in Pro usage tracking, new model catalog, saved chats, 6-part context
+transport, native Linux ARM64 packaging, staged updater). The `6.0.0` branch (previously at the old
+`main` head) is gone — it was merged, not lost. Decision: **defer** the whole `main`/`6.0.0` advance;
+this fork stays on its own reviewed 3-part-transport Windows-only baseline, and any adoption is a
+bounded, separately owned task (touches dependency files outside this worker's scope).
+
+Re-evaluated the Windows rollout-path identity candidate (#376/#365/#399): built an isolated
+reproduction and a codebase-level regression fixture for `pathIdentity()` not stripping an incoming
+`\\?\`/`\\?\UNC\` extended-length prefix before `resolve()`. Under both `node` and `bun` 1.4.2 on this
+Windows host, `resolve()` + `toNamespacedPath()` + `toLowerCase()` already normalize prefixed and
+un-prefixed forms of the same path to the same identity — no defect reproduces. No source change was
+kept; a drafted no-op fix and test were verified inert and reverted. The 2026-09-11 `#376` `adopt`
+decision (`toNamespacedPath()` itself) is unchanged.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| `main`/`6.0.0` (commits `8bd72e512cec`…`757942251222`) | squashed 6.0.0 release + 3 follow-ups | defer | Owner authorizes a bounded 6.0.0 adoption plan with its own dependency/packaging review. |
+| Branch `6.0.0` removed | merged into `main` | n/a, inventory change | — |
+| pathIdentity() extended-prefix candidate (#376/#365/#399) | re-evaluated, no defect found | reject (no port needed) | A concrete Windows reproduction demonstrates `resolve()`/`toNamespacedPath()` mishandling a `\\?\`/`\\?\UNC\` input on the fork's actual pinned Bun version. |
+| PR #623 | closed/unmerged, draft, `3420e522f046a217c4d57cbcad2e4c425232cd79` | reject | A worker/control-server-based lease-cancellation design (matching this fork's own architecture) is proposed and tested. |
+| PR #627 | closed/unmerged, `eaeb42ad140b3eae9d01208e93ab96f64edd688f` | reject | Superseded by an unreleased, differently worded local fix upstream; no isolated diff exists. |
+| PR #638 | closed/unmerged, `37677cf79259c60f94fa5f953ca5f75f9b0136f7` | reject | Maintainer declined it outright (unwanted `.omx` logs, reverted release protections). |
+| PR #649 | closed/unmerged, `06dc7b830a978b11828f5fff89a0d19f8cc946c4` | reject | Declined as out-of-scope six-language localization; related correctness gaps tracked under #640/#642/#648. |
+| PR #650 | closed/unmerged, `c3dcadf1712b025400a2d1bea6484247c9356d5a` | reject | Declined: shown to drop a completed tool-call result in the PR's own isolated check. |
+| PR #654 | open, `1cb4acb6461a80765e7c1bfb446fc7b16cdf9f5f` | **adopt** | Ported 2026-09-25: `overlapsDisplay()` in `launcher/electron/window-state.cjs` now requires 96px width / 32px title-bar height inside a display's work area before keeping saved window coordinates. `launcher/tests/window-state.test.cjs` covers it; `node --test` passes. Re-review if Electron's display/work-area geometry contract changes. |
+| PR #656 | open, `90adf9dc9f37349cfef85448536bb9d72d4449b7` | **adopt** | Ported 2026-09-25: `readRecent()` in `launcher/electron/logging.cjs` now reads the rotated `launcher.jsonl.1` before the current file, capped at 300 records. `launcher/tests/logging.test.cjs` covers it; `node --test` passes. Re-review if the log-rotation file-naming contract changes. |
+| PR #658 | open, `f3173055eea2976aebdd4cb3c62faeb3ac0f489c` | **adopt** | Security-relevant; ported 2026-09-25: `exportSanitizedLogs()` in `launcher/electron/logging.cjs` now also compares `fs.realpathSync()` output and device/inode identity, not just resolved path strings, before writing — closing a hard-link/symlink overwrite of source logs. `launcher/tests/logging.test.cjs` covers it (symlink case skipped on Windows, matching upstream); `node --test` passes. Re-review if the export destination-identity check changes. |
+| #621 | closed, macOS | reject | A Windows reproduction. |
+| #622 | open, cross-platform tracking | monitor | A bounded Windows-specific defect is isolated from the tracking issue. |
+| #624 | closed, Linux | reject | Outside Windows-only scope. |
+| #626 | closed `not_planned`, Windows | monitor | A reproduction against this fork's own `psmux`/`tmux` detection. |
+| #628 | closed, Linux | reject | Outside Windows-only scope. |
+| #629 | open, Windows | monitor | An isolated cause for the intermittent Native2 turn-token failure. |
+| #630 | open, macOS | reject | A Windows reproduction. |
+| #631 | open, macOS | reject | A Windows reproduction. |
+| #633 | closed `not_planned`, Windows | monitor | A reproduction against this fork's own `ALL_TOOLS` follow-up-turn handling. |
+| #634 | closed `not_planned`, no body | reject | Any reproduction evidence at all. |
+| #635 | closed `completed`, `fix: released`, Windows | defer | This fork's own hyperlink-preservation path is checked against a Windows reproduction. |
+| #636 | closed `not_planned`, no body | reject | Any reproduction evidence at all. |
+| #637 | closed `completed`, no label | defer | This fork's automatic-route/effort-pinning logic is checked against a reproduction. |
+| #639 | closed `not_planned` | reject | Specific to the deferred `v6.0.0` model-capacity path. |
+| #640 | open, `fix: committed-unreleased`, Windows | monitor | A bounded `6.0.0` adoption decision is made (fix is entangled with the deferred base). |
+| #642 | closed `completed`, `fix: committed-unreleased`, cross-platform | defer | The Korean-label fix is isolated from the rejected six-language localization expansion it ships with. |
+| #643 | closed `duplicate` | reject | — |
+| #645 | closed `not_planned`, no body | reject | Any reproduction evidence at all. |
+| #646 | open, macOS | reject | A Windows reproduction. |
+| #647 | open, macOS | reject | A Windows reproduction. |
+| #648 | closed `not_planned`, Windows | reject | Declined upstream alongside PR #649. |
+| #651 | closed `completed`, no platform info | reject | Any Windows-specific reproduction. |
+| #652 | open, Linux | reject | Outside Windows-only scope. |
+| #653 | open, cross-platform | adopt-linked | Tracked by adopted PR #654; ported. |
+| #655 | open, cross-platform | adopt-linked | Tracked by adopted PR #656; ported. |
+| #657 | open, cross-platform | adopt-linked | Tracked by adopted PR #658; ported. |
+| #659 | open, Windows | defer | A bounded installer-retry/backoff design is drafted. |
+| #660 | closed `not_planned` | reject | Declined upstream. |
+| #661 | open, Windows | monitor | Specific to the deferred `v6.0.0` base; an isolated cause on this fork's own baseline. |
+| #662 | open, Windows | monitor | An isolated cause for the `launcher:browser-smoke` login-expired error. |
+
+Five more items (PR #664, issues #663/#665–#667) appeared upstream while this review was in
+progress; `main` did not move again. #664 (draft, `UNSTABLE`) adapts browser-worker selectors to
+ChatGPT's September 24 interface change — the same DOM-drift class as the adopted #538 fix — but is
+too large/unstable to port this round.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| #663 | open, `bug`, no body | reject | Any reproduction evidence at all. |
+| PR #664 | open, draft, `UNSTABLE`, `39dbceaee47f8821a5df0bc06a9785bb1b9e9cfc` | defer | It leaves draft with green checks, or this fork's own browser-worker smoke test reproduces the composer/send failure independently. |
+| #665 | open, Linux x64 | reject | Outside Windows-only scope. |
+| #666 | open, feature request | monitor | It becomes a bounded, owner-authorized Windows-scoped documentation/UI task. |
+| #667 | open | defer | Same trigger as PR #664 above (tracks it). |
+
+One more issue (#668) appeared during verification; same symptom class as #662/#667, on `v6.0.0`.
+
+| Item | Head / status | Decision | Reconsider trigger |
+| --- | --- | --- | --- |
+| #668 | open, `bug`, Windows 10, `v6.0.0` | defer | Same trigger as #667/PR #664 above. |
+
+Advance the reviewed ledger to `main` `757942251222ee0f71953c35636679c6d92dd636`, PR #664 at
+`39dbceaee47f8821a5df0bc06a9785bb1b9e9cfc`, non-PR issue #668, and branch inventory `main` only.
