@@ -408,3 +408,32 @@ One more issue (#668) appeared during verification; same symptom class as #662/#
 
 Advance the reviewed ledger to `main` `757942251222ee0f71953c35636679c6d92dd636`, PR #664 at
 `39dbceaee47f8821a5df0bc06a9785bb1b9e9cfc`, non-PR issue #668, and branch inventory `main` only.
+
+## 2026-09-30 reconciliation: main@fa2d2c6c, PR #665–#739, issues #663–#738
+
+Read-only inventory: upstream `main` advanced six commits to `fa2d2c6c24926078b46eedb2186f69f2e8d548d7`
+(releases 6.1.0–6.1.3 plus two follow-ups; 90 files, +3497/-505), tag `v6.1.2` fetched, latest PR is
+closed #739 at `9d42927b342644590c07696939dfd99a1928ea9c`, latest non-PR issue is #738, and `main` is the
+only branch. Histories are unrelated (squashed fork), so nothing is merged; only isolated ports are adopted.
+
+| Item | Decision | Reason | Reconsider when |
+| --- | --- | --- | --- |
+| Commits `2933410`, `8d37291`, `76aa5d1`, `2d73f62`, `fa2d2c6` (6.1.0–6.1.3) | defer (adoption pending: built on the deferred 6.0.0 base, entangled across 90 files, verified only by account-bound browser acceptance that offline gates cannot prove) | Same class as the deferred #664 DOM-drift fix; this fork remains on the v5.0.6 identity. | Owner authorizes a bounded 6.0.0/6.1 adoption plan. |
+| Commit `a13cd09` (test fixture line endings) | not-applicable | Touches fixtures that exist only on the 6.x tree. | Same as above. |
+| PR #729 fast-uri 3.1.6 -> 3.1.7 (GHSA-58mr-gqgx-xq4g, GHSA-qw65-cvwx-89v3) | **adopt** | Fork pins `fast-uri` 3.1.6 in `overrides` of `package.json` and `launcher/package.json`; raised both plus both `bun.lock` (integrity from `bun install`); superseded by 3.1.8 in the dependency pass below. | - |
+| PRs #669, #681, #689, #698, #707, #718, #727, #728, #730 (browser worker/broker/steering fixes) | defer | Patch the 6.x browser-worker and broker code, absent in this baseline. | Adoption plan above. |
+| PRs #679, #719 (ProLite/Pro usage title), #705 (catalog diagnostics), #683 (workspace-write recovery) | defer | Depend on 6.0.0 Pro-usage tracking and model catalog. | Adoption plan above. |
+| PR #725 (system theme in launcher browser) | monitor | Cosmetic, open upstream. | It merges. |
+| PR #692 (NODE_USE_SYSTEM_CA on Windows), closed | monitor | Windows-relevant proxy/CA behavior but unmerged upstream; no reproduction here. | A Windows CA failure is reproduced here. |
+| PRs #691 (image capture feature), #694 (updater proxy; fork removed the updater), #735 (README video), #732 (withdrawn), #739 (empty arena PR) | reject | Feature, removed surface, promo, or withdrawn/junk. | - |
+| Issues #673, #678, #682, #693, #699, #700, #702, #704, #708, #709, #711, #712, #715, #717, #721, #724 (Windows) | defer | All are v6.1.x reports; the code paths do not exist in the v5.0.6 baseline. | Adoption plan above. |
+| Issues #672, #674, #676, #680, #686, #687, #690, #737, #738 (cross-platform/unlabeled 6.1 harness) | defer | Same as above. | Adoption plan above. |
+| Issues #703 (account invalidated after sustained automation) | monitor | Account-safety risk applies to any automated ChatGPT use; needs-info upstream. | Upstream identifies a cause. |
+| Issues #675, #677, #695, #696, #697, #720, #726, #736 (macOS), #684, #685, #713, #722, #723, #731 (Linux), #688 (Unix socket) | reject | Outside the Windows-only scope. | - |
+| Issues #670, #671, #733, #734 | reject | Docs/video, declined `not_planned`, or withdrawn. | - |
+
+Counts: 6 commits (all defer or not-applicable), 21 PRs (1 adopt, 13 defer, 2 monitor, 5 reject), 46 issues
+(25 defer, 1 monitor, 20 reject).
+
+Advance the reviewed ledger to `main` `fa2d2c6c24926078b46eedb2186f69f2e8d548d7`, PR #739 at
+`9d42927b342644590c07696939dfd99a1928ea9c`, non-PR issue #738, and branch inventory `main` only.

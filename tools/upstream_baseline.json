@@ -6,14 +6,17 @@
     "branch": "main"
   },
   "reviewed": {
-    "mainCommit": "757942251222ee0f71953c35636679c6d92dd636",
-    "latestPullRequest": 664,
-    "latestPullRequestHead": "39dbceaee47f8821a5df0bc06a9785bb1b9e9cfc",
-    "latestNonPullRequestIssue": 668,
+    "mainCommit": "fa2d2c6c24926078b46eedb2186f69f2e8d548d7",
+    "latestPullRequest": 739,
+    "latestPullRequestHead": "9d42927b342644590c07696939dfd99a1928ea9c",
+    "latestNonPullRequestIssue": 738,
     "branches": [
-      { "name": "main", "commit": "757942251222ee0f71953c35636679c6d92dd636" }
+      {
+        "name": "main",
+        "commit": "fa2d2c6c24926078b46eedb2186f69f2e8d548d7"
+      }
     ]
   },
-  "reviewedAt": "2026-09-25",
+  "reviewedAt": "2026-09-30",
   "status": "reviewed-not-merged"
 }
