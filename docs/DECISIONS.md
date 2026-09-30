@@ -450,3 +450,19 @@ Numbers #740 and #741 are not retrievable through the API (absent or removed).
 | Issue #743 (Developer Mode missing on a Plus account, MCP app setup), open, `bug` | defer | Reported against 6.1.3 and depends on an account plan/setting, not on code in this baseline. | Adoption plan above, or an account-independent cause is found. |
 
 Advance the reviewed ledger to PR #744 at `11cfdad80d86b132f331bd2b6871b56de210c837` and non-PR issue #743.
+
+## 2026-10-01 dependency maintenance
+
+The strict dependency gate failed on advisories and unreviewed updates; resolved without raising runtime floors.
+
+| Item | Decision | Reason | Reconsider when |
+| --- | --- | --- | --- |
+| `fast-uri` (GHSA-hrr3-gc8f-f4qj, fixed at 3.1.8) | **adopt** | `ajv@8.20.0` pins `fast-uri@3.1.7` exactly, so `bun audit fix` was blocked; root and launcher `overrides` moved 3.1.7 -> 3.1.8 (same major). | An `ajv` release declares a fixed range, then the override can be dropped. |
+| `ip-address` 10.3.1 -> 10.7.1 (4 advisories via `@modelcontextprotocol/sdk` > `express-rate-limit`) | **adopt** | In-range lockfile update from `bun audit fix`; no manifest change. | - |
+| `brace-expansion` 1.1.21 / 2.1.7 / 5.0.12, `undici` 6.28.1 / 7.29.1 (launcher, via `electron-builder` and `electron`) | **adopt** | In-range lockfile updates from `bun audit fix`; `bun audit` is clean in both workspaces. | - |
+| `@modelcontextprotocol/sdk` 1.30.1 -> 1.31.0 | **adopt** (lock only) | In range of the existing `^1.30.1`; the declared floor is unchanged. | - |
+| `@types/node` 24.13.4 -> 24.19.0 (launcher) | **adopt** | In-range dev typings that stay on the 24.x line of the bundled Electron Node. | - |
+| `electron` 44.4.5 -> 44.5.1 | defer | Same-major change to the packaged runtime and an exact pin; needs a packaged installer run. Recorded in `.github/dependency-deferrals.json`. | 44.5.1 or later is verified with launcher package and smoke:package. |
+| `motion` 13.4.6, `@types/node` 26.6.3 | defer (renewed) | Latest advanced past the recorded bound; the earlier reasons stand (visual runtime major; Node 24 typings match Electron). | Latest moves again, or the Electron pin bundles a newer Node major. |
+
+Result: `bun audit` clean in both workspaces; `bun run check:dependencies --strict` reports `current`.
