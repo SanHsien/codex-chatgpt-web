@@ -7,9 +7,9 @@
   },
   "reviewed": {
     "mainCommit": "fa2d2c6c24926078b46eedb2186f69f2e8d548d7",
-    "latestPullRequest": 739,
-    "latestPullRequestHead": "9d42927b342644590c07696939dfd99a1928ea9c",
-    "latestNonPullRequestIssue": 738,
+    "latestPullRequest": 744,
+    "latestPullRequestHead": "11cfdad80d86b132f331bd2b6871b56de210c837",
+    "latestNonPullRequestIssue": 743,
     "branches": [
       {
         "name": "main",
@@ -17,6 +17,6 @@
       }
     ]
   },
-  "reviewedAt": "2026-09-30",
+  "reviewedAt": "2026-10-01",
   "status": "reviewed-not-merged"
 }

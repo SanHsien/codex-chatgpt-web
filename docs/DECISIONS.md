@@ -437,3 +437,16 @@ Counts: 6 commits (all defer or not-applicable), 21 PRs (1 adopt, 13 defer, 2 mo
 
 Advance the reviewed ledger to `main` `fa2d2c6c24926078b46eedb2186f69f2e8d548d7`, PR #739 at
 `9d42927b342644590c07696939dfd99a1928ea9c`, non-PR issue #738, and branch inventory `main` only.
+
+## 2026-10-01 addendum: PR #740–#744, issues #739–#743
+
+Read-only re-check after the reconciliation above; `main` is unchanged at `fa2d2c6c24926078b46eedb2186f69f2e8d548d7`.
+Numbers #740 and #741 are not retrievable through the API (absent or removed).
+
+| Item | Decision | Reason | Reconsider when |
+| --- | --- | --- | --- |
+| PR #742 (session continuity), closed unmerged | reject | 239-file contributor rewrite closed without merge; not reviewable as an isolated port. | It is reopened as a focused change. |
+| PR #744 (multi-account profile pooling, failover, longer compaction timeout), open, `unstable`; `11cfdad80d86b132f331bd2b6871b56de210c837` | reject | Rotating several ChatGPT accounts to avoid per-account rate limits works against this fork's account-safety stance (see #703) and touches 6.x-only browser-host code. | It merges upstream and a single-account, Windows-relevant part can be split out. |
+| Issue #743 (Developer Mode missing on a Plus account, MCP app setup), open, `bug` | defer | Reported against 6.1.3 and depends on an account plan/setting, not on code in this baseline. | Adoption plan above, or an account-independent cause is found. |
+
+Advance the reviewed ledger to PR #744 at `11cfdad80d86b132f331bd2b6871b56de210c837` and non-PR issue #743.
