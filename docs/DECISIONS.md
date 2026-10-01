@@ -451,6 +451,19 @@ Numbers #740 and #741 are not retrievable through the API (absent or removed).
 
 Advance the reviewed ledger to PR #744 at `11cfdad80d86b132f331bd2b6871b56de210c837` and non-PR issue #743.
 
+## 2026-10-01 addendum 2: PR #748, issues #745–#747
+
+Re-check before the push; `main` is still `fa2d2c6c24926078b46eedb2186f69f2e8d548d7`.
+
+| Item | Decision | Reason | Reconsider when |
+| --- | --- | --- | --- |
+| PR #748 (Microsoft 365 / Cursor compatibility), open; `fee796790f31287caade25b2b61a0101972463be` | defer | 58 files, +12059/-333 feature work on the 6.x base this fork has deferred; not reviewable as an isolated port. | It merges upstream and the 6.x adoption plan above is taken up. |
+| Issue #745 (6.1.3 Full harness: read-only review runs blocked by a safety-status check), open, `bug` | defer | Reported against 6.1.3 behaviour that this baseline does not ship. | The 6.x adoption plan above, or the report reproduces on this baseline. |
+| Issue #746 (expose `autoApproveToolCalls` in Launcher Settings), open, feature | defer | Feature request; changes an approval default, which needs an explicit product decision here. | Upstream ships it and the 6.x adoption plan is taken up. |
+| Issue #747 (Codex computer use cannot reach the built-in browser), open, `bug` | defer | Reported against 6.1.3; no fix upstream yet. | Upstream lands a fix, or it reproduces on this baseline. |
+
+Advance the reviewed ledger to PR #748 at `fee796790f31287caade25b2b61a0101972463be` and non-PR issue #747.
+
 ## 2026-10-01 dependency maintenance
 
 The strict dependency gate failed on advisories and unreviewed updates; resolved without raising runtime floors.
@@ -463,6 +476,6 @@ The strict dependency gate failed on advisories and unreviewed updates; resolved
 | `@modelcontextprotocol/sdk` 1.30.1 -> 1.31.0 | **adopt** (lock only) | In range of the existing `^1.30.1`; the declared floor is unchanged. | - |
 | `@types/node` 24.13.4 -> 24.19.0 (launcher) | **adopt** | In-range dev typings that stay on the 24.x line of the bundled Electron Node. | - |
 | `electron` 44.4.5 -> 44.5.1 | defer | Same-major change to the packaged runtime and an exact pin; needs a packaged installer run. Recorded in `.github/dependency-deferrals.json`. | 44.5.1 or later is verified with launcher package and smoke:package. |
-| `motion` 13.4.6, `@types/node` 26.6.3 | defer (renewed) | Latest advanced past the recorded bound; the earlier reasons stand (visual runtime major; Node 24 typings match Electron). | Latest moves again, or the Electron pin bundles a newer Node major. |
+| `motion` 13.5.0, `@types/node` 26.6.3, `vite` 8.3.2, `chromium-bidi` 157.0.8081-0 | defer (renewed) | Latest advanced past the recorded bound; the earlier reasons stand (visual runtime major; Node 24 typings match Electron; vite and its React plugin move together; browser-protocol major). | Latest moves again, or the Electron pin bundles a newer Node major. |
 
 Result: `bun audit` clean in both workspaces; `bun run check:dependencies --strict` reports `current`.
