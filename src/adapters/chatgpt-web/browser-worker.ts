@@ -798,6 +798,21 @@ export async function resolveChatGptToolConfirmation(
       .getByRole("button", { name: /^Allow(?: once)?$/ })
       .last();
     await allowCurrentAction.waitFor({ state: "visible", timeout: 10_000 });
+    // Pressing Allow while the Stop button is still showing races the
+    // streaming response (#858); wait until the response has stopped.
+    const stopButton = page.locator(CHATGPT_STOP_BUTTON_SELECTOR).last();
+    const approvalDeadline = Date.now() + timeoutMs;
+    while (await stopButton.isVisible().catch(() => false)) {
+      if (signal?.aborted) throw new DOMException("ChatGPT web turn aborted", "AbortError");
+      if (!await dialog.isVisible().catch(() => false)) return true;
+      if (Date.now() >= approvalDeadline) {
+        throw new Error(
+          `ChatGPT was still generating after ${timeoutMs}ms; automatic approval was not sent.`,
+        );
+      }
+      await new Promise(resolveSleep => setTimeout(resolveSleep, Math.min(50, Math.max(1, approvalDeadline - Date.now()))));
+    }
+    if (signal?.aborted) throw new DOMException("ChatGPT web turn aborted", "AbortError");
     await allowCurrentAction.press("Enter");
     return true;
   }

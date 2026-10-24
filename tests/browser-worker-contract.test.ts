@@ -8,7 +8,7 @@ import { ensureChatGptPersonalizedConnectorAccess } from "../src/adapters/chatgp
 import { chatGptStoppedThinkingError } from "../src/adapters/chatgpt-web/adapter-error";
 import { CHATGPT_WEB_MODEL_ID } from "../src/adapters/chatgpt-web/model";
 import { CHATGPT_CONNECTOR_NAME, DEV_CHATGPT_CONNECTOR_NAME, defaultChromeExecutable, legacyChatGptConnectorMigrationMessage } from "../src/config";
-import { parseChatGptEffortSliderState } from "../src/chatgpt-session";
+import { CHATGPT_STOP_BUTTON_SELECTOR, parseChatGptEffortSliderState } from "../src/chatgpt-session";
 import { ChatGptExternalTurnProgress, chatGptExternalToolCallsAreInFlight } from "../src/adapters/chatgpt-web/turn-progress";
 import type { CodexProviderConfig } from "../src/types";
 
@@ -2584,11 +2584,17 @@ function toolConfirmationPage(options: {
   disappearAfterReads?: number;
   surface?: "dialog" | "card";
   allowLabel?: "Allow once" | "Allow";
+  /** Number of Stop-button visibility reads that report a streaming response. */
+  stopVisibleReads?: number;
+  /** Close the approval dialog after the Stop button has been read this many times. */
+  dialogClosesAfterStopReads?: number;
 } = {}): {
   page: Page;
   pressed: string[];
+  stopReads: () => number;
 } {
   let reads = 0;
+  let stopReads = 0;
   let visible = true;
   const pressed: string[] = [];
   const availableButtons = [options.allowLabel ?? "Allow once", "Deny"] as const;
@@ -2633,13 +2639,27 @@ function toolConfirmationPage(options: {
     last: () => hiddenDialog,
     isVisible: async () => false,
   };
+  const stopButton = {
+    last: () => stopButton,
+    isVisible: async () => {
+      stopReads += 1;
+      if (
+        options.dialogClosesAfterStopReads !== undefined
+        && stopReads >= options.dialogClosesAfterStopReads
+      ) visible = false;
+      return stopReads <= (options.stopVisibleReads ?? 0);
+    },
+  };
   return {
     page: {
-      locator: (selector: string) => selector.includes(surfaceSelector)
-        ? dialog
-        : hiddenDialog,
+      locator: (selector: string) => selector === CHATGPT_STOP_BUTTON_SELECTOR
+        ? stopButton
+        : selector.includes(surfaceSelector)
+          ? dialog
+          : hiddenDialog,
     } as unknown as Page,
     pressed,
+    stopReads: () => stopReads,
   };
 }
 
@@ -2662,6 +2682,39 @@ test("explicit connector auto-approval still selects Allow once", async () => {
 
   expect(await resolveChatGptToolConfirmation(fixture.page, "Codex Native", true)).toBeTrue();
   expect(fixture.pressed).toEqual(["Allow once:Enter"]);
+});
+
+test("connector auto-approval waits for the Stop button to disappear before pressing Allow (#858)", async () => {
+  const fixture = toolConfirmationPage({ stopVisibleReads: 3 });
+
+  expect(await resolveChatGptToolConfirmation(fixture.page, "Codex Native", true)).toBeTrue();
+  expect(fixture.stopReads()).toBe(4);
+  expect(fixture.pressed).toEqual(["Allow once:Enter"]);
+});
+
+test("connector auto-approval never presses Allow when the approval closes while Stop is still visible", async () => {
+  const fixture = toolConfirmationPage({ stopVisibleReads: 100, dialogClosesAfterStopReads: 2 });
+
+  expect(await resolveChatGptToolConfirmation(fixture.page, "Codex Native", true)).toBeTrue();
+  expect(fixture.pressed).toEqual([]);
+});
+
+test("connector auto-approval reports that Allow was not sent when Stop never disappears", async () => {
+  const fixture = toolConfirmationPage({ stopVisibleReads: Number.MAX_SAFE_INTEGER });
+
+  await expect(resolveChatGptToolConfirmation(fixture.page, "Codex Native", true, undefined, 120))
+    .rejects.toThrow("automatic approval was not sent");
+  expect(fixture.pressed).toEqual([]);
+});
+
+test("connector auto-approval stops waiting for the Stop button when the turn is aborted", async () => {
+  const fixture = toolConfirmationPage({ stopVisibleReads: Number.MAX_SAFE_INTEGER });
+  const controller = new AbortController();
+  const pending = resolveChatGptToolConfirmation(fixture.page, "Codex Native", true, controller.signal, 5_000);
+  setTimeout(() => controller.abort(), 30);
+
+  await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  expect(fixture.pressed).toEqual([]);
 });
 
 test("connector auto-approval accepts the current shortened Allow action", async () => {
