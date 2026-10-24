@@ -139,9 +139,13 @@ function abortReason(signal: AbortSignal): Error {
     : new DOMException("ChatGPT compaction handoff aborted", "AbortError");
 }
 
-function withCompactionAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+export function withCompactionAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
   if (!signal) return promise;
-  if (signal.aborted) return Promise.reject(abortReason(signal));
+  if (signal.aborted) {
+    // The abandoned promise may still reject later; nobody else observes it.
+    void promise.catch(() => {});
+    return Promise.reject(abortReason(signal));
+  }
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => reject(abortReason(signal));
     signal.addEventListener("abort", onAbort, { once: true });
