@@ -1982,6 +1982,24 @@ export function chatGptPromptFilePayloads(
 }
 
 /**
+ * Read back the text of a ChatGPT composer without its pills and non-text decorations. Runs inside
+ * the page, so it may reference only globals and its argument. ChatGPT adds inline SVG icons (with
+ * embedded CSS) to links such as Google Drive URLs; their text content is not prompt text and made
+ * a complete prompt read back as inconsistent (#801).
+ */
+export function readChatGptComposerPromptText(element: HTMLElement): string {
+  const clone = element.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll(
+    'svg, style, script, [data-id^="plugin:"][data-keyword], [data-inline-selection-pill-cursor-target]',
+  )
+    .forEach(part => part.remove());
+  return Array.from(clone.childNodes)
+    .map(child => child.textContent ?? "")
+    .join("\n")
+    .trimStart();
+}
+
+/**
  * Insert `value` at the caret of an already-resolved ChatGPT composer, returning whether the edit
  * was applied. Runs inside the page, so it may reference only globals and its two arguments.
  *
@@ -2850,17 +2868,7 @@ export class ChatGptBrowserWorker {
 
   private async attachedPromptText(page: Page, abortSignal?: AbortSignal): Promise<string> {
     const composer = await this.activeComposer(page, 30_000, abortSignal);
-    return composer.evaluate(element => {
-      const clone = element.cloneNode(true) as HTMLElement;
-      clone.querySelectorAll(
-        '[data-id^="plugin:"][data-keyword], [data-inline-selection-pill-cursor-target]',
-      )
-        .forEach(part => part.remove());
-      return [...clone.childNodes]
-        .map(child => child.textContent ?? "")
-        .join("\n")
-        .trimStart();
-    }, undefined, { timeout: 20_000, signal: abortSignal });
+    return composer.evaluate(readChatGptComposerPromptText, undefined, { timeout: 20_000, signal: abortSignal });
   }
 
   private async assertPromptAttached(

@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { insertPlainTextIntoComposer } from "../src/adapters/chatgpt-web/browser-worker";
+import { insertPlainTextIntoComposer, readChatGptComposerPromptText } from "../src/adapters/chatgpt-web/browser-worker";
 
 /**
  * The composer insert runs inside the page, where the caret state is whatever the last UI
@@ -84,4 +84,21 @@ test("reports a genuinely rejected edit as a failure", () => {
   });
 
   expect(insertPlainTextIntoComposer(composer, "staged part")).toBeFalse();
+});
+
+test("composer read-back ignores inline SVG icons, styles and scripts but keeps literal markup text (#801)", () => {
+  // domino ships without module typings; it is the only DOM implementation available to this suite.
+  const { createDocument } = require("@mixmark-io/domino") as {
+    createDocument: (html: string) => { body: { firstElementChild: HTMLElement } };
+  };
+  const read = (html: string): string => readChatGptComposerPromptText(
+    createDocument(`<body><div id="composer">${html}</div></body>`).body.firstElementChild,
+  );
+  const icon = '<svg width="16"><style>.a{fill:red}</style><path d="M0 0"/></svg>';
+
+  expect(read(`<p>see https://drive.google.com/file/d/1${icon}</p><p>next</p>`))
+    .toBe("see https://drive.google.com/file/d/1\nnext");
+  expect(read("<p>before<style>.x{}</style><script>var x=1</script>after</p>")).toBe("beforeafter");
+  expect(read("<p>keep &lt;svg&gt; as text</p>")).toBe("keep <svg> as text");
+  expect(read('<p>a<span data-id="plugin:x" data-keyword>pill</span>b</p>')).toBe("ab");
 });
