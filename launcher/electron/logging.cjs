@@ -30,8 +30,10 @@ function redactHttpUrls(value) {
 
 function redactExportText(value) {
   return redactHttpUrls(redactText(value))
-    .replace(/\b[A-Za-z]:\\+Users\\+[^\\/\r\n"'`<>|]+/gi, "[user-home]")
-    .replace(/\/(?:Users|home)\/[^/\r\n"'`<>]+/g, "[user-home]")
+    // The drive letter is optional so WSL UNC paths (\\wsl.localhost\Ubuntu\home\name) are covered.
+    .replace(/(?:\b[A-Za-z]:)?\\+(?:Users|home)\\+[^\\/\r\n"'`<>|]+/gi, "[user-home]")
+    // Windows can lowercase paths (c:/users/name), so match case-insensitively.
+    .replace(/\/(?:Users|home)\/[^/\r\n"'`<>]+/gi, "[user-home]")
     .replace(/((?:visible rows|sidebar (?:rows|titles)|conversation titles):)\s*[^\r\n]*/gi, "$1 [redacted]");
 }
 

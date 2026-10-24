@@ -8,9 +8,30 @@ const {
   createLogger,
   exportSanitizedLogs,
   installProcessDiagnosticGuards,
+  redactExportText,
   registerLoggedIpc,
   sanitize,
 } = require("../electron/logging.cjs");
+
+test("exported diagnostics redact lowercase, forward-slash, and drive-less user home paths", () => {
+  const bs = "\\";
+  const samples = [
+    `C:${bs}Users${bs}Alice${bs}AppData${bs}x`,
+    "C:/Users/Alice/x",
+    "c:/users/alice/AppData/x",
+    "/HOME/Alice/x",
+    `${bs}${bs}wsl.localhost${bs}Ubuntu${bs}home${bs}Alice${bs}p`,
+    `${bs}${bs}wsl$${bs}Ubuntu${bs}home${bs}Alice${bs}p`,
+    // JSON-escaped form of a backslash path inside a serialized detail string.
+    `C:${bs}${bs}Users${bs}${bs}Alice${bs}${bs}x`,
+  ];
+  for (const sample of samples) {
+    const redacted = redactExportText(`path=${sample} end`);
+    assert.doesNotMatch(redacted, /alice/i, `${sample} -> ${redacted}`);
+    assert.match(redacted, /\[user-home\]/, `${sample} -> ${redacted}`);
+  }
+  assert.equal(redactExportText("see /usr/local/home-page"), "see /usr/local/home-page");
+});
 
 test("launcher logs redact tunnel ids, runtime keys, and bearer credentials", () => {
   assert.deepEqual(sanitize({
