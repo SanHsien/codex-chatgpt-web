@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "deferrals": [
-    { "workspace": "root", "package": "chromium-bidi", "latest": "158.0.8121-0", "reviewed": "2026-10-25", "reason": "Re-reviewed 2026-10-25 (latest moved to 158.0.8121-0; decision unchanged): major browser-protocol upgrade awaits reviewed upstream or packaged desktop verification." },
+    { "workspace": "root", "package": "chromium-bidi", "latest": "158.0.8122-0", "reviewed": "2026-10-25", "reason": "Re-reviewed 2026-10-25 (latest moved to 158.0.8122-0; decision unchanged): major browser-protocol upgrade awaits reviewed upstream or packaged desktop verification." },
     { "workspace": "root", "package": "turndown", "latest": "7.2.4", "reviewed": "2026-10-25", "reason": "Re-reviewed 2026-10-25 (decision unchanged): exact pin 7.2.0 tracks the reviewed upstream baseline; a 7.2.x patch has no security driver here." },
     { "workspace": "root", "package": "@types/turndown", "latest": "5.0.6", "reviewed": "2026-10-25", "reason": "Re-reviewed 2026-10-25 (decision unchanged): exact pin 5.0.5 matches turndown 7.2.0; move both together." },
     { "workspace": "root", "package": "@types/bun", "latest": "1.4.4", "reviewed": "2026-10-25", "reason": "Exact pin 1.4.2 mirrors the pinned Bun 1.4.2 runtime (package.json engines); the types move with the Bun pin, not ahead of it." },
