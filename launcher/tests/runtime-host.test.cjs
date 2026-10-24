@@ -450,6 +450,32 @@ test("launcher update transaction does not preserve a stale disconnected route p
   assert.equal(fixture.invocation().args.includes("--refresh-account-capabilities"), true);
 });
 
+test("launcher update keeps the saved auto-approve preference only for Automatic mode", async () => {
+  const cases = [
+    { mode: "full", interaction: "automatic", autoApprove: true, expected: true },
+    { mode: "browser-only", interaction: "automatic", autoApprove: true, expected: true },
+    { mode: "full", interaction: "automatic", autoApprove: false, expected: false },
+    { mode: "full", interaction: "automatic", autoApprove: undefined, expected: false },
+    { mode: "full", interaction: "manual", autoApprove: true, expected: false },
+  ];
+  for (const item of cases) {
+    const fixture = hostFor({
+      mode: item.mode,
+      browserHost: "launcher",
+      browserInteractionMode: item.interaction,
+      appName: "Codex Native2",
+      releaseVersion: "1.1.1",
+      ...(item.autoApprove === undefined ? {} : { autoApproveToolCalls: item.autoApprove }),
+    });
+    assert.equal((await fixture.host.upgradeManagedRuntime()).updated, true);
+    assert.equal(
+      fixture.invocation().args.includes("--auto-approve-tool-calls"),
+      item.expected,
+      JSON.stringify(item),
+    );
+  }
+});
+
 test("launcher update preserves Zero Risk and never probes its account capabilities", async () => {
   const fixture = hostFor({
     mode: "full",

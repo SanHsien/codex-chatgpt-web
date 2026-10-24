@@ -1158,6 +1158,10 @@ class RuntimeHost {
       "--acknowledge-unofficial",
       "--restart-service",
     ];
+    // Zero Risk never auto-approves, so only the Automatic preference is carried over.
+    if (interactionMode === "automatic" && existing.config?.autoApproveToolCalls === true) {
+      args.push("--auto-approve-tool-calls");
+    }
     if (existing.mode === "full") {
       args.push("--app-name", this.setupConnectorName());
     }
