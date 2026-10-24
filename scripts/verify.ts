@@ -25,7 +25,8 @@ try {
   await run(["run", "test"]);
   await run(["run", "launcher:typecheck"]);
   await run(["run", "launcher:test"]);
-  await run(["run", "launcher:build"]);
+  // launcher:typecheck already ran above; `launcher build` would typecheck a second time.
+  await run(["run", "--cwd", "launcher", "build:renderer"]);
   await run(["run", "scripts/build-runtime-bundle.ts", runtimeBundle]);
   await run([
     "run",
