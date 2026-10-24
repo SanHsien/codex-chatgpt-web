@@ -1029,18 +1029,28 @@ export class ChatGptSuspensionClock {
   private lastTickAt: number;
   private timer: ReturnType<typeof setInterval> | undefined;
 
+  /**
+   * `now` must be monotonic (the default is `performance.now`): a wall-clock adjustment must not
+   * read as a sleep, nor hide one.
+   */
   constructor(
     private readonly tickIntervalMs = 1_000,
     private readonly gapThresholdMs = 5_000,
+    private readonly now: () => number = () => performance.now(),
   ) {
-    this.lastTickAt = Date.now();
+    this.lastTickAt = this.now();
   }
 
   start(): void {
     if (this.timer) return;
-    this.lastTickAt = Date.now();
-    this.timer = setInterval(() => this.tick(Date.now()), this.tickIntervalMs);
+    this.lastTickAt = this.now();
+    this.timer = setInterval(() => this.tick(this.now()), this.tickIntervalMs);
     this.timer.unref?.();
+  }
+
+  stop(): void {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = undefined;
   }
 
   /** Exposed for tests; production ticks come from the interval above. */
@@ -1050,7 +1060,13 @@ export class ChatGptSuspensionClock {
     if (gap >= this.gapThresholdMs) this.suspendedTotalMs += gap - this.tickIntervalMs;
   }
 
+  /**
+   * Tick first: after a sleep the interval may not have fired yet when a timer that was also
+   * frozen wakes up, and reading the stale total would charge the slept time to its budget.
+   * Only a started clock can tell a sleep from simply never having been ticked.
+   */
   suspendedMs(): number {
+    if (this.timer) this.tick(this.now());
     return this.suspendedTotalMs;
   }
 }
@@ -1069,6 +1085,46 @@ export function remainingStageBudgetMs(
   const awakeMs = elapsedMs - suspendedMs;
   if (awakeMs >= timeoutMs) return 0;
   return Math.max(250, timeoutMs - awakeMs);
+}
+
+/**
+ * A resettable liveness deadline that, like a browser stage, is not charged for time the process
+ * spent suspended. The timer itself measures the budget; when it fires, any suspension that has
+ * not yet been refunded extends the deadline by exactly that long instead of expiring it.
+ */
+export function createSuspensionAwareDeadline(
+  timeoutMs: number,
+  onExpire: () => void,
+  clock: Pick<ChatGptSuspensionClock, "start" | "suspendedMs"> = chatGptSuspensionClock,
+): { arm: () => void; clear: () => void } {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let refundedSuspendedMs = 0;
+  const schedule = (delayMs: number): void => {
+    timer = setTimeout(fire, delayMs);
+    timer.unref?.();
+  };
+  const fire = (): void => {
+    const unrefunded = clock.suspendedMs() - refundedSuspendedMs;
+    if (unrefunded > 0) {
+      refundedSuspendedMs += unrefunded;
+      schedule(unrefunded);
+      return;
+    }
+    timer = undefined;
+    onExpire();
+  };
+  return {
+    arm: () => {
+      if (timer) clearTimeout(timer);
+      clock.start();
+      refundedSuspendedMs = clock.suspendedMs();
+      schedule(timeoutMs);
+    },
+    clear: () => {
+      if (timer) clearTimeout(timer);
+      timer = undefined;
+    },
+  };
 }
 
 export const CHATGPT_BROWSER_OBSERVATION_PROBE_TIMEOUT_MS = 5_000;

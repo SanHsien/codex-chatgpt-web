@@ -21,7 +21,7 @@ import { namespacedToolName, type AdapterEvent, type CodexContentPart, type Code
 import type { ProviderAdapter } from "../base";
 import { parseDataUrl } from "../image";
 import { ChatGptWebAdapterError } from "./adapter-error";
-import { ChatGptBrowserWorker } from "./browser-worker";
+import { ChatGptBrowserWorker, createSuspensionAwareDeadline } from "./browser-worker";
 import { extractChatGptTurnEnvironment, extractChatGptTurnIdentity, priorChatGptAbortedTurnIds } from "./environment";
 import { CHATGPT_WEB_LUNA_MODEL_ID, resolveChatGptWebModelMode, type ChatGptWebCapabilities } from "./model";
 import { chatGptReadOnlyContextWarning, compileChatGptWebPrompt } from "./prompt";
@@ -915,15 +915,14 @@ export function createChatGptWebAdapter(
                       retryable: false,
                     },
                   );
-                  let handoffTimer: ReturnType<typeof setTimeout> | undefined;
+                  // Time the process spent suspended (system sleep) is not charged to the budget.
+                  const handoffTimer = createSuspensionAwareDeadline(
+                    handoffTimeoutMs,
+                    () => handoffDeadline.abort(handoffTimeoutError),
+                  );
                   const armHandoffDeadline = (): void => {
                     if (handoffDeadline.signal.aborted) return;
-                    if (handoffTimer) clearTimeout(handoffTimer);
-                    handoffTimer = setTimeout(
-                      () => handoffDeadline.abort(handoffTimeoutError),
-                      handoffTimeoutMs,
-                    );
-                    handoffTimer.unref?.();
+                    handoffTimer.arm();
                   };
                   armHandoffDeadline();
                   const operationSignal = AbortSignal.any([operatorSignal, handoffDeadline.signal]);
@@ -1070,7 +1069,7 @@ export function createChatGptWebAdapter(
                     }
                     throw handoffError;
                   } finally {
-                    if (handoffTimer) clearTimeout(handoffTimer);
+                    handoffTimer.clear();
                   }
                 },
               );

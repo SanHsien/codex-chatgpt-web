@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "playwright-core";
-import { CHATGPT_BROWSER_OBSERVATION_PROBE_TIMEOUT_MS, CHATGPT_COMPLETION_SETTLE_MS, CHATGPT_EXTERNAL_PROGRESS_CLOCK_SKEW_MS, CHATGPT_EXTERNAL_PROGRESS_STALL_CEILING_MS, ChatGptCompletionTracker, chatGptExternalProgressSuppressesDomHealth, CHATGPT_RESPONSE_DOM_GRACE_MS, MAX_CHATGPT_INTERNAL_OBSERVATION_FAULTS, CHATGPT_COMPOSER_DOCUMENT_END_KEY, CHATGPT_COMPOSER_SELECT_ALL_KEY, CHATGPT_STOPPED_THINKING_GRACE_MS, ChatGptBrowserObservationTimeoutError, ChatGptBrowserWorker, ChatGptPromptAttachmentIntegrityError, ChatGptStoppedThinkingTracker, ChatGptTurnDomHealthTracker, ChatGptVisibleTraceTracker, MAX_CHATGPT_BROWSER_PAGE_REBINDS, MAX_CHATGPT_BROWSER_TABS, MAX_CHATGPT_CONNECTOR_TRIGGER_ATTEMPTS, assertChatGptWebInputWithinLimits, assertChatGptWebMultipartInputWithinLimits, browserDiagnosticCheckpoint, chatGptConnectorAttachmentMode, chatGptNewTurnIdentity, chatGptReboundTurnIdentity, chatGptSubmissionEvidence, connectAfterClosingBrowserConnection, dismissChatGptTemporaryChatOnboarding, isChatGptTraceControl, redactChatGptUiDiagnostic, resolveBrowserConfig, resolveChatGptToolConfirmation, resolveChatGptWebMultipartStagingMode, sanitizeChatGptBrowserDiagnosticState, setChatGptThinkMode, stripChatGptTraceControlSuffix, throwIfChatGptRateLimitDialog, throwIfChatGptSessionFailureAlert, throwIfChatGptTerminalErrorAlert, withChatGptBrowserObservationTimeout, CHATGPT_MULTIPART_RESPONSE_DOM_GRACE_MS, browserStageTimeouts, ChatGptSuspensionClock, remainingStageBudgetMs } from "../src/adapters/chatgpt-web/browser-worker";
+import { CHATGPT_BROWSER_OBSERVATION_PROBE_TIMEOUT_MS, CHATGPT_COMPLETION_SETTLE_MS, CHATGPT_EXTERNAL_PROGRESS_CLOCK_SKEW_MS, CHATGPT_EXTERNAL_PROGRESS_STALL_CEILING_MS, ChatGptCompletionTracker, chatGptExternalProgressSuppressesDomHealth, CHATGPT_RESPONSE_DOM_GRACE_MS, MAX_CHATGPT_INTERNAL_OBSERVATION_FAULTS, CHATGPT_COMPOSER_DOCUMENT_END_KEY, CHATGPT_COMPOSER_SELECT_ALL_KEY, CHATGPT_STOPPED_THINKING_GRACE_MS, ChatGptBrowserObservationTimeoutError, ChatGptBrowserWorker, ChatGptPromptAttachmentIntegrityError, ChatGptStoppedThinkingTracker, ChatGptTurnDomHealthTracker, ChatGptVisibleTraceTracker, MAX_CHATGPT_BROWSER_PAGE_REBINDS, MAX_CHATGPT_BROWSER_TABS, MAX_CHATGPT_CONNECTOR_TRIGGER_ATTEMPTS, assertChatGptWebInputWithinLimits, assertChatGptWebMultipartInputWithinLimits, browserDiagnosticCheckpoint, chatGptConnectorAttachmentMode, chatGptNewTurnIdentity, chatGptReboundTurnIdentity, chatGptSubmissionEvidence, connectAfterClosingBrowserConnection, dismissChatGptTemporaryChatOnboarding, isChatGptTraceControl, redactChatGptUiDiagnostic, resolveBrowserConfig, resolveChatGptToolConfirmation, resolveChatGptWebMultipartStagingMode, sanitizeChatGptBrowserDiagnosticState, setChatGptThinkMode, stripChatGptTraceControlSuffix, throwIfChatGptRateLimitDialog, throwIfChatGptSessionFailureAlert, throwIfChatGptTerminalErrorAlert, withChatGptBrowserObservationTimeout, CHATGPT_MULTIPART_RESPONSE_DOM_GRACE_MS, browserStageTimeouts, ChatGptSuspensionClock, createSuspensionAwareDeadline, remainingStageBudgetMs } from "../src/adapters/chatgpt-web/browser-worker";
 import { ensureChatGptPersonalizedConnectorAccess } from "../src/adapters/chatgpt-web/browser-worker";
 import { chatGptStoppedThinkingError } from "../src/adapters/chatgpt-web/adapter-error";
 import { CHATGPT_WEB_MODEL_ID } from "../src/adapters/chatgpt-web/model";
@@ -3724,6 +3724,63 @@ test("the suspension clock charges only tick gaps that mean the process was froz
   // Fifteen minutes without a tick is a sleep; the ordinary interval is refunded from the charge.
   clock.tick(3_100 + 15 * 60_000);
   expect(clock.suspendedMs()).toBe(15 * 60_000 - 1_000);
+});
+
+test("the suspension clock ticks before reporting so a read right after a sleep is already refunded", () => {
+  let now = 50_000;
+  const clock = new ChatGptSuspensionClock(1_000, 5_000, () => now);
+  clock.start();
+  try {
+    now += 15 * 60_000;
+    // No interval tick has run yet; reading must still account for the gap.
+    expect(clock.suspendedMs()).toBe(15 * 60_000 - 1_000);
+    now += 500;
+    expect(clock.suspendedMs()).toBe(15 * 60_000 - 1_000);
+  } finally {
+    clock.stop();
+  }
+});
+
+test("the suspension clock ignores wall-clock jumps because it is monotonic", async () => {
+  const realNow = Date.now;
+  const clock = new ChatGptSuspensionClock(10, 50);
+  clock.start();
+  try {
+    Date.now = () => realNow() + 60 * 60_000;
+    await new Promise(resolveSleep => setTimeout(resolveSleep, 60));
+    expect(clock.suspendedMs()).toBeLessThan(50);
+  } finally {
+    Date.now = realNow;
+    clock.stop();
+  }
+});
+
+test("a deadline refunds slept time but still expires after awake inactivity", async () => {
+  let suspended = 0;
+  let expired = 0;
+  const deadline = createSuspensionAwareDeadline(
+    40,
+    () => { expired += 1; },
+    { start: () => {}, suspendedMs: () => suspended },
+  );
+  deadline.arm();
+  try {
+    // The process slept for 300ms of the budget: the deadline is extended by that long.
+    suspended = 300;
+    await new Promise(resolveSleep => setTimeout(resolveSleep, 150));
+    expect(expired).toBe(0);
+
+    // Awake time past the extended budget with no new activity expires it.
+    await new Promise(resolveSleep => setTimeout(resolveSleep, 400));
+    expect(expired).toBe(1);
+
+    // Progress re-arms from a fresh baseline instead of inheriting the spent budget.
+    deadline.arm();
+    await new Promise(resolveSleep => setTimeout(resolveSleep, 10));
+    expect(expired).toBe(1);
+  } finally {
+    deadline.clear();
+  }
 });
 
 test("remaining stage budget refunds slept time and stands once the awake budget is spent", () => {
