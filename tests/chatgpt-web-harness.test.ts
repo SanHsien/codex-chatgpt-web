@@ -22,7 +22,7 @@ import { MAX_CHATGPT_WEB_TURN_RETRIES } from "../src/adapters/chatgpt-web/retry-
 import { ChatGptTextFeed, ChatGptTraceFeed, ChatGptTurnSessions, chatGptCompactionSourceExecutionKey, chatGptInstructionLineage, chatGptThreadOwnershipKey, chatGptTurnExecutionKey, chatGptTurnSessions } from "../src/adapters/chatgpt-web/turn-execution";
 import { callTurnBroker, TurnBroker, type BrokerToolResult } from "../src/adapters/chatgpt-web/turn-broker";
 import { ChatGptExternalTurnProgress, ChatGptMirroredTurnProgress, chatGptExternalProgressIsLive, chatGptExternalToolCallsAreInFlight } from "../src/adapters/chatgpt-web/turn-progress";
-import { CHATGPT_WEB_MCP_INVOCATION_TIMEOUT_MS, chatGptMcpInvocationTimeout } from "../src/adapters/chatgpt-web/mcp-server";
+import { CHATGPT_WEB_MCP_INVOCATION_TIMEOUT_MS, CHATGPT_WEB_WRITE_STDIN_MAX_YIELD_MS, chatGptMcpInvocationTimeout } from "../src/adapters/chatgpt-web/mcp-server";
 import { defaultBrokerEndpoint } from "../src/config";
 import { estimateChatGptWebUsage } from "../src/adapters/chatgpt-web/usage";
 import { decodeCompactionSummary, SUMMARY_PREFIX } from "../src/responses/compaction";
@@ -2617,7 +2617,7 @@ describe("ChatGPT outer-native harness v4", () => {
       // ChatGPT caches the complete tools/list contract under a connector identity.
       // An intentional hash change therefore requires an explicit connector refresh or identity migration.
       expect(createHash("sha256").update(canonicalJson(publicConnectorAbi)).digest("hex"))
-        .toBe("5cb59b378c7d1939e260a2b4a60f58e22da31208fe09c2cc17a2cf31eb5ff3ad");
+        .toBe("569ac0e556a76bc500793e123738b32b0d50e9d20456a49a721cd03a6d0fc292");
       for (const tool of listed.tools) {
         const properties = tool.inputSchema.properties as Record<string, unknown>;
         expect(properties.turn_token).toEqual({ type: "string", minLength: 20, maxLength: 256 });
@@ -2630,6 +2630,18 @@ describe("ChatGPT outer-native harness v4", () => {
         idempotentHint: false,
         openWorldHint: true,
       });
+      // #904: a poll must return before the MCP invocation deadline cuts it off.
+      const writeStdinYield = (listed.tools.find(tool => tool.name === "codex_write_stdin")?.inputSchema
+        .properties as Record<string, { maximum?: number }>).yield_time_ms;
+      expect(writeStdinYield?.maximum).toBe(CHATGPT_WEB_WRITE_STDIN_MAX_YIELD_MS);
+      expect(CHATGPT_WEB_WRITE_STDIN_MAX_YIELD_MS).toBeLessThan(CHATGPT_WEB_MCP_INVOCATION_TIMEOUT_MS);
+      const overLimit = await call("codex_write_stdin", {
+        turn_token: "t".repeat(24),
+        session_id: 1,
+        yield_time_ms: CHATGPT_WEB_MCP_INVOCATION_TIMEOUT_MS,
+      });
+      expect(overLimit.isError).toBeTrue();
+      expect(JSON.stringify(overLimit.content)).toContain("yield_time_ms");
       expect(listed.tools.find(tool => tool.name === "codex_write_stdin")?.annotations).toMatchObject({
         readOnlyHint: false,
         destructiveHint: true,

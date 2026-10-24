@@ -42,6 +42,9 @@ const AGENT_WAIT_TRANSPORT_RULE = `ChatGPT Web transport rule: wait for exactly 
 // must settle first so an abandoned native tool call is returned as an MCP error instead of
 // letting the tunnel tear down and poison its long-lived stdio transport.
 export const CHATGPT_WEB_MCP_INVOCATION_TIMEOUT_MS = 90_000;
+// A session poll that outlives the invocation deadline is cut off and reported as an MCP error
+// (#904), so codex_write_stdin must yield with margin before that deadline.
+export const CHATGPT_WEB_WRITE_STDIN_MAX_YIELD_MS = CHATGPT_WEB_MCP_INVOCATION_TIMEOUT_MS - 10_000;
 
 const ZERO_RISK_MCP_INSTRUCTIONS = [
   "For each pasted Codex Web GPT request, begin with codex_turn_start using the request_id in its request block.",
@@ -662,12 +665,12 @@ export async function runChatGptMcpServer(options: {
     "codex_write_stdin",
     {
       title: "Continue a native Codex command session",
-      description: afterSafeStart(contract, "Write characters to, or poll, a session_id returned by codex_exec."),
+      description: afterSafeStart(contract, `Write characters to, or poll, a session_id returned by codex_exec. yield_time_ms is at most ${CHATGPT_WEB_WRITE_STDIN_MAX_YIELD_MS}; poll again for longer waits.`),
       inputSchema: {
         ...turnReferenceInput(contract),
         session_id: z.number().int().nonnegative(),
         chars: z.string().max(1_000_000).optional(),
-        yield_time_ms: z.number().int().min(250).max(300_000).optional(),
+        yield_time_ms: z.number().int().min(250).max(CHATGPT_WEB_WRITE_STDIN_MAX_YIELD_MS).optional(),
         max_output_tokens: z.number().int().min(1).max(1_000_000).optional(),
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
