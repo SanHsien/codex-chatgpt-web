@@ -549,6 +549,65 @@ test("scrubs every retired broker capability exactly, including JSON-escaped pre
   }
 });
 
+test("context JSON carries no backtick and still parses to the original value (#806)", () => {
+  const body = "0123456789abcdefghijklmnopqrstuv";
+  const original = { code: "```a```".repeat(12), nested: ["`", "\\`", `\`call_${body}`], plain: "no ticks" };
+  const scrubbed = withoutRetiredTurnHandles(JSON.stringify(original));
+
+  expect(scrubbed).not.toContain("`");
+  expect(JSON.parse(scrubbed)).toEqual({
+    ...original,
+    nested: ["`", "\\`", "`[retired call handle]"],
+  });
+});
+
+test("compiled single-part and multipart context carry no backtick (#806)", () => {
+  const token = "turn_12345678901234567890123456789012";
+  const dense = "```ts\nconst a = `${b}`;\n```\n".repeat(50);
+  const parsed = request("high");
+  parsed.context.messages = [
+    { role: "user", content: dense, timestamp: 1 },
+    { role: "user", content: "latest-request", timestamp: 2 },
+  ];
+  const capabilities = { localToolsEnabled: true, solAvailable: true, proAvailable: true };
+
+  const single = compileChatGptWebPrompt(parsed, capabilities, token);
+  const envelope = single.text.split("<codex_context_json>")[1]!.split("</codex_context_json>")[0]!.trim();
+  expect(envelope).not.toContain("`");
+  expect((JSON.parse(envelope) as { messages: Array<{ content: unknown }> }).messages[0]!.content).toBe(dense);
+
+  const multipart = compileChatGptWebPrompt(parsed, capabilities, token, {
+    experimentalMultipartParts: CHATGPT_BIGGER_CONTEXT_PARTS,
+  });
+  for (const part of multipart.multipart!.parts) expect(part).not.toContain("`");
+  const messages = multipart.multipart!.parts.flatMap(part => (
+    (JSON.parse(part) as { records: Array<{ kind: string; message?: { content?: unknown } }> }).records
+  )).filter(record => record.kind === "message");
+  expect(JSON.stringify(messages[0]!.message!.content)).toContain("const a = `${b}`;");
+});
+
+test("Bigger Context weighs backtick-dense records by their escaped size (#806)", () => {
+  const parsed = request("high");
+  parsed.context.systemPrompt = [];
+  // Unescaped weights are ~10k/40k/40k/40k; escaped, the backtick record grows to ~60k.
+  parsed.context.messages = [
+    { role: "user", content: "`".repeat(10_000), timestamp: 1 },
+    { role: "user", content: "x".repeat(40_000), timestamp: 2 },
+    { role: "user", content: "y".repeat(40_000), timestamp: 3 },
+    { role: "user", content: "z".repeat(40_000), timestamp: 4 },
+  ];
+
+  const compiled = compileChatGptWebPrompt(
+    parsed,
+    { localToolsEnabled: false, solAvailable: true, proAvailable: false },
+    undefined,
+    { experimentalMultipartParts: CHATGPT_BIGGER_CONTEXT_PARTS },
+  );
+  const parts = compiled.multipart!.parts.map(part => JSON.parse(part) as { records: unknown[] });
+
+  expect(parts.map(part => part.records.length)).toEqual([1, 2, 1]);
+});
+
 test("requires ChatGPT-native rich results to include a safe Markdown answer for Codex", () => {
   const compiled = compileChatGptWebPrompt(
     request("max"),

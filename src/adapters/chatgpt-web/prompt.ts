@@ -148,7 +148,19 @@ const RETIRED_TURN_HANDLE = new RegExp(
  * the current turn is supplied by the contract text, never by the replayed context.
  */
 export function withoutRetiredTurnHandles(contextJson: string): string {
-  return contextJson.replace(RETIRED_TURN_HANDLE, (_handle, kind: string) => `[retired ${kind} handle]`);
+  return withoutContextBackticks(
+    contextJson.replace(RETIRED_TURN_HANDLE, (_handle, kind: string) => `[retired ${kind} handle]`),
+  );
+}
+
+/**
+ * The context JSON is shown to ChatGPT inside a Markdown fence, and its renderer can stall on
+ * dense backtick runs (#806). A backtick is only ever valid inside a JSON string, where ```
+ * decodes to the same character, so the JSON still parses to the original value. This must run
+ * after handle redaction: the handle pattern relies on the character before a handle.
+ */
+function withoutContextBackticks(contextJson: string): string {
+  return contextJson.replaceAll("`", "\\u0060");
 }
 
 /** ChatGPT accepts at most this many attachments on one message. */
@@ -311,7 +323,8 @@ type MultipartContextRecord =
   | { kind: "message"; message_index: number; message: Record<string, unknown> };
 
 function multipartRecordWeight(record: MultipartContextRecord): number {
-  return Buffer.byteLength(JSON.stringify(record), "utf8");
+  // Weigh the record as it is transmitted: backtick escaping grows each backtick to six bytes.
+  return Buffer.byteLength(withoutContextBackticks(JSON.stringify(record)), "utf8");
 }
 
 function minimumMultipartGroupCapacity(
