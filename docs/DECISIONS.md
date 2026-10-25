@@ -658,3 +658,13 @@ Three-way merge of upstream `0901b9f` (6.1.13) on top of stage B (ancestor `fa2d
 | Electron | stay on 44.9.1 | Newer than upstream's 42.11.3 and already covers its origin-check advisory. | Electron 45 is verified with a packaged run. |
 | Dependencies | adopt with fork pins | `@mixmark-io/domino` 2.2.0, `@modelcontextprotocol/sdk` ^1.31.0, and override pins for `ip-address` (10.7.4, raised from upstream's vulnerable 10.7.1), `proxy-addr`, `global-agent`, `http-cache-semantics`, `source-map-js`. `@hono/node-server` 2.1.3 and `hono` 4.13.12 follow upstream 6.1.4 (raised from the fork's 2.1.1 and 4.13.11). | The next audit. |
 | Not adopted | reject | macOS/Linux packaging and updater code, ko and zh-TW launcher copy, non-Windows README downloads. | The owner changes the supported platforms. |
+
+## 2026-10-25 addendum: issue #910, numbers #907-#908
+
+Read-only re-check after stage C; upstream `main` is still `0901b9fb1976b4a984c7e9b4082c2868767bbf7c` and the latest PR is still #909 at `1f09c1928292f34d15f28a33aab2f3c831380c9d`. Numbers #907 and #908 are not retrievable through the API (absent or removed).
+
+| Item | Decision | Reason | Reconsider when |
+| --- | --- | --- | --- |
+| Issue #910 (v6.1.13 aborts a completed ChatGPT response about 79 s after send despite `stallTimeoutSec`), open | monitor | Reported on macOS arm64 with the Plus tier; the fork now ships the same 6.1.13 response-tracking code, so a Windows reproduction is plausible but none is reported. | A Windows reproduction, or upstream identifies a platform-neutral cause. |
+
+Advance the reviewed ledger to non-PR issue #910.
