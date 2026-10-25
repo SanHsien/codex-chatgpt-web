@@ -26,6 +26,53 @@ async function runCli(args: string[], env: Record<string, string | undefined>) {
   return { exitCode, stdout, stderr };
 }
 
+test("production and DEV setup reject the removed connector-name option before configuration", async () => {
+  const root = mkdtempSync(join(tmpdir(), "codex-chatgpt-web-fixed-connector-"));
+  try {
+    const env = {
+      ...process.env,
+      CODEX_HOME: join(root, "codex"),
+      CODEX_CHATGPT_WEB_HOME: join(root, "app"),
+      CODEX_CHATGPT_WEB_DEV_HOME: join(root, "dev"),
+    };
+    for (const command of [["setup"], ["dev", "setup"]]) {
+      const result = await runCli([
+        ...command, "--browser-only", "--app-name", "Other Connector", "--acknowledge-unofficial",
+      ], env);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/Unknown.*arguments: --app-name Other Connector/);
+    }
+    expect(existsSync(join(root, "app", "config.json"))).toBeFalse();
+    expect(existsSync(join(root, "dev", "config.json"))).toBeFalse();
+    const help = await runCli(["--help"], env);
+    expect(help.stdout).not.toContain("--app-name");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("production and DEV setup reject conflicting conversation modes before configuration", async () => {
+  const root = mkdtempSync(join(tmpdir(), "codex-web-conversation-flags-"));
+  try {
+    for (const command of [["setup"], ["dev", "setup"]]) {
+      const result = await runCli([
+        ...command, "--browser-only", "--fresh-conversation", "--retained-conversation",
+      ], {
+        ...process.env,
+        CODEX_HOME: join(root, "codex"),
+        CODEX_CHATGPT_WEB_HOME: join(root, "app"),
+        CODEX_CHATGPT_WEB_DEV_HOME: join(root, "dev"),
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("Choose --fresh-conversation or --retained-conversation");
+    }
+    expect(existsSync(join(root, "app", "config.json"))).toBeFalse();
+    expect(existsSync(join(root, "dev", "config.json"))).toBeFalse();
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("setup validates the port before performing runtime work", async () => {
   const root = mkdtempSync(join(tmpdir(), "codex-chatgpt-web-cli-"));
   try {
@@ -261,7 +308,7 @@ test("DEV browser-only setup persists only the isolated harness profile", async 
       authenticated: true,
       temporary: true,
       solAvailable: true,
-      proAvailable: false,
+      extraHighAvailable: false, proAvailable: false,
       url: "https://chatgpt.com/?temporary-chat=true",
     }));
   });
@@ -314,7 +361,7 @@ test("DEV browser-only setup persists only the isolated harness profile", async 
       browserHost: "launcher",
       browserHostDescriptorPath: descriptorPath,
       solAvailable: true,
-      proAvailable: false,
+      extraHighAvailable: false, proAvailable: false,
     });
     expect(existsSync(join(root, "production-codex", "config.toml"))).toBe(false);
     expect(existsSync(join(devHome, "codex-home", "config.toml"))).toBe(false);
@@ -473,7 +520,7 @@ test("terminal uninstall refuses to race a launcher-owned runtime", async () => 
     storageStatePath: join(appHome, "browser", "storage-state.json"),
     brokerSocketPath: defaultBrokerEndpoint(appHome),
     headed: true,
-    proAvailable: false,
+    extraHighAvailable: false, proAvailable: false,
     autoApproveToolCalls: false,
     controlToken: "launcher-uninstall-control-token-0123456789abcdef",
     runtimeCommand: [process.execPath],
@@ -536,7 +583,7 @@ test("authorized launcher uninstall does not re-probe an already stopped full ru
     storageStatePath: join(appHome, "browser", "storage-state.json"),
     brokerSocketPath: defaultBrokerEndpoint(appHome),
     headed: true,
-    proAvailable: false,
+    extraHighAvailable: false, proAvailable: false,
     autoApproveToolCalls: false,
     controlToken: "runtime-control-token-0123456789abcdef0123456789",
     runtimeCommand: [process.execPath],

@@ -6,6 +6,7 @@ import type {
 } from "../../types";
 import { extractChatGptCompactionSourceRevision } from "./environment";
 import type { ChatGptBrowserWorker } from "./browser-worker";
+import { ChatGptCompactionHandoffAccepted } from "./adapter-error";
 import type { CompactionTransactionHandle } from "./compaction-transaction";
 import type { ChatGptWebCapabilities } from "./model";
 import {
@@ -344,7 +345,7 @@ export async function requestRetainedCompactionHandoff(
     // The one-shot control submission is the terminal event for this purpose-built response.
     // ChatGPT may render no assistant text after a tool-only response, and therefore no Copy
     // action. End our owned turn explicitly and wait for the launcher/helper cleanup handshake.
-    browserAbort.abort(new DOMException("Structured compaction handoff accepted", "AbortError"));
+    browserAbort.abort(new ChatGptCompactionHandoffAccepted());
     await withCompactionAbort(
       browser.then(() => undefined, () => undefined),
       operationSignal,
@@ -491,16 +492,15 @@ export function runStructuredCompactionOnce(
   return promise;
 }
 
-async function cancelStructuredCompactionRuns(
+function beginCancelStructuredCompactionRuns(
   matches: (run: CachedCompactionRun) => boolean,
   reason: Error,
-): Promise<number> {
+): { cancelled: number; settlement: Promise<void> } {
   const runs = [...structuredCompactionRuns.values()].filter(run => run.active && matches(run));
   for (const run of runs) {
     if (!run.abort.signal.aborted) run.abort.abort(reason);
   }
-  await Promise.allSettled(runs.map(run => run.settlement));
-  return runs.length;
+  return { cancelled: runs.length, settlement: Promise.allSettled(runs.map(run => run.settlement)).then(() => undefined) };
 }
 
 /** Begin cancelling the structured compaction owned by one exact native Codex turn. */
@@ -528,11 +528,19 @@ export function cancelStructuredCompactionNativeTurn(
 }
 
 /** Cancel a user-requested compaction without treating an HTTP observer disconnect as terminal. */
-export function cancelStructuredCompactionTrace(traceId: string, reason: Error): Promise<number> {
-  return cancelStructuredCompactionRuns(run => run.traceIds.has(traceId), reason);
+export function beginCancelStructuredCompactionTrace(traceId: string, reason: Error): { cancelled: number; settlement: Promise<void> } {
+  return beginCancelStructuredCompactionRuns(run => run.traceIds.has(traceId), reason);
+}
+
+export async function cancelStructuredCompactionTrace(traceId: string, reason: Error): Promise<number> {
+  const cancellation = beginCancelStructuredCompactionTrace(traceId, reason);
+  await cancellation.settlement;
+  return cancellation.cancelled;
 }
 
 /** Cancel every active compaction owner and wait for its browser/helper cleanup. */
-export function cancelAllStructuredCompactions(reason: Error): Promise<number> {
-  return cancelStructuredCompactionRuns(() => true, reason);
+export async function cancelAllStructuredCompactions(reason: Error): Promise<number> {
+  const cancellation = beginCancelStructuredCompactionRuns(() => true, reason);
+  await cancellation.settlement;
+  return cancellation.cancelled;
 }

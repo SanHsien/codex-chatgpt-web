@@ -103,7 +103,9 @@ function createUpdateController({ currentVersion, platform, arch, packaged, exec
     if (state.status === "disabled" || checked) return state;
     checked = true; transition({ status: "checking" });
     try {
-      const release = await deps.fetchRelease(), version = releaseVersion(release?.tag_name);
+      const release = await deps.fetchRelease();
+      if (release?.draft === true || release?.prerelease === true) { candidate = null; return transition({ status: "up-to-date" }); }
+      const version = releaseVersion(release?.tag_name);
       if (version !== REVIEWED_RELEASE_VERSION) throw new Error(`Refusing unreviewed release version: ${version}`);
       if (compareVersions(version, currentVersion) <= 0) { candidate = null; return transition({ status: "up-to-date" }); }
       const assetName = releaseAssetName(version, platform, arch); if (!assetName) return transition({ status: "disabled" });

@@ -66,6 +66,7 @@ body:
       options:
         - Browser-only
         - Full harness (MCP)
+        - Zero Risk (manual browser submission)
         - Setup / sign-in (no model turn yet)
     validations:
       required: true
@@ -74,7 +75,7 @@ body:
     id: model
     attributes:
       label: Selected model
-      description: Use the exact Codex model-picker name, or write "not applicable" for setup failures.
+      description: Use the exact Codex model-picker name. For Zero Risk, also include the model and effort selected in ChatGPT. Write "not applicable" for setup failures.
       placeholder: ChatGPT Web — High
     validations:
       required: true

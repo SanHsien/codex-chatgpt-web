@@ -297,7 +297,7 @@ export async function inspectLauncherBrowserHost(
     expectedProfile?: LauncherBrowserHostProfile;
     timeoutMs?: number;
   } = {},
-): Promise<{ solAvailable?: boolean; proAvailable?: boolean; url: string }> {
+): Promise<{ solAvailable?: boolean; extraHighAvailable?: boolean; proAvailable?: boolean; url: string }> {
   const descriptor = readLauncherBrowserHostDescriptor(descriptorPath);
   if (options.expectedProfile && descriptor.profile !== options.expectedProfile) {
     throw new Error(
@@ -329,16 +329,17 @@ export async function inspectLauncherBrowserHost(
       throw new Error("Launcher returned invalid ChatGPT session evidence");
     }
     if (options.detectCapabilities
-      && (typeof body.solAvailable !== "boolean" || typeof body.proAvailable !== "boolean")) {
+      && (typeof body.solAvailable !== "boolean" || typeof body.extraHighAvailable !== "boolean" || typeof body.proAvailable !== "boolean")) {
       throw new Error("Launcher did not return complete ChatGPT account capability evidence");
     }
-    if (options.detectCapabilities && body.proAvailable === true && body.solAvailable !== true) {
+    if (options.detectCapabilities && (body.proAvailable === true || body.extraHighAvailable === true) && body.solAvailable !== true) {
       throw new Error("Launcher returned contradictory ChatGPT account capability evidence");
     }
     return {
       url: body.url,
       ...(options.detectCapabilities ? {
         solAvailable: body.solAvailable as boolean,
+        extraHighAvailable: body.extraHighAvailable as boolean,
         proAvailable: body.proAvailable as boolean,
       } : {}),
     };
@@ -356,6 +357,18 @@ export const LAUNCHER_SESSION_INSPECTION_TIMEOUT_MS = 30_000;
 export const LAUNCHER_CAPABILITY_INSPECTION_TIMEOUT_MS = 120_000;
 
 export type LauncherTurnActivity =
+  | {
+      phase: "usage";
+      traceId: string;
+      helperPid: number;
+      receipt?: {
+        id: string;
+        accountKey: string;
+        model: "gpt-6-pro" | "gpt-5.6-pro" | "pro-unknown" | "other";
+        at: number;
+      };
+      trackingError?: "account-unavailable";
+    }
   | {
       phase: "start";
       traceId: string;
@@ -381,7 +394,8 @@ export type LauncherTurnActivity =
       connectorBound?: boolean;
     };
 
-export const LAUNCHER_TURN_START_TIMEOUT_MS = 5_000;
+// Startup must outlast the launcher's ten-second idle bootstrap. This is not a model-turn budget.
+export const LAUNCHER_TURN_START_TIMEOUT_MS = 30_000;
 export const LAUNCHER_TURN_HEARTBEAT_INTERVAL_MS = 10_000;
 export const LAUNCHER_TURN_HEARTBEAT_TIMEOUT_MS = 5_000;
 export const LAUNCHER_TURN_END_TIMEOUT_MS = 15_000;
@@ -616,11 +630,13 @@ export async function notifyLauncherTurn(
     : activity.phase === "heartbeat"
       ? LAUNCHER_TURN_HEARTBEAT_TIMEOUT_MS
       : LAUNCHER_TURN_START_TIMEOUT_MS,
+  signal?: AbortSignal,
 ): Promise<{
   surfaceId?: string;
   reused?: boolean;
   connectorBound?: boolean;
   cancelledByUser?: boolean;
+  trackUsage?: boolean;
 }> {
   const descriptor = readLauncherBrowserHostDescriptor(descriptorPath);
   const controller = new AbortController();
@@ -633,7 +649,7 @@ export async function notifyLauncherTurn(
         "content-type": "application/json",
       },
       body: JSON.stringify(activity),
-      signal: controller.signal,
+      signal: signal ? AbortSignal.any([controller.signal, signal]) : controller.signal,
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({})) as Record<string, unknown>;
@@ -665,6 +681,7 @@ export async function notifyLauncherTurn(
         surfaceId: body.surfaceId,
         reused: body.reused,
         connectorBound: body.connectorBound,
+        trackUsage: body.trackUsage === true,
       };
     }
     if (activity.phase === "end") {
@@ -675,6 +692,8 @@ export async function notifyLauncherTurn(
     }
     return {};
   } catch (error) {
+    if (signal?.aborted) throw new DOMException("Launcher browser acquisition cancelled", "AbortError");
+    if (controller.signal.aborted) throw new Error(`Launcher browser control ${activity.phase} timed out after ${timeoutMs}ms`);
     if (error instanceof LauncherBrowserTurnCancelledError
       || error instanceof LauncherRetainedConversationUnavailableError) throw error;
     throw new Error(`Launcher browser control channel failed: ${error instanceof Error ? error.message : String(error)}`);

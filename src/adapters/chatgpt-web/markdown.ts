@@ -21,12 +21,22 @@ turndown.addRule("removeSvg", {
   filter: node => node.nodeName === "SVG",
   replacement: () => "",
 });
+turndown.addRule("preserveCodexPlanBlockTags", {
+  filter: "p",
+  replacement: content => {
+    // Codex recognizes these standalone control lines verbatim. Restore only paragraph text:
+    // a post-conversion replacement would also rewrite literal escapes in fenced code.
+    const paragraph = content.replace(/^([ \t]*)<(\/?)proposed\\_plan>([ \t]*)$/gm, "$1<$2proposed_plan>$3");
+    return `\n\n${paragraph}\n\n`;
+  },
+});
 turndown.addRule("linkInlineFilePaths", {
   filter: node => inlineFilePath(node) !== undefined,
   replacement: (_content, node) => {
     const path = node.textContent!;
     const target = path.replaceAll("\\", "/");
-    return `[${path}](<${target}>)`;
+    // Code text becomes a plain link label, where backslashes and emphasis must be escaped.
+    return `[${turndown.escape(path)}](<${target}>)`;
   },
 });
 turndown.addRule("compactListItem", {
@@ -139,6 +149,7 @@ export interface ChatGptMarkdownSegment {
   tag?: string;
   html: string;
   text: string;
+  linkTargets?: string[];
   group?: string;
   sourceStart?: number;
   sourceEnd?: number;
@@ -154,13 +165,14 @@ interface CommittedChatGptMarkdownSegment {
   key: string;
   tag?: string;
   text: string;
+  linkTargets?: string[];
   sourceStart?: number;
   sourceEnd?: number;
 }
 
 export class ChatGptMarkdownConsistencyError extends Error {
   constructor(message: string, readonly diagnostic?: {
-    reason: "text_changed" | "block_order_changed" | "source_range_overlap";
+    reason: "text_changed" | "link_target_changed" | "block_order_changed" | "source_range_overlap";
     observedStart?: number;
     observedEnd?: number;
     committedStart?: number;
@@ -303,6 +315,11 @@ export class ChatGptMarkdownBuffer {
           );
         }
         highestCommittedIndex = committedIndex;
+        // Link destinations are answer content even when textContent remains identical.
+        // Cosmetic DOM/formatting hydration still does not invalidate a committed paragraph.
+        if (JSON.stringify(committed.linkTargets ?? []) !== JSON.stringify(segment.linkTargets ?? [])) {
+          return this.changedCommittedBlockError("link_target_changed", segment, committed);
+        }
         continue;
       }
 
@@ -369,6 +386,7 @@ export class ChatGptMarkdownBuffer {
       key: segment.key,
       ...(segment.tag ? { tag: segment.tag } : {}),
       text: segment.text,
+      ...(segment.linkTargets ? { linkTargets: [...segment.linkTargets] } : {}),
       ...(segment.sourceStart !== undefined ? { sourceStart: segment.sourceStart } : {}),
       ...(segment.sourceEnd !== undefined ? { sourceEnd: segment.sourceEnd } : {}),
     };

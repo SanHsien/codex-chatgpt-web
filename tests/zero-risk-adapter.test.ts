@@ -82,7 +82,7 @@ function provider(name: string): CodexProviderConfig {
       brokerSocketPath: defaultBrokerEndpoint(join(root, name)),
       localToolsEnabled: true,
       solAvailable: false,
-      proAvailable: false,
+      extraHighAvailable: false, proAvailable: false,
       experimentalBiggerContext: false,
     },
   };
@@ -135,9 +135,8 @@ for (const scenario of [
     endpoint: server.descriptor().endpoint, control: server.descriptor(),
     helper: { executable: process.execPath, script: import.meta.path },
     partition: "persist:codex-web-gpt-dev-chatgpt", idleUrl: LAUNCHER_BROWSER_IDLE_URL,
-    surfaceId: "launcher_surface_id_0123456789AB",
-    surfaceTargets: { ["launcher_surface_id_0123456789AB"]: "native-owned-target" },
-    createdAt: new Date().toISOString(),
+    surfaceId: "launcher_surface_id_0123456789AB", createdAt: new Date().toISOString(),
+    surfaceTargets: { launcher_surface_id_0123456789AB: "native-owned-target" },
   }), { mode: 0o600 });
   const starts: string[] = [];
   const bindings = new Map<string, string>();

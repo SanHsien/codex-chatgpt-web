@@ -1,6 +1,6 @@
 {
   "name": "codex-chatgpt-web",
-  "version": "5.0.6",
+  "version": "6.0.0",
   "private": true,
   "description": "A focused local Responses bridge that runs Codex tasks through a user-authenticated ChatGPT web session.",
   "repository": {
@@ -41,6 +41,7 @@
     "smoke:interrupt": "bun run scripts/smoke-codex-interrupt.ts",
     "smoke:subagents": "bun run scripts/smoke-codex-subagents.ts --v1 && bun run scripts/smoke-codex-subagents.ts --v2",
     "smoke:subagents:live": "bun run scripts/smoke-codex-web-subagents.ts",
+    "smoke:environment": "bun run scripts/smoke-codex-environment.ts",
     "launcher": "bun run scripts/start-launcher.ts",
     "app": "bun run scripts/start-launcher.ts",
     "app:package": "bun run --cwd launcher package",
@@ -62,6 +63,7 @@
     "fflate": "^0.8.2",
     "playwright-core": "^1.62.0",
     "tiktoken": "1.0.22",
+    "toml-eslint-parser": "1.0.3",
     "turndown": "7.2.0",
     "turndown-plugin-gfm": "1.0.2",
     "zod": "4.6.7"

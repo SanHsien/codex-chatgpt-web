@@ -19,6 +19,7 @@ import type {
   ChatGptRootThreadMetadata,
   ChatGptThreadSpawnLineage,
   ChatGptTurnEnvironment,
+  ChatGptUnattributedEnvironmentMessage,
 } from "./environment";
 
 type RolloutIdentity = ChatGptRootThreadMetadata | ChatGptThreadSpawnLineage;
@@ -107,7 +108,8 @@ function indexedRollout(
     if (!row) return { kind: "absent" };
     const child = "parentThreadId" in identity;
     const matchesOwner = child
-      ? matchesAgentPath(row.agent_path, identity.agentName) && row.parent_thread_id === identity.parentThreadId && row.status === "open"
+      ? matchesAgentPath(row.agent_path, identity.agentName)
+        && row.parent_thread_id === identity.parentThreadId && row.status === "open"
       : row.parent_thread_id == null && (row.agent_path == null || row.agent_path === "/root");
     if (typeof row.rollout_path !== "string" || !matchesOwner) {
       throw new Error(`Codex state does not authenticate the requested ${child ? "subagent" : "root thread"} rollout`);
@@ -231,6 +233,51 @@ function latestTurnContext(fd: number, size: number): Record<string, unknown> | 
   if (carry.length === 0) return undefined;
   const item = parseJsonLine(carry);
   return item.type === "turn_context" ? record(item.payload) : undefined;
+}
+
+function verifyHistoricalEnvironmentMessages(
+  fd: number,
+  size: number,
+  turnId: string,
+  messages: ChatGptUnattributedEnvironmentMessage[],
+): void {
+  const pending = new Map(messages.map(message => [message.id, message.content]));
+  if (pending.size !== messages.length) throw new Error("Codex environment history repeats a message id");
+  let position = 0;
+  let carry = Buffer.alloc(0);
+  while (position < size) {
+    const length = Math.min(ROLLOUT_READ_CHUNK_BYTES, size - position);
+    const chunk = Buffer.alloc(length);
+    if (readSync(fd, chunk, 0, length, position) !== length) {
+      throw new Error("Codex rollout changed during environment history lookup");
+    }
+    position += length;
+    const data = Buffer.concat([carry, chunk]);
+    let start = 0;
+    for (let end = data.indexOf(0x0a); end >= 0; end = data.indexOf(0x0a, start)) {
+      const line = data.subarray(start, end);
+      start = end + 1;
+      if (!line.length) continue;
+      if (line.length > MAX_ROLLOUT_JSON_LINE_BYTES) throw new Error("Codex rollout JSONL record exceeds the bounded record size");
+      const item = parseJsonLine(line);
+      const payload = record(item.payload);
+      // Core writes task_started before this turn's environment update. Merely finding matching
+      // XML somewhere in the file would also accept a current update as historical.
+      if (item.type === "event_msg" && payload?.type === "task_started" && payload.turn_id === turnId) {
+        if (pending.size === 0) return;
+        throw new Error("Codex rollout does not authenticate the historical environment messages");
+      }
+      if (item.type !== "response_item" || payload?.type !== "message" || payload.role !== "user"
+        || typeof payload.id !== "string" || !pending.has(payload.id)) continue;
+      if (!isDeepStrictEqual(payload.content, pending.get(payload.id))) {
+        throw new Error("Historical environment message differs from its native Codex record");
+      }
+      pending.delete(payload.id);
+    }
+    carry = Buffer.from(data.subarray(start));
+    if (carry.length > MAX_ROLLOUT_JSON_LINE_BYTES) throw new Error("Codex rollout JSONL record exceeds the bounded record size");
+  }
+  throw new Error("Codex rollout has no current task boundary for environment history");
 }
 
 function validateSessionMeta(
@@ -563,6 +610,7 @@ export function resolveCurrentCodexRolloutEnvironment(options: {
   turnId: string;
   compactionSourceTurnId?: string;
   tools?: readonly CodexTool[];
+  historicalEnvironmentMessages?: ChatGptUnattributedEnvironmentMessage[];
 }): ChatGptTurnEnvironment | undefined {
   const { codexHome, lineage, turnId, tools, compactionSourceTurnId } = options;
   const nativeThreadId = CODEX_ID.test(lineage.threadId);
@@ -600,6 +648,9 @@ export function resolveCurrentCodexRolloutEnvironment(options: {
       }
       const environment = environmentFromTurnContext(latest, latest.turn_id as string, tools);
       validateMetadataConsistency(lineage, environment);
+      if (options.historicalEnvironmentMessages) {
+        verifyHistoricalEnvironmentMessages(fd, size, turnId, options.historicalEnvironmentMessages);
+      }
       matching.push(environment);
     } finally {
       closeSync(fd);

@@ -17,19 +17,24 @@ const en = {
   devSettingsTitle: "DEV profile settings",
   devKeepRunningBody: "Keep the isolated browser session and DEV MCP tunnel available when this window closes.",
   biggerContext: "Bigger Context (experimental)",
-  biggerContextBody: "Warning: keeps small turns as one message, then splits large context across two or three messages. The final part starts the task without an extra request. It triples the model context and compaction thresholds; restart Codex after changing it. Extra requests may increase rate limits or temporary cooldowns. Disabled by default.",
+  biggerContextBody: "Warning: keeps small turns as one message, then splits large context across two or six messages. The final part starts the task without an extra request. It triples the model context and compaction thresholds; restart Codex after changing it. Extra requests may increase rate limits or temporary cooldowns. Disabled by default.",
+  skillAttachments: "Skills as files (experimental)",
+  skillAttachmentsBody: "Upload explicitly selected Codex skills as named text files instead of inline instructions. Other skills still load through tools. Off by default; uses the same attachment limit as images.",
+  manualSkillAttachmentsUnavailable: "Skill uploads require automatic browser interaction.",
+  savedChats: "Save chats in ChatGPT",
+  savedChatsBody: "Keep task conversations in ChatGPT history. ChatGPT memory and custom instructions may apply. Off by default.",
+  freshConversation: "New browser chat for each turn",
+  freshConversationBody: "Rebuild context from the same Codex task in a new browser chat for each turn. This may help when ChatGPT loses access to tools, but can send more context and be slower. Off by default.",
+  manualFreshConversationUnavailable: "Available only with Automation. Your preference is saved while Zero Risk is active.",
   biggerContextRecommendationTitle: "Use up to 3× more context",
   biggerContextRecommendationBody: "Bigger Context sends large tasks in multiple messages so ChatGPT Web can use up to three times more context. It remains experimental and can increase rate limits or temporary cooldowns.",
   biggerContextRecommendationToggleBody: "Stage large tasks across multiple messages and raise the model context and compaction limits.",
   tagline: "ChatGPT Web inside the native Codex harness",
   chooseLanguage: "Choose your language",
   chooseLanguageHint: "You can change this later in Settings.",
-  english: "English",
-  chinese: "简体中文",
-  japanese: "日本語",
   continue: "Continue",
   supportTitle: "Before we start",
-  supportBody: "Star the repository and open my X profile to help more developers find Codex Web GPT.",
+  supportBody: "Star the repository and open my X profile to help more developers find Codex Web GPT. I share product updates and useful Codex tips on X.",
   star: "Star on GitHub",
   starred: "GitHub opened",
   follow: "Open my X",
@@ -183,6 +188,23 @@ const en = {
   sessionReminderTitle: "Refresh your ChatGPT session",
   sessionReminderBody: "We recommend signing in again every two days. A stale ChatGPT session can interrupt Web model turns and MCP tools.",
   logOut: "Log out",
+  checkingLocalRuntime: "Checking local runtime",
+  doctorConfigValid: "Configuration is valid ({path})",
+  doctorBrowserReady: "Embedded launcher browser is authenticated and reachable (pid {pid})",
+  doctorManualBrowserReady: "Embedded launcher browser is reachable for Zero Risk (pid {pid})",
+  doctorCodexInstalled: "Codex native model route is installed",
+  doctorRuntimeOwned: "Launcher owns the background runtime",
+  checkingChatGptConnector: "Checking ChatGPT connector",
+  doctorProxyHealthy: "Responses proxy is healthy on {endpoint}",
+  doctorTunnelBinaryInstalled: "Pinned openai/tunnel-client binary is installed",
+  doctorTunnelKeyStored: "Tunnel runtime key is stored privately",
+  doctorTunnelRuntimeOwned: "Launcher owns the tunnel runtime",
+  doctorTunnelRuntimeReady: "Tunnel runtime reports healthy and ready",
+  doctorConnectorAvailable: "ChatGPT connector \"{name}\" is available",
+  doctorChromeFound: "Chrome executable found: {path}",
+  doctorLoginVerified: "ChatGPT login state has authenticated browser evidence",
+  doctorMacServiceLoaded: "macOS background service is loaded",
+  doctorMacTunnelRunning: "macOS tunnel service is installed, loaded, and running",
 } as const;
 
 const zh: Record<keyof typeof en, string> = {
@@ -202,19 +224,24 @@ const zh: Record<keyof typeof en, string> = {
   devSettingsTitle: "DEV 配置设置",
   devKeepRunningBody: "窗口关闭后保持隔离的浏览器会话和 DEV MCP Tunnel 可用。",
   biggerContext: "更大上下文（实验性）",
-  biggerContextBody: "警告：较小回合仍作为一条消息发送；较大的上下文会拆分为两条或三条消息，最后一部分会直接开始任务，不会额外发送请求。模型上下文和压缩阈值将扩大三倍；更改后请重启 Codex。额外请求可能提高触发速率限制或临时冷却的概率。默认关闭。",
+  biggerContextBody: "警告：较小回合仍作为一条消息发送；较大的上下文会拆分为两条或六条消息，最后一部分会直接开始任务，不会额外发送请求。模型上下文和压缩阈值将扩大三倍；更改后请重启 Codex。额外请求可能提高触发速率限制或临时冷却的概率。默认关闭。",
+  skillAttachments: "技能作为文件（实验性）",
+  skillAttachmentsBody: "将明确选择的 Codex 技能作为命名文本文件上传，而不是内联指令。其他技能仍通过工具读取。默认关闭；与图片共用附件数量限制。",
+  manualSkillAttachmentsUnavailable: "上传技能需要自动浏览器交互模式。",
+  savedChats: "在 ChatGPT 中保存聊天",
+  savedChatsBody: "将任务对话保留在 ChatGPT 历史记录中。可能应用 ChatGPT 记忆和自定义指令。默认关闭。",
+  freshConversation: "每轮使用新的浏览器聊天",
+  freshConversationBody: "每轮在新的浏览器聊天中重建同一个 Codex 任务的上下文。这可能有助于解决 ChatGPT 丢失工具访问的问题，但可能发送更多上下文，速度也可能更慢。默认关闭。",
+  manualFreshConversationUnavailable: "仅在自动化模式下可用。启用零风险模式时会保留此偏好设置。",
   biggerContextRecommendationTitle: "使用多达 3 倍的上下文",
   biggerContextRecommendationBody: "Bigger Context 通过多条消息发送大型任务，让 ChatGPT Web 使用多达三倍的上下文。此功能仍处于实验阶段，可能增加触发速率限制或临时冷却的概率。",
   biggerContextRecommendationToggleBody: "将大型任务分成多条消息，并提高模型上下文与压缩限制。",
   tagline: "在原生 Codex Harness 中运行 ChatGPT Web",
   chooseLanguage: "选择语言",
   chooseLanguageHint: "稍后可以在设置中更改。",
-  english: "English",
-  chinese: "简体中文",
-  japanese: "日本語",
   continue: "继续",
   supportTitle: "开始之前",
-  supportBody: "请为仓库 Star，并打开我的 X 主页，帮助更多开发者发现 Codex Web GPT。",
+  supportBody: "请为仓库 Star，并打开我的 X 主页，帮助更多开发者发现 Codex Web GPT。我会在 X 分享产品更新和实用的 Codex 技巧。",
   star: "在 GitHub 上 Star",
   starred: "已打开 GitHub",
   follow: "打开我的 X",
@@ -368,6 +395,23 @@ const zh: Record<keyof typeof en, string> = {
   sessionReminderTitle: "刷新 ChatGPT 会话",
   sessionReminderBody: "建议每两天重新登录一次。失效的 ChatGPT 会话可能会中断 Web 模型任务和 MCP 工具。",
   logOut: "退出登录",
+  checkingLocalRuntime: "正在检查本地运行时",
+  doctorConfigValid: "配置有效（{path}）",
+  doctorBrowserReady: "内嵌浏览器已登录且可访问（进程 {pid}）",
+  doctorManualBrowserReady: "Zero Risk 内嵌浏览器可访问（进程 {pid}）",
+  doctorCodexInstalled: "已安装 Codex 原生模型路由",
+  doctorRuntimeOwned: "启动器正在管理后台运行时",
+  checkingChatGptConnector: "正在检查 ChatGPT 连接器",
+  doctorProxyHealthy: "Responses 代理在 {endpoint} 上运行正常",
+  doctorTunnelBinaryInstalled: "已安装固定版本的 openai/tunnel-client 二进制文件",
+  doctorTunnelKeyStored: "隧道运行时密钥已安全存储",
+  doctorTunnelRuntimeOwned: "启动器正在管理隧道运行时",
+  doctorTunnelRuntimeReady: "隧道运行正常，可以使用",
+  doctorConnectorAvailable: "ChatGPT 连接器“{name}”可用",
+  doctorChromeFound: "已找到 Chrome 可执行文件：{path}",
+  doctorLoginVerified: "已通过浏览器验证 ChatGPT 登录状态",
+  doctorMacServiceLoaded: "已加载 macOS 后台服务",
+  doctorMacTunnelRunning: "macOS 隧道服务已安装、加载并运行",
 };
 
 const ja: Record<keyof typeof en, string> = {
@@ -387,19 +431,24 @@ const ja: Record<keyof typeof en, string> = {
   devSettingsTitle: "DEV プロファイル設定",
   devKeepRunningBody: "ウィンドウを閉じても、隔離されたブラウザーセッションと DEV MCP トンネルを使用可能な状態に保ちます。",
   biggerContext: "Bigger Context（試験的）",
-  biggerContextBody: "警告：小さなターンは 1 件のメッセージとして維持し、大きなコンテキストは 2～3 件のメッセージに分割します。最後の部分から追加リクエストなしでタスクを開始します。モデルのコンテキスト上限とコンパクションしきい値が 3 倍になります。変更後は Codex を再起動してください。追加リクエストにより、レート制限や一時的なクールダウンが発生しやすくなる場合があります。初期設定では無効です。",
+  biggerContextBody: "警告：小さなターンは 1 件のメッセージとして維持し、大きなコンテキストは 2 件または 6 件のメッセージに分割します。最後の部分から追加リクエストなしでタスクを開始します。モデルのコンテキスト上限とコンパクションしきい値が 3 倍になります。変更後は Codex を再起動してください。追加リクエストにより、レート制限や一時的なクールダウンが発生しやすくなる場合があります。初期設定では無効です。",
+  skillAttachments: "スキルをファイルで送信（試験的）",
+  skillAttachmentsBody: "明示的に選択した Codex スキルを、インラインの指示ではなく名前付きテキストファイルとしてアップロードします。他のスキルは引き続きツールで読み込みます。初期設定はオフ。画像と添付数の上限を共有します。",
+  manualSkillAttachmentsUnavailable: "スキルのアップロードには自動ブラウザ操作が必要です。",
+  savedChats: "ChatGPT にチャットを保存",
+  savedChatsBody: "タスクの会話を ChatGPT の履歴に残します。ChatGPT のメモリとカスタム指示が適用される場合があります。初期設定はオフです。",
+  freshConversation: "ターンごとに新しいブラウザチャットを使用",
+  freshConversationBody: "ターンごとに新しいブラウザチャットで、同じ Codex タスクのコンテキストを再構築します。ChatGPT がツールにアクセスできなくなった場合に役立つことがありますが、送信するコンテキストが増え、遅くなる可能性があります。初期設定はオフです。",
+  manualFreshConversationUnavailable: "自動操作モードでのみ利用できます。ゼロリスクモード中も設定は保存されます。",
   biggerContextRecommendationTitle: "最大 3 倍のコンテキストを使用",
   biggerContextRecommendationBody: "Bigger Context は大きなタスクを複数のメッセージで送信し、ChatGPT Web で最大 3 倍のコンテキストを使用できるようにします。試験的な機能であり、レート制限や一時的なクールダウンが発生しやすくなる場合があります。",
   biggerContextRecommendationToggleBody: "大きなタスクを複数のメッセージに分割し、モデルのコンテキスト上限とコンパクション上限を引き上げます。",
   tagline: "ネイティブ Codex ハーネス内で動作する ChatGPT Web",
   chooseLanguage: "言語を選択",
   chooseLanguageHint: "後から設定で変更できます。",
-  english: "English",
-  chinese: "简体中文",
-  japanese: "日本語",
   continue: "続ける",
   supportTitle: "開始する前に",
-  supportBody: "より多くの開発者に Codex Web GPT を知ってもらうため、リポジトリに Star を付け、私の X プロフィールを開いてください。",
+  supportBody: "より多くの開発者に Codex Web GPT を知ってもらうため、リポジトリに Star を付け、私の X プロフィールを開いてください。X では製品のアップデートや便利な Codex の使い方を紹介しています。",
   star: "GitHub で Star",
   starred: "GitHub を開きました",
   follow: "X を開く",
@@ -553,6 +602,23 @@ const ja: Record<keyof typeof en, string> = {
   sessionReminderTitle: "ChatGPT セッションを更新してください",
   sessionReminderBody: "2 日ごとの再サインインを推奨します。古い ChatGPT セッションは、Web モデルのターンや MCP ツールを中断する場合があります。",
   logOut: "ログアウト",
+  checkingLocalRuntime: "ローカルランタイムを確認中",
+  doctorConfigValid: "設定は有効です（{path}）",
+  doctorBrowserReady: "内蔵ブラウザーは認証済みで接続可能です（PID {pid}）",
+  doctorManualBrowserReady: "Zero Risk の内蔵ブラウザーに接続できます（PID {pid}）",
+  doctorCodexInstalled: "Codex のネイティブモデルルートはインストール済みです",
+  doctorRuntimeOwned: "ランチャーがバックグラウンドランタイムを管理しています",
+  checkingChatGptConnector: "ChatGPT コネクタを確認中",
+  doctorProxyHealthy: "Responses プロキシは {endpoint} で正常に動作しています",
+  doctorTunnelBinaryInstalled: "固定バージョンの openai/tunnel-client バイナリがインストールされています",
+  doctorTunnelKeyStored: "トンネルのランタイムキーは安全に保存されています",
+  doctorTunnelRuntimeOwned: "ランチャーがトンネルランタイムを管理しています",
+  doctorTunnelRuntimeReady: "トンネルランタイムは正常で、使用可能です",
+  doctorConnectorAvailable: "ChatGPT コネクタ「{name}」を利用できます",
+  doctorChromeFound: "Chrome 実行ファイルが見つかりました: {path}",
+  doctorLoginVerified: "ChatGPT のログイン状態はブラウザーで認証済みです",
+  doctorMacServiceLoaded: "macOS バックグラウンドサービスは読み込み済みです",
+  doctorMacTunnelRunning: "macOS トンネルサービスはインストール・読み込み済みで稼働中です",
 };
 
 export type Copy = typeof en;
@@ -561,4 +627,64 @@ export function copyFor(language: Language): Copy {
   if (language === "zh-CN") return zh as Copy;
   if (language === "ja") return ja as Copy;
   return en;
+}
+
+export function localizeRuntimeMessage(
+  copy: Copy,
+  message: string,
+  checkId: string | undefined,
+  language: Language,
+): string {
+  if (language === "en") return message;
+  if (checkId === undefined && message === "Checking ChatGPT connector") return copy.checkingChatGptConnector;
+  if (checkId === undefined && message === "Checking local runtime") return copy.checkingLocalRuntime;
+  if (checkId === "config") {
+    const match = /^Configuration is valid \((.+)\)$/s.exec(message);
+    if (match) return copy.doctorConfigValid.replace("{path}", () => match[1]);
+  }
+  if (checkId === "browser-host") {
+    const match = /^Embedded launcher browser is (authenticated and reachable|reachable for Zero Risk) \(pid (\d+)\)$/.exec(message);
+    if (match) return (match[1] === "reachable for Zero Risk" ? copy.doctorManualBrowserReady : copy.doctorBrowserReady)
+      .replace("{pid}", () => match[2]);
+  }
+  if (checkId === "codex" && message === "Codex native model route is installed") return copy.doctorCodexInstalled;
+  if (checkId === "service" && message === "Launcher owns the background runtime") return copy.doctorRuntimeOwned;
+  if (checkId === "service" && message === "macOS background service is loaded") return copy.doctorMacServiceLoaded;
+  if (checkId === "chrome") {
+    const match = /^Chrome executable found: (.+)$/s.exec(message);
+    if (match) return copy.doctorChromeFound.replace("{path}", () => match[1]);
+  }
+  if (checkId === "login" && message === "ChatGPT login state has authenticated browser evidence") return copy.doctorLoginVerified;
+  if (checkId === "tunnel-service" && message === "macOS tunnel service is installed, loaded, and running") return copy.doctorMacTunnelRunning;
+
+  if (checkId === "proxy") {
+    const match = /^Responses proxy is healthy on (127\.0\.0\.1:\d+)$/.exec(message);
+    if (match) return copy.doctorProxyHealthy.replace("{endpoint}", () => match[1]);
+  }
+  if (checkId === "tunnel-binary" && message === "Pinned openai/tunnel-client binary is installed") {
+    return copy.doctorTunnelBinaryInstalled;
+  }
+  if (checkId === "tunnel-key" && message === "Tunnel runtime key is stored privately") {
+    return copy.doctorTunnelKeyStored;
+  }
+  if (checkId === "tunnel-service" && message === "Launcher owns the tunnel runtime") {
+    return copy.doctorTunnelRuntimeOwned;
+  }
+  if (checkId === "tunnel-runtime" && message === "Tunnel runtime reports healthy and ready") {
+    return copy.doctorTunnelRuntimeReady;
+  }
+  if (checkId === "connector") {
+    const match = /^ChatGPT connector (".*") is available$/s.exec(message);
+    if (match) {
+      try {
+        const connectorName = JSON.parse(match[1]);
+        if (typeof connectorName === "string") {
+          return copy.doctorConnectorAvailable.replace("{name}", () => connectorName);
+        }
+      } catch {
+        return message;
+      }
+    }
+  }
+  return message;
 }

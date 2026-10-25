@@ -59,6 +59,8 @@ connects ChatGPT back to the tools of that same Codex task until its next compac
   starts a clean chat; if that chat was closed, canonical Codex history supplies the fallback.
 - **Windows launcher.** The Windows app owns sign-in, model setup, MCP
   guidance, health checks, safe diagnostics, and up to five visible task-bound browser tabs.
+- **Optional chat settings.** The launcher can use saved ChatGPT conversations or a fresh browser chat
+  per turn; both are off by default and described in [architecture](docs/architecture.md).
 - **Fail-closed behavior.** Missing models, tools, or changed ChatGPT UI produce explicit errors
   instead of silently switching route or capability. End-to-end coverage is documented in
   [release validation](docs/release-validation.md).

@@ -251,9 +251,19 @@ function validateConfig(config, descriptorPath, platform = process.platform, lau
       throw new Error(`Runtime configuration has an invalid ${key}`);
     }
   }
+  if (config.extraHighAvailable !== undefined && typeof config.extraHighAvailable !== "boolean") {
+    throw new Error("Runtime configuration has an invalid extraHighAvailable");
+  }
+  if (config.extraHighAvailable === true && !config.solAvailable) {
+    throw new Error("Runtime configuration cannot enable Extra High without Sol");
+  }
   if (config.experimentalBiggerContext !== undefined
     && typeof config.experimentalBiggerContext !== "boolean") {
     throw new Error("Runtime configuration has an invalid experimentalBiggerContext");
+  }
+  if (config.experimentalFreshConversationPerTurn !== undefined
+    && typeof config.experimentalFreshConversationPerTurn !== "boolean") {
+    throw new Error("Runtime configuration has an invalid experimentalFreshConversationPerTurn");
   }
   if (config.stallTimeoutSec !== undefined
     && (!Number.isFinite(config.stallTimeoutSec) || config.stallTimeoutSec <= 0)) {
@@ -323,6 +333,7 @@ class RuntimeSupervisor {
     launcherProfile = "production",
     publishOperation,
     runtimeInvocationFactory = runtimeInvocation,
+    onConfigRead,
   }) {
     this.app = app;
     this.logger = logger;
@@ -337,6 +348,7 @@ class RuntimeSupervisor {
     this.launcherProfile = launcherProfile;
     this.publishOperation = publishOperation;
     this.runtimeInvocationFactory = runtimeInvocationFactory;
+    this.onConfigRead = onConfigRead;
     this.configPath = path.join(coreHome, "config.json");
     this.statePath = path.join(coreHome, "runtime", "launcher-supervisor.json");
     this.daemon = null;
@@ -361,12 +373,14 @@ class RuntimeSupervisor {
 
   readConfig() {
     if (!fs.existsSync(this.configPath)) return null;
-    return validateConfig(
+    const config = validateConfig(
       readJson(this.configPath),
       this.browserDescriptorPath,
       this.platform,
       this.launcherProfile,
     );
+    this.onConfigRead?.(config);
+    return config;
   }
 
   readSetupConfig() {
@@ -555,6 +569,8 @@ class RuntimeSupervisor {
     if (!fs.existsSync(tunnel.runtimeKeyFile)) {
       throw new Error(`Tunnel runtime key is missing: ${tunnel.runtimeKeyFile}`);
     }
+    // First-time setup commits only configuration; all native manager commands run here.
+    fs.mkdirSync(tunnel.profileDir, { recursive: true, mode: 0o700 });
   }
 
   async proxyHealthPayload(config, timeoutMs = 2_000) {
@@ -781,7 +797,7 @@ class RuntimeSupervisor {
     if (!tunnel) throw new Error("launcher-owned tunnel has no runtime configuration");
     const result = await this.runTunnelCommand(
       config,
-      ["runtimes", "status", tunnel.alias, "--json"],
+      ["runtimes", "list", "--json"],
       5_000,
       "Local tunnel health discovery",
     );
@@ -794,13 +810,16 @@ class RuntimeSupervisor {
     } catch (error) {
       throw new Error(`Local tunnel health discovery returned invalid JSON: ${errorMessage(error)}`);
     }
-    const candidates = [
-      parsed?.local?.effective_health?.base_url,
-      parsed?.local?.health?.base_url,
-      parsed?.health_url,
-      parsed?.ui_url,
-    ];
-    const baseUrl = candidates.map(loopbackHealthBaseURL).find(Boolean);
+    // Unscoped `list` is local-only. Its exact alias record points to the live health URL file;
+    // `status` waits for an unrelated remote API before returning this same local information.
+    const aliases = Array.isArray(parsed?.aliases)
+      ? parsed.aliases.filter(entry => entry?.alias === tunnel.alias)
+      : [];
+    const healthFile = aliases.length === 1 ? aliases[0].health_url_file : undefined;
+    if (typeof healthFile !== "string" || !path.isAbsolute(healthFile)) {
+      throw new Error("Local tunnel health discovery returned no unique alias health URL file");
+    }
+    const baseUrl = loopbackHealthBaseURL(await fs.promises.readFile(healthFile, "utf8"));
     if (!baseUrl) {
       throw new Error("Local tunnel health discovery returned no verified loopback endpoint");
     }
@@ -1848,7 +1867,7 @@ class RuntimeSupervisor {
     };
   }
 
-  async cancelBrowserTurn(traceId) {
+  async cancelBrowserTurn(traceId, reason) {
     if (!/^[A-Za-z0-9_-]{6,128}$/.test(traceId || "")) throw new Error("Browser turn trace id is invalid");
     const config = this.readConfig();
     const daemon = this.daemon;
@@ -1856,7 +1875,7 @@ class RuntimeSupervisor {
       throw new Error("Launcher-owned runtime is unavailable for browser-turn cancellation");
     }
     const result = await this.control(config, "cancel-turn", {
-      body: { traceId },
+      body: { traceId, ...(reason === undefined ? {} : { reason }) },
       timeoutMs: 15_000,
     });
     if (result.status !== "ok"

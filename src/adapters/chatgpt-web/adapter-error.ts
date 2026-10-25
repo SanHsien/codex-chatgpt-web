@@ -22,6 +22,14 @@ export class ChatGptWebAdapterError extends Error {
   }
 }
 
+// Only the compaction owner may signal this after the broker accepts its one-shot handoff.
+// It cancels browser observation, while the accepted summary remains the native result.
+export class ChatGptCompactionHandoffAccepted extends DOMException {
+  constructor() {
+    super("Structured compaction handoff accepted", "AbortError");
+  }
+}
+
 export function chatGptBrowserTabClosedError(): ChatGptWebAdapterError {
   return new ChatGptWebAdapterError(
     "The ChatGPT browser tab was closed, so the Codex turn was cancelled.",
@@ -43,11 +51,12 @@ export function chatGptTurnSupersededError(): ChatGptWebAdapterError {
 
 export function chatGptStoppedThinkingError(): ChatGptWebAdapterError {
   return new ChatGptWebAdapterError(
-    "ChatGPT remained in 'Stopped thinking' for 5 seconds, so the Codex turn was cancelled.",
+    "ChatGPT displayed 'Stopped thinking' and could not continue this response. "
+    + "A ChatGPT Web usage limit may have been reached. Check the ChatGPT tab for the exact reason before retrying.",
     {
-      status: 499,
-      errorType: "client_closed_request",
-      code: "client_cancelled",
+      status: 502,
+      errorType: "server_error",
+      code: "chatgpt_stopped_thinking",
       retryable: false,
     },
   );

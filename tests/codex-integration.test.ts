@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -25,9 +25,27 @@ import {
   MANAGED_MULTI_AGENT_V2_LINE,
   MANAGED_ROUTE_COMMENT,
   managedAgentMaxDepthLine,
+  restoreFileSnapshot,
+  snapshotFile,
+  writeFilesWithCompensation,
 } from "../src/codex-integration-shared";
 
 const roots: string[] = [];
+
+/** Creating a symbolic link needs Developer Mode or an elevated token on Windows. */
+function canCreateSymlink(): boolean {
+  const directory = mkdtempSync(join(tmpdir(), "codex-chatgpt-symlink-probe-"));
+  try {
+    writeFileSync(join(directory, "target"), "");
+    symlinkSync(join(directory, "target"), join(directory, "link"));
+    return true;
+  } catch {
+    return false;
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+const symlinksAvailable = canCreateSymlink();
 
 function nativeConfig(mode: "browser-only" | "full") {
   const config = defaultConfig(mode);
@@ -104,7 +122,6 @@ describe("reversible native Codex route integration", () => {
     const recovery = readFileSync(getCodexJournalRecoveryPath(), "utf8");
     for (const current of [
       active.replace("timeout = 3", "timeout = 2"),
-      active.replace(/^#.*interrupt.*\n/gm, ""),
       withoutHook + installed.interruptHook.fragment.split("[[hooks.Interrupt]]")[0],
       withoutHook + `\n[hooks.state.${JSON.stringify(installed.interruptHook.stateKey)}]\ntrusted_hash = ${JSON.stringify(installed.interruptHook.trustedHash)}\n`,
       withoutHook + '\n[[hooks.Interrupt]]\n[[hooks.Interrupt.hooks]]\ntype = "command"\ncommand = "user-modified-hook"\n',
@@ -118,6 +135,73 @@ describe("reversible native Codex route integration", () => {
       expect(readFileSync(configPath, "utf8")).toBe(current);
       expect(readFileSync(getCodexJournalPath(), "utf8")).toBe(journal);
       expect(readFileSync(getCodexJournalRecoveryPath(), "utf8")).toBe(recovery);
+    }
+  });
+
+  test.skipIf(!symlinksAvailable)("route install, update, switching and removal preserve a symlinked shared Codex config", () => {
+    const { root, codexHome } = fixture();
+    const shared = join(root, "shared");
+    mkdirSync(shared, { mode: 0o750 });
+    const target = join(shared, "config.toml");
+    const alias = join(codexHome, "config.toml");
+    const original = 'model = "gpt-5.6-sol"\n\n[features]\ngoals = true\n';
+    writeFileSync(target, original, { mode: 0o640 });
+    symlinkSync(join("..", "shared", "config.toml"), alias);
+    const link = readlinkSync(alias);
+    const linkInode = lstatSync(alias).ino;
+    const directoryMode = statSync(shared).mode & 0o777;
+    const fileMode = statSync(target).mode & 0o777;
+    const config = nativeConfig("browser-only");
+    for (const action of [
+      () => installCodexIntegration(config),
+      () => installCodexIntegration({ ...config, port: config.port + 1 }),
+      () => deactivateCodexIntegration(),
+      () => activateCodexIntegration(),
+      () => setCodexSubagentProtocol(config, "compatibility-v1"),
+      () => setCodexSubagentProtocol(config, "native"),
+      () => uninstallCodexIntegration(),
+    ]) {
+      action();
+      expect(lstatSync(alias).isSymbolicLink()).toBe(true);
+      expect(lstatSync(alias).ino).toBe(linkInode);
+      expect(readlinkSync(alias)).toBe(link);
+      expect(statSync(shared).mode & 0o777).toBe(directoryMode);
+      expect(statSync(target).mode & 0o777).toBe(fileMode);
+      expect(inspectCodexIntegration().errors).toEqual([]);
+    }
+    expect(readFileSync(target, "utf8")).toBe(original);
+  });
+
+  test.skipIf(!symlinksAvailable)("config compensation preserves the link and refuses redirected or invalid targets", () => {
+    const { root, codexHome } = fixture();
+    const alias = join(codexHome, "config.toml");
+    const target = join(root, "shared.toml");
+    const other = join(root, "other.toml");
+    const directory = join(root, "directory");
+    writeFileSync(target, "original\n", { mode: 0o640 });
+    writeFileSync(other, "other\n");
+    mkdirSync(directory);
+    symlinkSync(target, alias);
+    const inode = lstatSync(alias).ino;
+    const mode = statSync(target).mode & 0o777;
+    expect(() => writeFilesWithCompensation(
+      [{ path: alias, data: "changed\n", followSymlink: true }], [directory],
+    )).toThrow();
+    expect(readFileSync(target, "utf8")).toBe("original\n");
+    expect(lstatSync(alias).ino).toBe(inode);
+    expect(statSync(target).mode & 0o777).toBe(mode);
+
+    const snapshot = snapshotFile(alias, { followSymlink: true });
+    rmSync(alias);
+    symlinkSync(other, alias);
+    expect(() => restoreFileSnapshot(snapshot)).toThrow("symlink changed");
+    expect(readFileSync(target, "utf8")).toBe("original\n");
+    expect(readFileSync(other, "utf8")).toBe("other\n");
+    for (const invalidTarget of [directory, join(root, "missing.toml"), alias]) {
+      rmSync(alias);
+      symlinkSync(invalidTarget, alias);
+      expect(() => preflightCodexIntegration(nativeConfig("browser-only"))).toThrow();
+      expect(lstatSync(alias).isSymbolicLink()).toBe(true);
     }
   });
 
@@ -630,15 +714,20 @@ describe("reversible native Codex route integration", () => {
     expect(() => activateCodexIntegration()).toThrow("realtime WebRTC call route changed while the bridge was disconnected");
   });
 
-  test("invalidates Codex's provider-agnostic model cache on install and uninstall", () => {
+  test("invalidates the model cache on install, release reinstall, and uninstall without rewriting a saved model", () => {
     const { codexHome } = fixture();
     const configPath = join(codexHome, "config.toml");
     const cachePath = getCodexModelsCachePath();
-    writeFileSync(configPath, 'model = "gpt-5.6-sol"\n');
+    writeFileSync(configPath, 'model = "chatgpt-web/high"\n');
     writeFileSync(cachePath, '{"models":["native-only"]}\n');
 
     installCodexIntegration(nativeConfig("browser-only"));
     expect(() => readFileSync(cachePath, "utf8")).toThrow();
+
+    writeFileSync(cachePath, '{"models":["chatgpt-web/high","chatgpt-web/pro"]}\n');
+    installCodexIntegration({ ...nativeConfig("browser-only"), releaseVersion: "6.0.0" });
+    expect(() => readFileSync(cachePath, "utf8")).toThrow();
+    expect(readFileSync(configPath, "utf8")).toContain('model = "chatgpt-web/high"');
 
     writeFileSync(cachePath, '{"models":["native-and-web"]}\n');
     uninstallCodexIntegration();
@@ -648,7 +737,7 @@ describe("reversible native Codex route integration", () => {
   test("requires explicit replacement and preserves every non-port route assignment", () => {
     const { codexHome } = fixture();
     const configPath = join(codexHome, "config.toml");
-    const original = `model = "gpt-5.6-sol"\nmodel_provider = "existing-provider"\nopenai_base_url = "http://127.0.0.1:9999/v1"\nmodel_catalog_json = "/tmp/native.json"\n\n[features]\ngoals = true\n`;
+    const original = `model = "gpt-5.6-sol"\nmodel_provider = "openai"\nopenai_base_url = "http://127.0.0.1:9999/v1"\nmodel_catalog_json = "/tmp/native.json"\n\n[features]\ngoals = true\n`;
     writeFileSync(configPath, original);
     const config = nativeConfig("full");
 
@@ -656,19 +745,146 @@ describe("reversible native Codex route integration", () => {
     installCodexIntegration(config, { replaceExistingRoute: true });
     const installed = readFileSync(configPath, "utf8");
     expect(installed).toContain('openai_base_url = "http://127.0.0.1:17841/v1"');
-    expect(installed).toContain('model_provider = "existing-provider"');
+    expect(installed).toContain('model_provider = "openai"');
     expect(installed).toContain('model_catalog_json = "/tmp/native.json"');
 
     uninstallCodexIntegration();
     expect(readFileSync(configPath, "utf8")).toBe(original);
   });
 
-  test("owns only openai_base_url while active", () => {
+  test("explicit setup restores a removed hook without discarding the current Codex config", () => {
+    for (const ending of ["\n", "\r\n"]) {
+      for (const keepRoute of [true, false]) {
+        const { codexHome } = fixture();
+        const configPath = join(codexHome, "config.toml");
+        const original = [
+          'model = "gpt-5.6-sol"',
+          `experimental_realtime_webrtc_call_base_url = "${CODEX_REALTIME_WEBRTC_CALL_BASE_URL}"`,
+          "", "[hooks.state]", "", "[mcp_servers.user_tool]",
+          'command = "user-tool-never-executed"', "",
+        ].join(ending);
+        writeFileSync(configPath, original);
+        const config = nativeConfig("full");
+        saveConfig(config);
+        const installed = installCodexIntegration(config);
+        const current = keepRoute
+          ? readFileSync(configPath, "utf8").replace(installed.interruptHook.fragment, "")
+          : original;
+        writeFileSync(configPath, current);
+        const journal = readFileSync(getCodexJournalPath(), "utf8");
+        const recovery = readFileSync(getCodexJournalRecoveryPath(), "utf8");
+
+        expect(() => preflightCodexIntegration(config)).toThrow("changed after setup");
+        expect(() => installCodexIntegration(config)).toThrow("changed after setup");
+        expect(() => preflightCodexIntegration(config, { replaceExistingRoute: true })).not.toThrow();
+        expect(readFileSync(configPath, "utf8")).toBe(current);
+        expect(readFileSync(getCodexJournalPath(), "utf8")).toBe(journal);
+        expect(readFileSync(getCodexJournalRecoveryPath(), "utf8")).toBe(recovery);
+
+        const repaired = installCodexIntegration(config, { replaceExistingRoute: true });
+        const repairedText = readFileSync(configPath, "utf8");
+        expect(inspectCodexIntegration().errors).toEqual([]);
+        expect(repairedText.match(/^\[\[hooks\.Interrupt\]\]/gm)).toHaveLength(1);
+        expect(repairedText).toContain(repaired.interruptHook.fragment);
+        installCodexIntegration(config, { replaceExistingRoute: true });
+        expect(readFileSync(configPath, "utf8")).toBe(repairedText);
+        deactivateCodexIntegration();
+        expect(readFileSync(configPath, "utf8")).toBe(original);
+        activateCodexIntegration();
+        expect(inspectCodexIntegration().errors).toEqual([]);
+        uninstallCodexIntegration();
+        expect(readFileSync(configPath, "utf8")).toBe(original);
+      }
+    }
+  });
+
+  test("explicit setup still refuses changed hooks, partial removal and invalid config", () => {
+    const { codexHome } = fixture();
+    const configPath = join(codexHome, "config.toml");
+    const original = 'model = "gpt-5.6-sol"\n';
+    writeFileSync(configPath, original);
+    const config = nativeConfig("full");
+    const installed = installCodexIntegration(config);
+    const active = readFileSync(configPath, "utf8");
+    const withoutHook = active.replace(installed.interruptHook.fragment, "");
+    const journal = readFileSync(getCodexJournalPath(), "utf8");
+    const recovery = readFileSync(getCodexJournalRecoveryPath(), "utf8");
+    for (const current of [
+      active.replace("timeout = 3", "timeout = 2"),
+      withoutHook + installed.interruptHook.fragment.split("[[hooks.Interrupt]]")[0],
+      withoutHook + `\n[hooks.state.${JSON.stringify(installed.interruptHook.stateKey)}]\ntrusted_hash = ${JSON.stringify(installed.interruptHook.trustedHash)}\n`,
+      withoutHook + '\n[[hooks.Interrupt]]\n[[hooks.Interrupt.hooks]]\ntype = "command"\ncommand = "user-modified-hook"\n',
+      withoutHook + '\n[hooks]\nInterrupt = []\n',
+      withoutHook + '\n[hooks]\nstate = "invalid"\n',
+      withoutHook + '\n[mcp_servers.invalid\n',
+    ]) {
+      writeFileSync(configPath, current);
+      expect(() => preflightCodexIntegration(config, { replaceExistingRoute: true })).toThrow();
+      expect(() => installCodexIntegration(config, { replaceExistingRoute: true })).toThrow();
+      expect(readFileSync(configPath, "utf8")).toBe(current);
+      expect(readFileSync(getCodexJournalPath(), "utf8")).toBe(journal);
+      expect(readFileSync(getCodexJournalRecoveryPath(), "utf8")).toBe(recovery);
+    }
+  });
+
+  test("reinstalls and removes an integration after native hook serialization without resetting other settings", () => {
+    const { codexHome } = fixture();
+    const configPath = join(codexHome, "config.toml");
+    const original = 'model = "gpt-5.6-sol"\n\n[mcp_servers.notes]\ncommand = "user-mcp"\n';
+    writeFileSync(configPath, original);
+    const config = nativeConfig("full");
+    installCodexIntegration(config);
+    const nativeRewrite = () => {
+      const journal = inspectCodexIntegration().journal!;
+      if (journal.version !== 10) throw new Error("Expected current journal");
+      const hook = journal.interruptHook;
+      const inline = `Interrupt = [{ hooks = [{ command = ${JSON.stringify(hook.command)}, timeout = 3, type = 'command' }] }]\n`;
+      const without = readFileSync(configPath, "utf8").replace(hook.fragment, "");
+      const rewritten = without.includes("[hooks]\n")
+        ? without.replace("[hooks]\n", "[hooks]\n" + inline)
+        : without + "\n[hooks]\n" + inline;
+      writeFileSync(configPath, rewritten + `\n[hooks.state.${JSON.stringify(hook.stateKey)}]\ntrusted_hash = '${hook.trustedHash}'\n`);
+      expect(inspectCodexIntegration().errors).toEqual([]);
+    };
+    nativeRewrite();
+    preflightCodexIntegration(config, { replaceExistingRoute: true });
+    installCodexIntegration(config, { replaceExistingRoute: true });
+    nativeRewrite();
+    deactivateCodexIntegration();
+    activateCodexIntegration();
+    nativeRewrite();
+    uninstallCodexIntegration();
+    const restored = readFileSync(configPath, "utf8");
+    expect(restored).toContain(original);
+    expect((Bun.TOML.parse(restored) as any).mcp_servers.notes.command).toBe("user-mcp");
+    expect(inspectCodexIntegration().installed).toBe(false);
+  });
+
+  test("rejects custom providers without changing them, even with explicit route replacement", () => {
+    const { codexHome } = fixture();
+    const configPath = join(codexHome, "config.toml");
+    for (const selection of ['model_provider = "custom"', '"model_provider" = \'custom\'']) {
+      const original = `${selection} # user choice\n\n[model_providers.custom]\nname = "custom"\nbase_url = "http://127.0.0.1:9999/v1"\n`;
+      writeFileSync(configPath, original);
+      writeFileSync(getCodexModelsCachePath(), '{"models":[]}\n');
+      for (const replaceExistingRoute of [false, true]) {
+        for (const action of [preflightCodexIntegration, installCodexIntegration]) {
+          expect(() => action(nativeConfig("full"), { replaceExistingRoute })).toThrow(/model_provider.*built-in.*openai/s);
+          expect(readFileSync(configPath, "utf8")).toBe(original);
+          expect(readFileSync(getCodexModelsCachePath(), "utf8")).toBe('{"models":[]}\n');
+          expect(existsSync(getCodexJournalPath())).toBe(false);
+          expect(existsSync(getCodexJournalRecoveryPath())).toBe(false);
+        }
+      }
+    }
+  });
+
+  test("detects a custom provider on an active v10 route while allowing exact release and recovery", () => {
     const { codexHome } = fixture();
     const configPath = join(codexHome, "config.toml");
     const original = [
       'model = "gpt-5.6-sol"',
-      'model_provider = "first-provider"',
+      'model_provider = "openai"',
       'model_catalog_json = "/tmp/first.json"',
       "",
       "[features]",
@@ -680,10 +896,25 @@ describe("reversible native Codex route integration", () => {
 
     installCodexIntegration(nativeConfig("full"));
     const userEdited = readFileSync(configPath, "utf8")
-      .replace('model_provider = "first-provider"', 'model_provider = "second-provider"')
+      .replace('model_provider = "openai"', 'model_provider = "second-provider"')
       .replace('model_catalog_json = "/tmp/first.json"', 'model_catalog_json = "/tmp/second.json"')
       .replace("multi_agent = true", "multi_agent = false");
     writeFileSync(configPath, userEdited);
+
+    const journal = readFileSync(getCodexJournalPath(), "utf8");
+    for (const replaceExistingRoute of [false, true]) {
+      for (const action of [preflightCodexIntegration, installCodexIntegration]) {
+        expect(() => action(nativeConfig("full"), { replaceExistingRoute })).toThrow("model_provider");
+        expect(readFileSync(configPath, "utf8")).toBe(userEdited);
+        expect(readFileSync(getCodexJournalPath(), "utf8")).toBe(journal);
+        expect(readFileSync(getCodexJournalRecoveryPath(), "utf8")).toBe(journal);
+      }
+    }
+    expect(() => activateCodexIntegration()).toThrow("model_provider");
+    // Journal recovery proves ownership, so the unsupported route can still be removed.
+    rmSync(getCodexJournalPath());
+    expect(inspectCodexIntegration().errors).toEqual([expect.stringContaining("model_provider")]);
+    expect(readFileSync(getCodexJournalPath(), "utf8")).toBe(journal);
 
     expect(uninstallCodexIntegration()).toEqual({ changed: true });
     const restored = readFileSync(configPath, "utf8");
@@ -691,6 +922,43 @@ describe("reversible native Codex route integration", () => {
     expect(restored).toContain('model_provider = "second-provider"');
     expect(restored).toContain('model_catalog_json = "/tmp/second.json"');
     expect(restored).toContain("multi_agent = false");
+
+    // Recreate a released v10 installation that accepted this provider at setup time.
+    const previousInstall = JSON.parse(journal);
+    previousInstall.previous.model_provider.value = "second-provider";
+    previousInstall.previous.model_provider.rawLine = 'model_provider = "second-provider"';
+    writeFileSync(configPath, userEdited);
+    for (const path of [getCodexJournalPath(), getCodexJournalRecoveryPath()]) {
+      writeFileSync(path, JSON.stringify(previousInstall));
+    }
+    expect(inspectCodexIntegration().errors).toEqual([expect.stringContaining("model_provider")]);
+    expect(() => preflightCodexIntegration(nativeConfig("full"))).toThrow("model_provider");
+    expect(deactivateCodexIntegration()).toEqual({ changed: true, active: false });
+    expect(readFileSync(configPath, "utf8")).toBe(restored);
+    expect(() => activateCodexIntegration()).toThrow("model_provider");
+    expect(uninstallCodexIntegration()).toEqual({ changed: true });
+    expect(readFileSync(configPath, "utf8")).toBe(restored);
+  });
+
+  test("refuses a custom provider added while disconnected without preventing removal", () => {
+    const { codexHome } = fixture();
+    const configPath = join(codexHome, "config.toml");
+    const original = 'model = "gpt-5.6-sol"\n';
+    writeFileSync(configPath, original);
+    const config = nativeConfig("browser-only");
+    installCodexIntegration(config);
+    deactivateCodexIntegration();
+    const changed = `model_provider = 'custom' # user choice\n${original}`;
+    writeFileSync(configPath, changed);
+    const journal = readFileSync(getCodexJournalPath(), "utf8");
+    expect(() => preflightCodexIntegration(config)).toThrow("model_provider");
+    expect(() => installCodexIntegration(config)).toThrow("model_provider");
+    expect(() => activateCodexIntegration()).toThrow("model_provider");
+    expect(readFileSync(configPath, "utf8")).toBe(changed);
+    expect(readFileSync(getCodexJournalPath(), "utf8")).toBe(journal);
+    expect(readFileSync(getCodexJournalRecoveryPath(), "utf8")).toBe(journal);
+    expect(uninstallCodexIntegration()).toEqual({ changed: true });
+    expect(readFileSync(configPath, "utf8")).toBe(changed);
   });
 
   test("preflight detects route conflicts without changing Codex or creating a journal", () => {

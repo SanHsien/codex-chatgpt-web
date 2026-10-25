@@ -11,8 +11,8 @@ const englishReadme = read("README.en.md");
 const traditionalChineseReadme = read("README.md");
 
 function commandFences(source) {
-  return [...source.matchAll(/```(bash|powershell)\n([\s\S]*?)```/g)]
-    .map((match) => `${match[1]}\n${match[2].trim()}`);
+  return [...source.matchAll(/```(bash|powershell)\r?\n([\s\S]*?)```/g)]
+    .map((match) => `${match[1]}\n${match[2].replace(/\r\n/g, "\n").trim()}`);
 }
 
 function linkTargets(source) {

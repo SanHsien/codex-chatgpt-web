@@ -38,10 +38,12 @@ function writeJson(response, status, body) {
 }
 
 class BrowserControlServer {
-  constructor({ logger, getBrowserHost, getPreferences }) {
+  constructor({ logger, getBrowserHost, getPreferences, resolveProxy, limits }) {
     this.logger = logger;
     this.getBrowserHost = getBrowserHost;
     this.getPreferences = getPreferences;
+    this.resolveProxy = resolveProxy;
+    this.limits = limits;
     this.token = randomBytes(32).toString("base64url");
     this.port = 0;
     this.server = createServer((request, response) => {
@@ -95,9 +97,11 @@ class BrowserControlServer {
     }
     const isTurn = request.url === "/v1/turn/start"
       || request.url === "/v1/turn/heartbeat"
+      || request.url === "/v1/turn/usage"
       || request.url === "/v1/turn/end";
     const isTurnRelease = request.url === "/v1/turn/release";
     const isSessionInspect = request.url === "/v1/session/inspect";
+    const isProxyResolution = request.url === "/v1/network/resolve-proxy";
     const manualAction = new Map([
       ["/v1/manual/start", "start"],
       ["/v1/manual/wait-sent", "wait-sent"],
@@ -106,7 +110,7 @@ class BrowserControlServer {
       ["/v1/manual/end", "end"],
       ["/v1/manual/cancel", "cancel"],
     ]).get(request.url);
-    if (request.method !== "POST" || (!isTurn && !isTurnRelease && !isSessionInspect && !manualAction)) {
+    if (request.method !== "POST" || (!isTurn && !isTurnRelease && !isSessionInspect && !isProxyResolution && !manualAction)) {
       writeJson(response, 404, { error: "not_found" });
       return;
     }
@@ -115,6 +119,19 @@ class BrowserControlServer {
         request,
         manualAction === "start" ? MAX_MANUAL_START_BODY_BYTES : MAX_BODY_BYTES,
       );
+      if (isProxyResolution) {
+        const url = new URL(body?.url);
+        if (url.origin !== "https://chatgpt.com" || url.username || url.password
+          || !url.pathname.startsWith("/backend-api/codex/")) {
+          throw new Error("Proxy resolution is restricted to native Codex requests");
+        }
+        if (!this.resolveProxy) throw new Error("Native proxy resolver is unavailable");
+        let proxy;
+        try { proxy = await this.resolveProxy(url.href); }
+        catch { throw new Error("System proxy resolution failed"); }
+        writeJson(response, 200, { proxy });
+        return;
+      }
       const preferences = this.getPreferences();
       const host = this.getBrowserHost();
       if (!host) throw new Error("browser host is not ready");
@@ -276,20 +293,41 @@ class BrowserControlServer {
         writeJson(response, 200, { ok: true, ...release });
         return;
       }
+      if (request.url === "/v1/turn/usage") {
+        if (host.browserInteractionMode() === "manual") throw new Error("Limits tracking is disabled in Zero Risk mode");
+        // The same owner check as a heartbeat prevents another helper from charging this tab.
+        host.heartbeatTurn(body.traceId, body.helperPid);
+        if (!this.limits) throw new Error("Limits tracking is unavailable");
+        const recorded = this.limits.record(body);
+        writeJson(response, 200, { ok: true, recorded });
+        return;
+      }
       if (request.url === "/v1/turn/start") {
         if (host.browserInteractionMode() === "manual") {
           throw new Error("Automatic browser interaction is disabled");
         }
-        const lease = await host.beginTurn(
-          body.traceId,
-          preferences.showBrowserDuringTurns === true,
-          body.helperPid,
-          body.conversationKey,
-          body.connectorIdentity,
-          body.requireRetainedConversation === true,
-        );
+        const acquisition = new AbortController();
+        const onClose = () => {
+          if (!response.writableFinished) acquisition.abort(new Error("Browser turn acquisition caller disconnected"));
+        };
+        response.once("close", onClose);
+        let lease;
+        try {
+          if (response.destroyed) onClose();
+          lease = await host.beginTurn(
+            body.traceId,
+            preferences.showBrowserDuringTurns === true,
+            body.helperPid,
+            body.conversationKey,
+            body.connectorIdentity,
+            body.requireRetainedConversation === true,
+            acquisition.signal,
+          );
+        } finally {
+          response.off("close", onClose);
+        }
         this.logger.info("browser.turn_started", { traceId: body.traceId });
-        writeJson(response, 200, { ok: true, ...lease });
+        writeJson(response, 200, { ok: true, ...lease, trackUsage: this.limits?.enabled() === true });
         return;
       } else if (request.url === "/v1/turn/heartbeat") {
         host.heartbeatTurn(body.traceId, body.helperPid, body.refreshViewport === true);
