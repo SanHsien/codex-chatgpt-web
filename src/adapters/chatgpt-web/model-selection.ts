@@ -1,4 +1,3 @@
-import type { Page } from "playwright-core";
 import { activateChatGptEffortMenu, parseChatGptEffortSliderState } from "../../chatgpt-session";
 import type { ChatGptWebAdapterEffort, ChatGptWebModelFamily } from "../../chatgpt-web-models";
 import { ChatGptWebAdapterError } from "./adapter-error";
@@ -24,23 +23,34 @@ function familyOption(menu: EffortMenu, family: ChatGptWebModelFamily) {
 
 /** Model and effort are separate browser controls; a generic Pro label proves neither family. */
 export async function selectChatGptModelFamily(
-  page: Page,
   menu: EffortMenu,
   family: ChatGptWebModelFamily,
-  reopen: () => Promise<EffortMenu>,
+  activate: () => Promise<EffortMenu>,
 ): Promise<EffortMenu> {
   try {
     const option = familyOption(menu, family);
     if (await option.count() > 1) throw familyError(family);
     if (await option.count() === 1 && await option.getAttribute("aria-checked") === "true") return menu;
     // The attached radio rows are inert while this composer-owned advanced view is collapsed.
-    const trigger = menu.menu.locator('[role="menuitem"][aria-expanded][aria-hidden="false"]');
-    if (await trigger.count() !== 1) throw familyError(family);
-    if (await trigger.getAttribute("aria-expanded") === "false") await trigger.click({ timeout: 5_000 });
+    const powerView = menu.menu.locator('[data-model-picker-view]');
+    if (await powerView.count() === 1) {
+      const view = await powerView.getAttribute("data-model-picker-view");
+      if (view === "simple") {
+        const trigger = powerView.locator('[data-model-picker-view-toggle="true"][aria-hidden="false"]');
+        if (await trigger.count() !== 1) throw familyError(family);
+        await trigger.click({ timeout: 5_000 });
+      } else if (view !== "advanced") throw familyError(family);
+    } else {
+      const trigger = menu.menu.locator('[role="menuitem"][aria-expanded][aria-hidden="false"]');
+      if (await powerView.count() !== 0 || await trigger.count() !== 1) throw familyError(family);
+      if (await trigger.getAttribute("aria-expanded") === "false") await trigger.click({ timeout: 5_000 });
+    }
     await option.waitFor({ state: "visible", timeout: 5_000 });
     await option.click({ timeout: 5_000 });
-    await page.keyboard.press("Escape");
-    const selected = await reopen();
+    // Choosing a family returns the open picker to its slider. Keep that surface:
+    // Escape followed by an immediate reopen races the outgoing menu's cleanup.
+    // Activation reuses the open menu and verifies its owner before returning it.
+    const selected = await activate();
     const deadline = Date.now() + 1_000;
     do {
       const current = familyOption(selected, family);

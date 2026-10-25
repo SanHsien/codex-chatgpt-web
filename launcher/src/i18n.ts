@@ -1,6 +1,12 @@
 import type { Language } from "./types";
 
 const en = {
+  pluginName: "Plugin name",
+  pluginNameBody: "Codex stays fixed. Edit the rest of the name.",
+  pluginNameChange: "Change name",
+  pluginNameWarning: "Create a new plugin with the displayed name, then verify MCP again. This changes only the current mode. Tunnel credentials and your ChatGPT login are kept.",
+  pluginNameConfirm: "Change and configure",
+
   product: "Codex Web GPT",
   devBadge: "DEV",
   devSetupTitle: "Set up the isolated DEV profile",
@@ -117,6 +123,8 @@ const en = {
   done: "Done",
   guideVideo: "Guide video",
   expandGuideVideo: "Expand guide video",
+  playGuideVideo: "Play video",
+  pauseGuideVideo: "Pause video",
   closeGuideVideo: "Close expanded guide video",
   mcpStepOne: "Create a tunnel and API key",
   mcpStepOneBody: "Create an OpenAI tunnel, copy its Tunnel ID, and create a regular API key with Tunnels Read + Use (free; the key is required only to run the tunnel). (Don't forget to create a ChatGPT workspace.)",
@@ -208,6 +216,12 @@ const en = {
 } as const;
 
 const zh: Record<keyof typeof en, string> = {
+  pluginName: "插件名称",
+  pluginNameBody: "Codex 保持不变，可以修改其后的名称。",
+  pluginNameChange: "更改名称",
+  pluginNameWarning: "请使用显示的名称创建新插件，然后重新验证 MCP。仅更改当前模式，隧道凭据和 ChatGPT 登录状态将保留。",
+  pluginNameConfirm: "更改并配置",
+
   product: "Codex Web GPT",
   devBadge: "DEV",
   devSetupTitle: "设置隔离的 DEV 配置",
@@ -324,6 +338,8 @@ const zh: Record<keyof typeof en, string> = {
   done: "完成",
   guideVideo: "指导视频",
   expandGuideVideo: "展开指导视频",
+  playGuideVideo: "播放视频",
+  pauseGuideVideo: "暂停视频",
   closeGuideVideo: "关闭展开的指导视频",
   mcpStepOne: "创建 Tunnel 和 API key",
   mcpStepOneBody: "创建 OpenAI Tunnel，复制 Tunnel ID，然后创建一个拥有 Tunnels Read + Use 权限的普通 API key（免费；此密钥仅用于运行 Tunnel）。（别忘了创建 ChatGPT 工作区。）",
@@ -415,6 +431,12 @@ const zh: Record<keyof typeof en, string> = {
 };
 
 const ja: Record<keyof typeof en, string> = {
+  pluginName: "プラグイン名",
+  pluginNameBody: "Codex は固定です。それ以降の名前を編集できます。",
+  pluginNameChange: "名前を変更",
+  pluginNameWarning: "表示された名前で新しいプラグインを作成し、MCP を再確認してください。現在のモードだけが変わります。トンネルの認証情報と ChatGPT のログインは保持されます。",
+  pluginNameConfirm: "変更して設定",
+
   product: "Codex Web GPT",
   devBadge: "DEV",
   devSetupTitle: "隔離された DEV プロファイルをセットアップ",
@@ -531,6 +553,8 @@ const ja: Record<keyof typeof en, string> = {
   done: "完了",
   guideVideo: "ガイド動画",
   expandGuideVideo: "ガイド動画を拡大",
+  playGuideVideo: "動画を再生",
+  pauseGuideVideo: "動画を一時停止",
   closeGuideVideo: "拡大したガイド動画を閉じる",
   mcpStepOne: "トンネルと API キーを作成",
   mcpStepOneBody: "OpenAI トンネルを作成して Tunnel ID をコピーし、Tunnels Read + Use 権限を持つ通常の API キーを作成します（無料。キーはトンネルの実行にのみ必要です）。（ChatGPT ワークスペースの作成も忘れないでください。）",
@@ -621,9 +645,20 @@ const ja: Record<keyof typeof en, string> = {
   doctorMacTunnelRunning: "macOS トンネルサービスはインストール・読み込み済みで稼働中です",
 };
 
-export type Copy = typeof en;
+export type Copy = { [Key in keyof typeof en]: string };
 
-export function copyFor(language: Language): Copy {
+export function copyFor(language: Language, names?: { automatic: string; manual: string }): Copy {
+  const copy = baseCopyFor(language);
+  if (!names) return copy;
+  const localized = { ...copy };
+  for (const key of ["manualMcpStepThreeBody", "manualConnectorNotice", "manualPromptInstruction", "manualPromptWaiting"] as const) {
+    localized[key] = copy[key].replaceAll("Codex Zero Risk", () => names.manual);
+  }
+  localized.connectorMigrationNotice = copy.connectorMigrationNotice.replaceAll("Codex Native2", () => names.automatic);
+  return localized;
+}
+
+function baseCopyFor(language: Language): Copy {
   if (language === "zh-CN") return zh as Copy;
   if (language === "ja") return ja as Copy;
   return en;

@@ -7,6 +7,22 @@ const launcherRoot = path.resolve(__dirname, "..");
 const repositoryRoot = path.resolve(launcherRoot, "..");
 const read = (...parts) => fs.readFileSync(path.join(repositoryRoot, ...parts), "utf8");
 
+const ts = require("typescript");
+const languages = require("../electron/languages.json");
+
+function loadI18nModule() {
+  const source = read("launcher", "src", "i18n.ts");
+  const output = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2023,
+    },
+  }).outputText;
+  const loaded = { exports: {} };
+  Function("module", "exports", "require", output)(loaded, loaded.exports, require);
+  return loaded.exports;
+}
+
 const englishReadme = read("README.en.md");
 const traditionalChineseReadme = read("README.md");
 
@@ -44,4 +60,19 @@ test("the README command pins this fork's reviewed installer", () => {
   assert.ok(command, "README must contain the pinned installer command");
   assert.match(command, /https:\/\/github\.com\/SanHsien\/codex-chatgpt-web\/releases\/download\/v5\.0\.6\/install-launcher\.ps1 \| iex/);
   assert.doesNotMatch(command, /CODEX_WEB_GPT_VERSION/);
+});
+
+
+test("plugin setup and Zero Risk instructions show configured names in every language", () => {
+  const { copyFor } = loadI18nModule();
+  const names = { automatic: "Codex Work", manual: "Codex Manual" };
+  for (const language of Object.keys(languages)) {
+    const copy = copyFor(language, names);
+    for (const key of ["manualMcpStepThreeBody", "manualConnectorNotice", "manualPromptInstruction", "manualPromptWaiting"]) {
+      assert.ok(copy[key].includes(names.manual), `${language}: ${key}`);
+    }
+    assert.ok(copy.connectorMigrationNotice.includes(names.automatic));
+    assert.ok(copy.pluginNameWarning.length > 0);
+    assert.equal(copyFor(language).manualPromptInstruction.includes("Codex Manual"), false);
+  }
 });

@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { renameAtomicFile } = require("./atomic-file.cjs");
+const { renameAtomicFile, writePrivateFileAtomic } = require("./atomic-file.cjs");
 
 const MAX_LOG_BYTES = 4 * 1024 * 1024;
 const MAX_MEMORY_RECORDS = 300;
@@ -96,13 +96,13 @@ function exportSanitizedLogs({ filePath, destinationPath }) {
       } catch {}
     }
   }
-  fs.mkdirSync(path.dirname(destination), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(
+  // Replacing the directory entry also avoids following a link introduced after
+  // the identity check. A failed write leaves the previous export intact.
+  writePrivateFileAtomic(
     destination,
     records.length > 0 ? `${records.map(record => JSON.stringify(record)).join("\n")}\n` : "",
-    { mode: 0o600 },
+    { protectDirectory: false },
   );
-  if (process.platform !== "win32") fs.chmodSync(destination, 0o600);
   return records.length;
 }
 
@@ -124,16 +124,17 @@ function sanitize(value, seen = new WeakSet()) {
 
 function readRecent(filePath) {
   const records = [];
-  for (const sourcePath of [`${filePath}.1`, filePath]) {
+  // Count valid events, not lines: a partial final write must not evict history.
+  for (const sourcePath of [filePath, `${filePath}.1`]) {
     let lines;
     try {
-      lines = fs.readFileSync(sourcePath, "utf8").split(/\r?\n/).filter(Boolean);
+      lines = fs.readFileSync(sourcePath, "utf8").split(/\r?\n/);
     } catch {
       continue;
     }
-    for (const line of lines.slice(-MAX_MEMORY_RECORDS)) {
+    for (let index = lines.length - 1; index >= 0; index -= 1) {
       try {
-        const record = JSON.parse(line);
+        const record = JSON.parse(lines[index]);
         if (!record
           || typeof record.at !== "string"
           || !["debug", "info", "warning", "error"].includes(record.level)
@@ -146,10 +147,11 @@ function readRecent(filePath) {
             ? sanitize(record.detail)
             : {},
         });
+        if (records.length === MAX_MEMORY_RECORDS) return records.reverse();
       } catch {}
     }
   }
-  return records.slice(-MAX_MEMORY_RECORDS);
+  return records.reverse();
 }
 
 function createLogger({ filePath, publish }) {

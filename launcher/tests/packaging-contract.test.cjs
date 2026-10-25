@@ -115,3 +115,24 @@ test("removed macOS/Linux distribution surfaces have no retained files", () => {
     "LICENSES/libnotify-0.8.7-LGPL-2.1.md",
   ]) assert.equal(fs.existsSync(path.join(repositoryRoot, file)), false, file);
 });
+
+test("release does not publish demo or screenshot assets", () => {
+  const release = fs.readFileSync(path.join(repositoryRoot, ".github", "workflows", "release.yml"), "utf8");
+  assert.doesNotMatch(release, /assets\/demo\.gif/);
+  assert.doesNotMatch(release, /release-assets\/[^\n]*(?:demo|screenshot)/i);
+});
+
+test("Windows packages embed the checksummed Bun baseline runtime for CPUs without AVX2", () => {
+  const builder = fs.readFileSync(path.join(repositoryRoot, "scripts", "build-runtime-bundle.ts"), "utf8");
+  const baseline = fs.readFileSync(
+    path.join(repositoryRoot, "scripts", "prepare-windows-baseline-bun.ps1"),
+    "utf8",
+  );
+  assert.match(builder, /CODEX_CHATGPT_WEB_EMBEDDED_BUN/);
+  assert.match(builder, /Embedded Bun must be/);
+  assert.match(builder, /if not defined NODE_USE_SYSTEM_CA set "NODE_USE_SYSTEM_CA=1"/);
+  assert.match(baseline, /bun-windows-x64-baseline\.zip/);
+  assert.match(baseline, /SHASUMS256\.txt/);
+  assert.match(baseline, /Get-FileHash[^\n]+SHA256/);
+  assert.match(baseline, /CODEX_CHATGPT_WEB_EMBEDDED_BUN=/);
+});

@@ -10,6 +10,63 @@ const electronMain = fs.readFileSync(path.join(launcherRoot, "electron", "main.c
 const browserHostSource = fs.readFileSync(path.join(launcherRoot, "electron", "browser-host.cjs"), "utf8");
 const preloadSource = fs.readFileSync(path.join(launcherRoot, "electron", "preload.cjs"), "utf8");
 
+test("Bigger Context waits for startup and route recovery without invalidating healthy setup", async () => {
+  const vm = require("node:vm");
+  for (const fails of [false, true]) {
+    let completeAuthentication;
+    const startupAuthenticationRefresh = new Promise(resolve => { completeAuthentication = resolve; });
+    let finishRuntimeStartup;
+    const runtimeStartup = new Promise(resolve => { finishRuntimeStartup = resolve; });
+    let startupSettled = false;
+    const calls = [];
+    const handlers = new Map();
+    const config = { mode: "full", experimentalBiggerContext: false };
+    const state = { coreSetupComplete: true, codexCatalogVerified: true };
+    const stateStore = { read: () => state, update: patch => Object.assign(state, patch) };
+    const logger = { info() {}, error() {} };
+    const context = vm.createContext({
+      runtimeStartup, finishRuntimeStartup: () => { startupSettled = true; finishRuntimeStartup(); },
+      startupAuthenticationRefresh, logger, stateStore, IS_DEV_PROFILE: false,
+      ipcMain: { on() {} }, registerLoggedIpc: (_ipc, _logger, channel, handler) => handlers.set(channel, handler),
+      send() {}, publishOperation() {}, startCatalogVerificationMonitor() {},
+      restoreCodexRouteAfterRuntimeFailure: async () => { calls.push("recovery"); return {}; },
+      limitsController: { snapshot: () => ({ enabled: false }) },
+      runtimeSupervisor: {
+        readConfig: () => config,
+        startIfConfigured: async () => {
+          calls.push("startup");
+          if (fails) throw new Error("actual startup failure");
+          return { status: "ready" };
+        },
+      },
+      runtimeHost: {
+        upgradeManagedRuntime: async () => ({ updated: false }),
+        runtimeConfigSnapshot: () => ({ configured: true, config }),
+        connectBridgeRoute: async () => { calls.push("route"); return { changed: false }; },
+        setBiggerContext: async enabled => {
+          assert.equal(startupSettled, true, "settings must wait through startup recovery too");
+          calls.push("setting");
+          config.experimentalBiggerContext = enabled;
+          return { enabled };
+        },
+      },
+    });
+    vm.runInContext(electronMain.slice(electronMain.indexOf("function registerIpc("), electronMain.indexOf("async function requestQuit("))
+      + "\nregisterIpc({ logger, stateStore });", context);
+    const start = electronMain.indexOf("} else void (async () => {");
+    vm.runInContext(electronMain.slice(start + "} else ".length, electronMain.indexOf('  app.on("before-quit"', start)), context);
+    const setting = handlers.get("launcher:bigger-context")({}, true);
+    // Read-only UI remains usable while authentication/startup is pending.
+    assert.equal((await handlers.get("launcher:limits")()).enabled, false);
+    assert.deepEqual(calls, []);
+    completeAuthentication();
+    await setting;
+    assert.deepEqual(calls, fails ? ["startup", "recovery", "setting"] : ["startup", "route", "setting"]);
+    assert.equal(state.experimentalBiggerContext, true);
+    assert.equal(state.coreSetupComplete, !fails, "only a real startup failure may invalidate setup");
+  }
+});
+
 test("embedded ChatGPT is measured only after its animated surface mounts", () => {
   assert.match(appSource, /const \[browserSlot, setBrowserSlot\] = useState<HTMLDivElement \| null>\(null\)/);
   assert.match(appSource, /setBrowserSurfaceActive\(browserSurfaceActive\)\.then\(\(\) => \{/);
@@ -504,10 +561,11 @@ test("fresh-conversation control is translated, disabled in Zero Risk, and invok
   const sandbox = {
     element: (type, props, ...children) => ({ type, props: props ?? {}, children }),
     useState: value => [value, () => {}],
+    useEffect() {},
     api: { setFreshConversationPerTurn: async enabled => { invocation = enabled; return { experimentalFreshConversationPerTurn: enabled }; } },
     messageOf: String, platformLabel: String,
   };
-  for (const name of ["ContentSurface", "SectionHeading", "SettingRow", "Switch", "InteractionModePicker", "LanguageMenu", "NoticeRow", "Icon", "DoctorSummary", "BrandMark"]) sandbox[name] = name;
+  for (const name of ["ContentSurface", "SectionHeading", "SettingRow", "PrimaryButton", "SecondaryButton", "Switch", "InteractionModePicker", "LanguageMenu", "NoticeRow", "Icon", "DoctorSummary", "BrandMark"]) sandbox[name] = name;
   vm.runInNewContext(transpile(settings, "settings.tsx") + "\nrender = SettingsSurface;", Object.assign(sandbox, { render }));
   render = sandbox.render;
   const visit = tree => Array.isArray(tree) ? tree.flatMap(visit) : tree && typeof tree === "object"
@@ -520,7 +578,7 @@ test("fresh-conversation control is translated, disabled in Zero Risk, and invok
     }
     for (const [mode, configured, enabled] of [["automatic", true, false], ["manual", true, true], ["automatic", false, false]]) {
       const tree = render({ copy, devProfile: false, language, configureInteractionMode() {}, setError() {},
-        snapshot: { state: { browserInteractionMode: mode, coreSetupComplete: configured, experimentalFreshConversationPerTurn: enabled } },
+        snapshot: { connectorNames: { automatic: "Codex Native2", manual: "Codex Zero Risk" }, state: { browserInteractionMode: mode, coreSetupComplete: configured, experimentalFreshConversationPerTurn: enabled } },
         updateState: value => { saved = value; },
       });
       const row = visit(tree).find(node => node.type === "SettingRow" && node.props.label === copy.freshConversation);
@@ -537,4 +595,85 @@ test("fresh-conversation control is translated, disabled in Zero Risk, and invok
       }
     }
   }
+});
+
+test("plugin rename invalidates verification only after success and rejects active browser work", async () => {
+  const vm = require("node:vm");
+  const handlers = new Map();
+  const state = { mcpSetupComplete: true, mcpGuideStep: 0 };
+  const events = [];
+  let fail = true, calls = 0;
+  const browserHost = { activeTraceId: "busy", currentOperation: () => null };
+  vm.runInNewContext(electronMain.slice(electronMain.indexOf('handle("launcher:connector-name",'),
+    electronMain.indexOf('handle("launcher:set-mcp-step",')), {
+    handle: (name, handler) => handlers.set(name, handler), browserHost,
+    runtimeHost: {
+      setConnectorNameSuffix: async () => { calls++; if (fail) throw new Error("setup failed"); return { changed: true }; },
+      browserConnectorName: () => "Codex Work",
+      setupConnectorName: mode => mode === "manual" ? "Codex Zero Risk" : "Codex Work",
+      runtimeConfigSnapshot: () => ({ config: { appName: "Codex Work" } }),
+    },
+    stateStore: { read: () => state, update: patch => Object.assign(state, patch) },
+    send: (channel, body) => events.push({ channel, body }),
+  });
+  const rename = handlers.get("launcher:connector-name");
+  await assert.rejects(rename(null, "Work"), /Finish active ChatGPT turns/);
+  assert.equal(calls, 0);
+  browserHost.activeTraceId = null;
+  await assert.rejects(rename(null, "Work"), /setup failed/);
+  assert.equal(state.mcpSetupComplete, true);
+  assert.equal(events.length, 0);
+  fail = false;
+  await rename(null, "Work");
+  assert.equal(state.mcpSetupComplete, false);
+  assert.equal(state.mcpGuideStep, 2);
+  assert.equal(events[0].channel, "launcher:connector-names-changed");
+  assert.equal(events[0].body.connectorNames.manual, "Codex Zero Risk");
+  assert.equal(events[1].channel, "launcher:state-changed");
+});
+
+test("plugin name editor fixes Codex and edits Native2 before asking to reconfigure", async () => {
+  const ts = require("typescript");
+  const vm = require("node:vm");
+  const transpile = (source, fileName) => ts.transpileModule(source, {
+    fileName, compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+      jsx: ts.JsxEmit.React, jsxFactory: "element", jsxFragmentFactory: "Fragment" },
+  }).outputText;
+  const translated = { exports: {} };
+  vm.runInNewContext(transpile(fs.readFileSync(path.join(launcherRoot, "src", "i18n.ts"), "utf8"), "i18n.ts"), translated);
+  const copy = translated.exports.copyFor("en");
+  const hooks = [];
+  let cursor = 0, submitted, configureMode;
+  const sandbox = {
+    element: (type, props, ...children) => ({ type, props: props ?? {}, children }), Fragment: "Fragment",
+    useState: initial => { const index = cursor++; if (!(index in hooks)) hooks[index] = initial;
+      return [hooks[index], value => { hooks[index] = value; }]; },
+    useEffect() {}, messageOf: String, platformLabel: String,
+    api: { setConnectorNameSuffix: async suffix => { submitted = suffix; return { mcpSetupComplete: false }; } },
+  };
+  for (const name of ["ContentSurface", "SectionHeading", "SettingRow", "PrimaryButton", "SecondaryButton", "Switch", "InteractionModePicker", "LanguageMenu", "NoticeRow", "Icon", "DoctorSummary", "BrandMark"]) sandbox[name] = name;
+  const settings = appSource.slice(appSource.indexOf("function SettingsSurface("), appSource.indexOf("function ContentSurface("));
+  vm.runInNewContext(transpile(settings, "settings.tsx") + "\nrender = SettingsSurface;", sandbox);
+  const visit = tree => Array.isArray(tree) ? tree.flatMap(visit) : tree && typeof tree === "object"
+    ? [tree, ...visit(tree.children ?? [])] : [];
+  const render = () => { cursor = 0; return visit(sandbox.render({ copy, devProfile: false, language: "en",
+    snapshot: { connectorNames: { automatic: "Codex Native2", manual: "Codex Zero Risk" }, state: { browserInteractionMode: "automatic", coreSetupComplete: true } },
+    configureInteractionMode: mode => { configureMode = mode; }, setError: error => { if (error) throw new Error(error); }, updateState() {},
+  })); };
+  let nodes = render();
+  const group = nodes.find(node => node.props.className === "plugin-name-input");
+  assert.ok(visit(group).some(node => node.type === "span" && node.children[0] === "Codex"));
+  const input = visit(group).find(node => node.type === "input");
+  assert.equal(input.props.value, "Native2");
+  input.props.onChange({ target: { value: "Work" } });
+  nodes = render();
+  assert.ok(nodes.some(node => node.type === "code" && node.children[0] === "Codex Work"));
+  nodes.find(node => node.type === "SecondaryButton" && node.children[0] === copy.pluginNameChange).props.onClick();
+  assert.equal(submitted, undefined);
+  nodes = render();
+  assert.ok(nodes.some(node => node.type === "p" && node.children[0] === copy.pluginNameWarning));
+  nodes.find(node => node.type === "PrimaryButton" && node.children[0] === copy.pluginNameConfirm).props.onClick();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(submitted, "Work");
+  assert.equal(configureMode, "automatic");
 });

@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -71,6 +72,9 @@ export function App() {
           }
         : current);
     });
+    const unsubscribeConnectorNames = api.onConnectorNamesChanged(names => {
+      setSnapshot(current => current ? { ...current, ...names } : current);
+    });
     const unsubscribeBrowser = api.onBrowserState(setBrowser);
     const unsubscribeOperation = api.onOperation((next) => {
       setOperation(next);
@@ -83,6 +87,7 @@ export function App() {
     return () => {
       cancelled = true;
       unsubscribeState();
+      unsubscribeConnectorNames();
       unsubscribeBrowser();
       unsubscribeOperation();
       unsubscribeLog();
@@ -105,7 +110,7 @@ export function App() {
   if (!snapshot) return <LaunchLoading />;
 
   const language = snapshot.state.language ?? "en";
-  const copy = copyFor(language);
+  const copy = copyFor(language, snapshot.connectorNames);
 
   return (
     <div
@@ -1615,6 +1620,27 @@ function SettingsSurface({
   const [busy, setBusy] = useState(false);
   const [turnsCancelled, setTurnsCancelled] = useState(false);
   const [integrationRemoved, setIntegrationRemoved] = useState(false);
+  const currentPluginName = snapshot.connectorNames[snapshot.state.browserInteractionMode];
+  const [nameSuffix, setNameSuffix] = useState(currentPluginName.slice(6));
+  const [confirmNameChange, setConfirmNameChange] = useState(false);
+  const proposedName = `Codex ${nameSuffix.trim()}`;
+  useEffect(() => {
+    setNameSuffix(currentPluginName.slice(6));
+    setConfirmNameChange(false);
+  }, [currentPluginName]);
+  const changePluginName = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      updateState(await api!.setConnectorNameSuffix(nameSuffix.trim()));
+      setConfirmNameChange(false);
+      configureInteractionMode(snapshot.state.browserInteractionMode);
+    } catch (cause) {
+      setError(messageOf(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const updateLanguage = async (next: Language) => {
     try {
@@ -1736,6 +1762,31 @@ function SettingsSurface({
           mode={snapshot.state.browserInteractionMode}
           onChange={(mode) => void setInteractionMode(mode)}
         />
+        <div className="plugin-name-setting">
+          <SettingRow body={copy.pluginNameBody} label={copy.pluginName}>
+            <div className="plugin-name-input">
+              <span aria-hidden="true">Codex</span>
+              <input
+                aria-label={copy.pluginName}
+                disabled={busy || !snapshot.state.coreSetupComplete}
+                maxLength={74}
+                onChange={event => { setNameSuffix(event.target.value); setConfirmNameChange(false); }}
+                value={nameSuffix}
+              />
+            </div>
+          </SettingRow>
+          <code>{proposedName}</code>
+          {confirmNameChange ? <>
+            <p>{copy.pluginNameWarning}</p>
+            <div className="manual-turn-actions">
+              <SecondaryButton disabled={busy} onClick={() => setConfirmNameChange(false)}>{copy.previous}</SecondaryButton>
+              <PrimaryButton disabled={busy} onClick={() => void changePluginName()}>{copy.pluginNameConfirm}</PrimaryButton>
+            </div>
+          </> : <SecondaryButton
+            disabled={busy || !snapshot.state.coreSetupComplete || !nameSuffix.trim() || proposedName === currentPluginName}
+            onClick={() => setConfirmNameChange(true)}
+          >{copy.pluginNameChange}</SecondaryButton>}
+        </div>
         <SettingRow body={devProfile ? copy.devKeepRunningBody : copy.keepRunningOnCloseBody} label={copy.keepRunningOnClose}>
           <Switch
             checked={snapshot.state.keepRunningOnClose}
@@ -2022,9 +2073,31 @@ function ZeroRiskModelMenu({
 
 function TutorialVideo({ copy, label, src }: { copy: Copy; label: string; src: string }) {
   const [expanded, setExpanded] = useState(false);
+  const [paused, setPaused] = useState(false);
   const inlineVideo = useRef<HTMLVideoElement>(null);
   const expandedVideo = useRef<HTMLVideoElement>(null);
   const expandedAt = useRef(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const active = expanded ? expandedVideo.current : inlineVideo.current;
+    if (expanded) inlineVideo.current?.pause();
+    if (paused) active?.pause();
+    else if (active) void active.play().catch(() => { if (!cancelled) setPaused(true); });
+    return () => { cancelled = true; };
+  }, [expanded, paused]);
+
+  const playbackControl = {
+    "aria-label": `${label}: ${paused ? copy.playGuideVideo : copy.pauseGuideVideo}`,
+    role: "button",
+    tabIndex: 0,
+    onClick: () => setPaused(value => !value),
+    onKeyDown: (event: ReactKeyboardEvent<HTMLVideoElement>) => {
+      if (event.repeat || (event.key !== " " && event.key !== "Enter")) return;
+      event.preventDefault();
+      setPaused(value => !value);
+    },
+  };
 
   const closeExpanded = () => {
     const currentTime = expandedVideo.current?.currentTime;
@@ -2046,7 +2119,10 @@ function TutorialVideo({ copy, label, src }: { copy: Copy; label: string; src: s
   return (
     <>
       <div className="guide-media">
-        <video aria-label={label} autoPlay loop muted playsInline ref={inlineVideo} src={src} />
+        <video {...playbackControl} autoPlay={!paused && !expanded} loop muted playsInline ref={inlineVideo} src={src} />
+        <span aria-hidden="true" className={`guide-media-pause${paused ? " is-visible" : ""}`}>
+          <Icon name="pause" />
+        </span>
         <button
           aria-label={copy.expandGuideVideo}
           className="guide-media-expand"
@@ -2067,8 +2143,8 @@ function TutorialVideo({ copy, label, src }: { copy: Copy; label: string; src: s
           role="dialog"
         >
           <video
-            aria-label={label}
-            autoPlay
+            {...playbackControl}
+            autoPlay={!paused}
             loop
             muted
             onLoadedMetadata={(event) => {
@@ -2078,6 +2154,9 @@ function TutorialVideo({ copy, label, src }: { copy: Copy; label: string; src: s
             ref={expandedVideo}
             src={src}
           />
+          <span aria-hidden="true" className={`guide-media-pause${paused ? " is-visible" : ""}`}>
+            <Icon name="pause" />
+          </span>
           <button
             aria-label={copy.closeGuideVideo}
             autoFocus

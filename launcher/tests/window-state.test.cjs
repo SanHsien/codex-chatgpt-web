@@ -33,24 +33,27 @@ test("window state drops off-screen positions and enforces minimum dimensions", 
   });
 });
 
-test("window state resets positions with no usable title bar on a remaining display", () => {
-  for (const bounds of [
-    { x: 1511, y: 400, width: 1120, height: 720 }, // Only one pixel remains visible.
-    { x: 100, y: 981, width: 1120, height: 720 }, // Title bar is below the work area.
-    { x: 100, y: -700, width: 1120, height: 720 }, // Body overlaps, title bar does not.
-  ]) {
-    assert.deepEqual(normalizeWindowState({ bounds }, displays).bounds, { width: 1120, height: 720 });
-  }
-  assert.deepEqual(normalizeWindowState({
-    bounds: { x: 1400, y: 10, width: 1120, height: 720 },
-  }, displays).bounds, { x: 1400, y: 10, width: 1120, height: 720 });
-});
-
 test("window state caps corrupt oversized dimensions", () => {
   const state = normalizeWindowState({
     bounds: { width: Number.MAX_SAFE_INTEGER, height: Number.MAX_SAFE_INTEGER },
   }, displays);
   assert.deepEqual(state.bounds, { width: 16_384, height: 16_384 });
+});
+
+test("restore fits a partly visible window into its remaining display", () => {
+  for (const [position, expected] of [
+    [{ x: 1511, y: 400 }, { x: 392, y: 262 }],
+    [{ x: 100, y: -700 }, { x: 100, y: 0 }],
+    [{ x: 100, y: 981 }, { x: 100, y: 262 }],
+  ]) {
+    assert.deepEqual(normalizeWindowState({ bounds: { width: 1120, height: 720, ...position } }, displays).bounds,
+      { width: 1120, height: 720, ...expected });
+  }
+  const left = { workArea: { x: -1280, y: 0, width: 1280, height: 800 } };
+  assert.deepEqual(normalizeWindowState({ bounds: { x: -1000, y: 50, width: 1120, height: 720 } }, [...displays, left]).bounds,
+    { x: -1120, y: 50, width: 1120, height: 720 });
+  assert.deepEqual(normalizeWindowState({ bounds: { x: -10, y: 10, width: 1800, height: 1200 } }, [left]).bounds,
+    { x: -1280, y: 0, width: 1280, height: 800 });
 });
 
 test("window state is stored atomically with owner-only permissions", () => {

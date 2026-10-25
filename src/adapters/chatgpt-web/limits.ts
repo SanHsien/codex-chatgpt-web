@@ -4,6 +4,11 @@ import type { Locator, Page } from "playwright-core";
 export type ChatGptLimitsPlan = "pro_100" | "pro_200" | "unsupported";
 export type ChatGptUsageModel = "gpt-6-pro" | "gpt-5.6-pro" | "pro-unknown" | "other";
 
+/** ChatGPT uses distinct account plan codes for Pro and Pro Light, independent of UI labels. */
+export function supportsChatGptUsageTracking(account: { personal: boolean; planType: string }): boolean {
+  return account.personal && ["pro", "prolite"].includes(account.planType);
+}
+
 /** Only stable account identity leaves the page; never export session credentials. */
 export async function readChatGptUsageAccount(page: Page): Promise<{
   accountKey: string;
@@ -16,13 +21,18 @@ export async function readChatGptUsageAccount(page: Page): Promise<{
   }
   const identity = await page.evaluate(async () => {
     const response = await fetch("/api/auth/session", {
-      credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(5_000),
+      credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(5_000),
     });
     const url = new URL(response.url);
     if (!response.ok || url.origin !== "https://chatgpt.com" || url.pathname !== "/api/auth/session") {
       throw new Error("Limits could not verify the current ChatGPT account.");
     }
     const session = await response.json();
+    if ((session?.error != null && session.error !== "") || (session?.expires != null
+      && (typeof session.expires !== "string" || !Number.isFinite(Date.parse(session.expires))
+        || Date.parse(session.expires) <= Date.now()))) {
+      throw new Error("The ChatGPT session has expired. Sign in again before setting up Limits.");
+    }
     // Deliberately copy only these fields from the session response.
     return {
       userId: session?.user?.id,
@@ -44,48 +54,19 @@ export async function readChatGptUsageAccount(page: Page): Promise<{
   };
 }
 
-/** Read the current subscription heading, not upgrade offers, invoices, or a bare 'Pro' badge. */
-export function chatGptLimitsPlanFromHeadings(headings: readonly string[]): "pro_100" | "pro_200" {
-  const plans = headings.map(text => text.trim()).filter(text => /^ChatGPT Pro\b/i.test(text));
-  if (plans.length === 1 && /^ChatGPT Pro 20x$/i.test(plans[0]!)) return "pro_200";
-  if (plans.length === 1 && /^ChatGPT Pro 5x$/i.test(plans[0]!)) return "pro_100";
-  throw new Error("Could not distinguish Pro $100 from Pro $200 in ChatGPT billing settings. Limits tracking was not enabled.");
-}
-
+/** The authenticated account tier is stable across renamed and translated billing headings. */
 export async function detectChatGptLimitsPlan(page: Page): Promise<{ accountKey: string; plan: ChatGptLimitsPlan }> {
   const before = await readChatGptUsageAccount(page);
-  if (!before.personal || before.planType !== "pro") return { accountKey: before.accountKey, plan: "unsupported" };
+  if (!supportsChatGptUsageTracking(before)) return { accountKey: before.accountKey, plan: "unsupported" };
   if (before.needsAttention) {
     throw new Error("ChatGPT reports a subscription payment problem. Check your plan in ChatGPT settings before enabling Limits.");
   }
-  if (await page.getByRole("dialog").filter({ visible: true }).count() > 0) {
-    throw new Error("Close the open ChatGPT dialog and retry Limits setup.");
+  const after = await readChatGptUsageAccount(page);
+  if (after.accountKey !== before.accountKey || after.planType !== before.planType
+    || !supportsChatGptUsageTracking(after) || after.needsAttention) {
+    throw new Error("The ChatGPT account or subscription changed during Limits setup. Retry the check.");
   }
-  let settings: Locator | undefined;
-  try {
-    // Enter targets the profile control itself; a center click can hit its nested payment button.
-    await page.getByTestId("accounts-profile-button").filter({ visible: true }).last().press("Enter", { timeout: 5_000 });
-    await page.getByTestId("settings-menu-item").click({ timeout: 5_000 });
-    settings = page.getByRole("dialog").filter({ has: page.locator('[role="tab"][id$="-trigger-Billing"]') });
-    await settings.waitFor({ state: "visible", timeout: 10_000 });
-    await settings.locator('[role="tab"][id$="-trigger-Billing"]').click({ timeout: 5_000 });
-    const panel = settings.locator('[role="tabpanel"][id$="-content-Billing"]');
-    await panel.getByRole("heading", { name: /^ChatGPT Pro\b/i }).waitFor({ state: "visible", timeout: 10_000 });
-    const plan = chatGptLimitsPlanFromHeadings(await panel.getByRole("heading").allTextContents());
-    const after = await readChatGptUsageAccount(page);
-    if (after.accountKey !== before.accountKey || after.planType !== "pro" || !after.personal || after.needsAttention) {
-      throw new Error("The ChatGPT account or subscription changed during Limits setup. Retry the check.");
-    }
-    return { accountKey: after.accountKey, plan };
-  } finally {
-    // Only dismiss the UI opened by this inspection; no subscription controls are activated.
-    if (settings && await settings.isVisible().catch(() => false)) {
-      await page.keyboard.press("Escape");
-      await settings.waitFor({ state: "hidden", timeout: 5_000 });
-    } else if (await page.getByTestId("settings-menu-item").isVisible().catch(() => false)) {
-      await page.keyboard.press("Escape");
-    }
-  }
+  return { accountKey: after.accountKey, plan: after.planType === "pro" ? "pro_200" : "pro_100" };
 }
 
 /** The slider's own accessibility announcement names the selected family, even for 'Latest'. */

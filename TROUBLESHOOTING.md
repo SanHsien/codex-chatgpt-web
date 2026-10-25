@@ -8,8 +8,8 @@ editing Codex configuration, or opening a new issue.
 1. Install this fork's [Windows release v5.0.6](https://github.com/SanHsien/codex-chatgpt-web/releases/tag/v5.0.6). Quit
    **Codex Web GPT** before running the installer again; updating preserves its private ChatGPT
    profile and launcher configuration.
-2. In the launcher, confirm that ChatGPT sign-in, the browser smoke test, and **Install models** (or
-   **Repair Codex setup**) are green.
+2. In **Setup**, confirm that ChatGPT sign-in, the browser smoke test, and **Install into Codex**
+   are green. The installation button says **Install models**, or **Reinstall** after setup.
 3. Fully quit Codex, including its background process, and reopen it. Signing out, closing only the
    window, or starting another task does not reload the model catalog. Keep the launcher open.
 4. Select a model ending in **(Web)** from Codex's model picker.
@@ -29,7 +29,7 @@ If the models still do not appear:
 
 - confirm that **Codex itself** uses ChatGPT sign-in; signing into the launcher's browser is separate.
   An API-key or signed-out Codex session can show only its built-in catalog without contacting the bridge;
-- run **Repair Codex setup** once;
+- open **Setup → Install into Codex** and click **Reinstall** once;
 - check **Settings → Run doctor**;
 - make sure another Codex wrapper is not replacing the route; and
 - export a safe log after the failed catalog check.
@@ -46,8 +46,9 @@ for the whole installation or only for the process they launch.
 
 Choose one route owner:
 
-- To use Codex Web GPT, disable the other wrapper's provider/proxy mode, run **Repair Codex setup**,
-  fully restart Codex, and start Codex directly rather than through the wrapper command.
+- To use Codex Web GPT, disable the other wrapper's provider/proxy mode, click
+  **Setup → Install into Codex → Reinstall**, fully restart Codex, and start Codex directly rather
+  than through the wrapper command.
 - A tool may remain enabled only as an MCP integration if it does not replace `openai_base_url`.
 - To switch away cleanly, use **Settings → Remove Codex integration** first. This restores the exact
   route that existed before Codex Web GPT was installed.
@@ -133,7 +134,7 @@ Video walkthroughs:
 
 Browser-only mode needs no connector. Full harness mode requires all of the following:
 
-- a newly created connector named exactly **Codex Native2**;
+- a newly created connector with the exact name shown in the launcher (**Codex Native2** by default);
 - **Developer Mode** enabled in ChatGPT;
 - the exact Tunnel selected with **Authentication: None**;
 - the connector and Tunnel on the same OpenAI account as the ChatGPT workspace;
@@ -147,6 +148,17 @@ After updating, if `codex_exec` still does not expose `sandbox_permissions`, `ju
 `prefix_rule`, recreate the current mode's connector so ChatGPT loads the updated tool schema.
 These fields only forward a permission request to Codex; its sandbox and approval policy still
 decide whether the command can run. Ordinary commands do not require these optional fields.
+
+### ChatGPT refuses a tool call or context compaction
+
+Share the exact failed tool result and an **Activity → Export safe log**. An assistant saying
+"safety block" without a failed tool result does not establish the cause. **Allow all actions**
+does not override ChatGPT's own safety checks.
+
+After updating, refresh **Codex Native2** in ChatGPT's plugin settings to load its current tool
+descriptions. This updates the compaction tool contract; it does not remove safety restrictions.
+If compaction ends without a submitted summary, the launcher reports that failure and preserves
+the existing task history.
 
 ### Tools disappear on follow-up messages
 
@@ -163,11 +175,15 @@ Also try recreating **Codex Native2** as a new connector with the same Tunnel an
 actions**, then run **Verify runtime**. If tools are already missing in a fresh chat, report that
 separately with a safe log and the browser's actual connector/tool state.
 
-### Windows: `unable to verify the first certificate`
+### Windows: `unable to verify the first certificate` or `SELF_SIGNED_CERT_IN_CHAIN`
 
-For this error during **Connect harness**, check the affected host with Windows `curl.exe -Iv`
+The Windows launcher and packaged CLI use Windows-trusted certificates by default, including
+certificates installed by your company or antivirus. Explicit `NODE_USE_SYSTEM_CA` settings are
+preserved. Certificate verification remains enabled.
+
+If it still fails, check the affected host with Windows `curl.exe -Iv`
 (for example, `curl.exe -Iv https://api.openai.com/`). If it uses Schannel and receives an HTTP
-response, Windows trusts that connection. Fully quit the launcher, then start it from PowerShell:
+response, Windows trusts that connection. For an older launcher, fully quit it and start it from PowerShell:
 
 ```powershell
 $env:NODE_USE_SYSTEM_CA = "1"
@@ -178,6 +194,20 @@ Start-Process (Join-Path $install "Codex Web GPT.exe")
 For a portable copy, use its executable path instead. Retry **Connect harness** once. This enables
 [Node's system CA support](https://nodejs.org/api/cli.html#node_use_system_ca1); certificate verification
 stays enabled. If it still fails, export a safe log. Do not set `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+
+### ChatGPT will not reuse a deleted plugin's name
+
+In the launcher, open **Settings → Plugin name**, change the part after **Codex**, and confirm.
+For example, replace **Native2** with **Work** to get **Codex Work**. Create a new plugin using
+the exact name shown in **MCP**, then verify it again. Only the current mode's name changes;
+the tunnel credentials and ChatGPT login are kept. Do not rename the retired
+**Codex Native** plugin to reuse its old schema.
+
+### Zero Risk: the prompt was not sent
+
+Confirm **Sent** only after ChatGPT accepts the prompt. If sending is blocked, choose an available
+model yourself. **Copy prompt** gives you a fresh handoff timer before Sent and remains available
+after Sent until the plugin starts. Copying does not send another message or change the model.
 
 ### ChatGPT shows `Error creating connector`
 
@@ -256,8 +286,13 @@ To update, quit **Codex Web GPT** and run the same installer command from the RE
 replaces the application and runtime while preserving the launcher configuration and private
 ChatGPT profile.
 
-To repair a valid installation, use **Repair Codex setup** once and fully restart Codex. Avoid
-deleting configuration until **Run doctor** and a safe log identify which layer failed.
+On Linux, automatic updates require the installed launcher created by `install-launcher.sh`.
+If Update reports that the stable wrapper is missing, quit the app, run the installer command
+from the README, and reopen Codex Web GPT from the applications menu. This preserves settings and browser data.
+
+To repair a valid integration, open **Setup → Install into Codex**, click **Reinstall** once,
+and fully restart Codex. Avoid deleting configuration until **Run doctor** and a safe log identify
+which layer failed.
 
 To remove the integration safely:
 

@@ -59,7 +59,9 @@ test("a missing structural personalization control fails closed within its bound
   const control = {
     waitFor: async ({ state, timeout }: { state: string; timeout: number }) => {
       expect(state).toBe("visible");
-      expect(timeout).toBe(5_000);
+      // The deadline is computed from Date.now(), so a millisecond tick may elapse before this call.
+      expect(timeout).toBeLessThanOrEqual(5_000);
+      expect(timeout).toBeGreaterThan(4_000);
       const error = new Error("structural control absent");
       error.name = "TimeoutError";
       throw error;

@@ -1,3 +1,5 @@
+const { configureWindowsTrust } = require("./windows-trust.cjs");
+configureWindowsTrust();
 const languages = require("./languages.json");
 const fs = require("node:fs");
 const net = require("node:net");
@@ -89,6 +91,10 @@ let mainWindowShowRequested = false;
 let startupFailed = false;
 let browserHost = null;
 let runtimeHost = null;
+// Renderer actions can arrive as soon as loadRenderer starts, before startup has acquired any
+// runtime operation lock. Keep setup/settings behind startup and its recovery as one boundary.
+let finishRuntimeStartup;
+const runtimeStartup = new Promise(resolve => { finishRuntimeStartup = resolve; });
 let browserControl = null;
 let runtimeSupervisor = null;
 let tray = null;
@@ -212,13 +218,7 @@ async function restoreCodexRouteAfterRuntimeFailure({ logger, stateStore }) {
 }
 
 function trayImage() {
-  if (process.platform !== "darwin") {
-    return nativeImage.createFromPath(APP_ICON_PATH).resize({ width: 18, height: 18 });
-  }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><path d="M4.1 3.4h6.4l3.4 3.4v7.8H7.5l-3.4-3.4V3.4Z" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><path d="m7 7 2-2 2 2M7 11l2 2 2-2" fill="none" stroke="white" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  const image = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`);
-  image.setTemplateImage(true);
-  return image;
+  return nativeImage.createFromPath(APP_ICON_PATH).resize({ width: 18, height: 18 });
 }
 
 const NATIVE_COPY = Object.freeze({
@@ -485,7 +485,18 @@ function syncFreshConversationPreference(stateStore, config) {
 }
 
 function registerIpc({ logger, stateStore }) {
-  const handle = (channel, handler) => registerLoggedIpc(ipcMain, logger, channel, handler);
+  const runtimeChannels = new Set([
+    "launcher:setup-core", "launcher:setup-mcp", "launcher:uninstall-integration",
+    "launcher:bigger-context", "launcher:skill-attachments", "launcher:fresh-conversation-per-turn",
+    "launcher:use-saved-chats", "launcher:zero-risk-pro", "launcher:browser-interaction-mode",
+    "launcher:connector-name", "launcher:mcp-verify", "launcher:doctor", "launcher:cancel-turns",
+    "launcher:browser-passkey-login", "launcher:browser-logout", "launcher:browser-smoke",
+    "launcher:limits-setup", "launcher:update-install", "launcher:complete-onboarding",
+  ]);
+  const handle = (channel, handler) => registerLoggedIpc(ipcMain, logger, channel, async (...args) => {
+    if (runtimeChannels.has(channel)) await runtimeStartup;
+    return handler(...args);
+  });
   handle("launcher:limits", () => limitsController.snapshot());
   handle("launcher:limits-setup", async () => {
     if (runtimeHost.currentOperation()) throw new Error("Finish the current launcher operation before checking Limits.");
@@ -503,7 +514,7 @@ function registerIpc({ logger, stateStore }) {
     connectorName: runtimeHost.browserConnectorName(),
     connectorNames: {
       automatic: runtimeHost.setupConnectorName(),
-      manual: "Codex Zero Risk",
+      manual: runtimeHost.setupConnectorName("manual"),
     },
     mcpCredentialsConfigured: runtimeHost?.mcpCredentialsConfigured() ?? false,
     logs: logger.recent(),
@@ -817,6 +828,20 @@ function registerIpc({ logger, stateStore }) {
     if (interactionModeChange) send("launcher:browser-state", browserHost.snapshot());
     if (!IS_DEV_PROFILE) startCatalogVerificationMonitor({ logger, stateStore });
     return { ok: true, stdout: result.stdout };
+  });
+  handle("launcher:connector-name", async (_event, suffix) => {
+    if (browserHost.activeTraceId || browserHost.currentOperation()) {
+      throw new Error("Finish active ChatGPT turns before changing the plugin name");
+    }
+    const result = await runtimeHost.setConnectorNameSuffix(suffix);
+    if (!result.changed) return stateStore.read();
+    const state = stateStore.update({ mcpSetupComplete: false, mcpGuideStep: 2 });
+    send("launcher:connector-names-changed", {
+      connectorName: runtimeHost.browserConnectorName(),
+      connectorNames: { automatic: runtimeHost.setupConnectorName(), manual: runtimeHost.setupConnectorName("manual") },
+    });
+    send("launcher:state-changed", state);
+    return state;
   });
   handle("launcher:set-mcp-step", (_event, step) => {
     if (!Number.isInteger(step) || step < 0 || step > 2) throw new Error("Invalid MCP guide step");
@@ -1232,8 +1257,8 @@ async function start() {
         logger.error("dev_profile.runtime_start_failed", { message });
         const failed = stateStore.update({ mcpSetupComplete: false });
         send("launcher:state-changed", failed);
-      });
-    }
+      }).finally(finishRuntimeStartup);
+    } else finishRuntimeStartup();
   } else void (async () => {
     await startupAuthenticationRefresh;
     const upgrade = await runtimeHost.upgradeManagedRuntime();
@@ -1367,7 +1392,7 @@ async function start() {
     const state = stateStore.update({ coreSetupComplete: false, codexCatalogVerified: false });
     send("launcher:state-changed", state);
     publishOperation({ name: "runtime-start", status: "failed", message });
-  });
+  }).finally(finishRuntimeStartup);
 
   app.on("before-quit", (event) => {
     if (exitCommitted) return;
