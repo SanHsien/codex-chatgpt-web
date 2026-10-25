@@ -67,3 +67,17 @@ test("repeated picker version verifies GPT-5.6 Pro without accepting conflicting
   expect(chatGptModelFamilyMatches(["6 Astra 6 Pro"], "6", "max")).toBeTrue();
   expect(chatGptModelFamilyMatches(["6 Astra 6 Pro"], "6", "high")).toBeFalse();
 });
+
+test("family confirmation accepts the observed Chinese effort labels without loosening other checks (upstream #911)", () => {
+  expect(chatGptModelFamilyMatches(["6 Sol 高，3 / 3。"], "6", "high")).toBeTrue();
+  expect(chatGptModelFamilyMatches(["GPT-6 Sol 中，2 / 3。"], "6", "medium")).toBeTrue();
+  expect(chatGptModelFamilyMatches(["6 即时，1 / 3。"], "6", "low")).toBeTrue();
+  expect(chatGptModelFamilyMatches(["6 即時，1 / 3。"], "6", "low")).toBeFalse();
+  expect(chatGptModelFamilyMatches(["6 Sol 高，3 / 3。"], "6", "xhigh")).toBeFalse();
+  expect(chatGptModelFamilyMatches(["6 Astra 高，3 / 3。"], "6", "max")).toBeFalse();
+  expect(chatGptModelFamilyMatches(["6 Sol 高，3 / 3。"], "6", "medium")).toBeFalse();
+  expect(chatGptModelFamilyMatches(["6 Sol 中，2 / 3。"], "6", "high")).toBeFalse();
+  expect(chatGptModelFamilyMatches(["5.6 Sol 高，3 / 3。"], "6", "high")).toBeFalse();
+  expect(chatGptModelFamilyMatches(["6 Sol 高，3 / 3。", "5.6 Sol 高"], "6", "high")).toBeFalse();
+  expect(chatGptModelFamilyMatches(["6 Astra 高，3 / 3。"], "6", "high")).toBeFalse();
+});

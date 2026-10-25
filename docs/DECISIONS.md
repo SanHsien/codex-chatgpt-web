@@ -668,3 +668,13 @@ Read-only re-check after stage C; upstream `main` is still `0901b9fb1976b4a984c7
 | Issue #910 (v6.1.13 aborts a completed ChatGPT response about 79 s after send despite `stallTimeoutSec`), open | monitor | Reported on macOS arm64 with the Plus tier; the fork now ships the same 6.1.13 response-tracking code, so a Windows reproduction is plausible but none is reported. | A Windows reproduction, or upstream identifies a platform-neutral cause. |
 
 Advance the reviewed ledger to non-PR issue #910.
+
+## 2026-10-25 addendum: issue #911
+
+Read-only re-check; upstream `main` is still `0901b9fb1976b4a984c7e9b4082c2868767bbf7c`, latest PR still #909.
+
+| Item | Decision | Reason | Reconsider when |
+| --- | --- | --- | --- |
+| Issue #911 (v6.1.13 rejects a valid GPT-6 High selection in the Simplified Chinese picker because the announcement says `高`), open | adopt (own fix) | Reproduced by reading the code: `chatGptModelFamilyMatches` compared the announced mode with English words only, and upstream has the same code. The fork now also accepts the labels seen in the report (`即时`, `中`, `高`; the Traditional form `即時` was not observed, so it is not accepted); the slider position is still checked separately, and unknown translations stay rejected. Extra High and Pro labels were not observed in the report and are not guessed. | Upstream lands its own fix (compare, then drop the local list), or an Extra High / Pro label is observed. |
+
+Advance the reviewed ledger to non-PR issue #911.

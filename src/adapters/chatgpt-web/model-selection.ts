@@ -74,14 +74,19 @@ export function chatGptModelFamilyMatches(
   // GPT-6 uses Sol below Pro and Astra at Pro. An old Latest picker can still use
   // 5.6 at lower efforts; that is not proof of an explicitly requested GPT-6 turn.
   const expectedName = family === "6" && effort === "max" ? "astra" : "sol";
-  const expectedMode = { low: "instant", medium: "medium", high: "high", xhigh: "extra high", max: "pro" }[effort];
+  // Only labels observed in a real localized picker are listed (zh-CN: upstream #911); an
+  // unknown translation stays unverified instead of being guessed.
+  const expectedModes = {
+    low: ["instant", "即时"], medium: ["medium", "中"], high: ["high", "高"],
+    xhigh: ["extra high"], max: ["pro"],
+  }[effort];
   const states = descriptions.flatMap(text => {
     const state = parseChatGptModelAnnouncement(text);
     return state ? [state] : [];
   });
   return states.length > 0 && states.every(state => state.version === family
     && (!state.name || state.name === expectedName)
-    && state.mode.toLowerCase() === expectedMode);
+    && expectedModes.includes(state.mode.toLowerCase()));
 }
 
 export async function assertChatGptModelFamily(
