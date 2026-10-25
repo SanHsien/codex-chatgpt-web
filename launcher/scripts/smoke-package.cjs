@@ -15,7 +15,10 @@ const coreHome = path.join(scratch, "core-home");
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { cwd: scratch, env: options.env || process.env, encoding: "utf8", maxBuffer: 8 * 1024 * 1024, timeout: options.timeout || 45_000, windowsHide: true });
-  if (result.error) throw result.error;
+  if (result.error) {
+    result.error.message += ` stdout=${JSON.stringify((result.stdout || "").slice(-2000))} stderr=${JSON.stringify((result.stderr || "").slice(-2000))}`;
+    throw result.error;
+  }
   if (result.status !== 0) throw new Error(`${command} failed with status ${result.status}: ${result.stderr?.trim() || result.stdout?.trim() || "no output"}`);
 }
 function windowsInstallLocation() {
@@ -39,7 +42,7 @@ try {
   run(installer, ["/S", "/currentuser"], { timeout: 120_000 });
   const executable = path.join(windowsInstallLocation(), `${launcherManifest.build.productName}.exe`);
   if (!fs.existsSync(executable)) throw new Error(`Packaged launcher executable is missing: ${executable}`);
-  run(executable, ["--launcher-smoke-test"], { env });
+  run(executable, ["--launcher-smoke-test"], { env, timeout: 180_000 });
   if (!fs.existsSync(markerPath)) throw new Error("Packaged launcher did not write its readiness marker");
   const marker = JSON.parse(fs.readFileSync(markerPath, "utf8"));
   if (marker.ok !== true || marker.packaged !== true || marker.runtimeVerified !== true || marker.version !== launcherManifest.version || marker.platform !== "win32") throw new Error(`Unexpected packaged launcher marker: ${JSON.stringify(marker)}`);

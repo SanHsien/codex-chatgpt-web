@@ -502,7 +502,7 @@ Result: `bun audit` clean in both workspaces; `bun run check:dependencies --stri
 | `zod` 4.6.6 -> 4.6.7 (direct pin and `overrides`) | **adopt** | Patch release of the exact pin; the override keeps one zod in the tree as recorded on 2026-10-24. | - |
 | `playwright-core` deferral | removed | The lock now holds the latest release, so nothing is outdated. | - |
 | `@types/bun` 1.4.4 | **defer** (new entry) | The exact pin 1.4.2 mirrors the pinned Bun 1.4.2 runtime (`engines`); the types move with the Bun pin. | The Bun pin moves. |
-| `chromium-bidi` 158.0.8122-0, `motion` 14.6.0, `@types/node` 26.6.5, `@vitejs/plugin-react` 6.1.2, `vite` 8.3.5, `typescript` 7.0.2, `turndown` 7.2.4, `@types/turndown` 5.0.6, `electron` 45.0.0 | **defer** (renewed) | Reasons unchanged from earlier reviews; `latest` values and review dates refreshed in `.github/dependency-deferrals.json`. | A newer release resurfaces them; or the reason named in each entry is met. |
+| `chromium-bidi` 158.0.8123-0, `motion` 14.6.0, `@types/node` 26.6.5, `@vitejs/plugin-react` 6.1.2, `vite` 8.3.5, `typescript` 7.0.2, `turndown` 7.2.4, `@types/turndown` 5.0.6, `electron` 45.0.0 | **defer** (renewed) | Reasons unchanged from earlier reviews; `latest` values and review dates refreshed in `.github/dependency-deferrals.json`. | A newer release resurfaces them; or the reason named in each entry is met. |
 
 Result: `bun audit` clean in both workspaces; `tsc` and launcher typecheck pass.
 
