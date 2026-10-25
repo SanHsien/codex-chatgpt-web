@@ -9,6 +9,7 @@ test("maintained-fork manifest documents Windows-only entrypoints and boundaries
   for (const path of ["AGENTS.md", "CHANGELOG.md", "FORK.md", "NOTICE.md", "CODE_OF_CONDUCT.md", "README.en.md", "docs/DEVELOPMENT.md", "docs/DECISIONS.md", "docs/REVIEW.md", "docs/TEST_PLAN.md", "docs/UPSTREAM.md", "docs/loop-engineering.md", "tools/bootstrap_dev.ps1", "tools/dev_check.ps1", "tools/upstream_baseline.json", ".github/dependency-deferrals.json", "scripts/check-dependency-freshness.ts"]) expect(existsSync(resolve(root, path))).toBe(true);
   expect(existsSync(resolve(root, "README.zh-CN.md"))).toBe(false);
   expect(existsSync(resolve(root, "README.ja.md"))).toBe(false);
+  expect(existsSync(resolve(root, "README.ko.md"))).toBe(false);
   expect(read("FORK.md")).toContain("reviewed");
   expect(read("README.md")).toContain("維護 fork 說明");
   expect(read("README.en.md")).toContain("Maintained fork notice");

@@ -616,3 +616,17 @@ Most 6.x items have no fork counterpart: the fork has no `gpt-6`, `midnight`, `h
 - **Other report-recommended ports not taken in this pass:** Enter/acceptance parallelism and a larger send budget (#764), Native2 inventory marker (#782), KaTeX (#753), background-tab viewport (`3077638`), page-script timeout and primary-renderer recovery, and launcher diagnostic events.
 
 Advance the reviewed ledger to PR #909 at 1f09c1928292f34d15f28a33aab2f3c831380c9d, non-PR issue #906, and upstream main 0901b9fb1976b4a984c7e9b4082c2868767bbf7c.
+
+## 2026-10-25 6.x adoption, stage A: upstream 6.0 line (`7579422`)
+
+The maintainer authorized adopting upstream 6.x in stages. Stage A is a three-way merge of upstream `7579422` (last commit of the 6.0 line) into this fork, committed as one single-parent commit so upstream history is not imported. The ChatGPT account probe (zh-TW UI, `form[data-chatgpt-composer]` present, fork composer selectors absent) showed the account is already on the new UI, so the browser layer is the priority and the stages run back to back (A, then 6.1.0-6.1.3, then 6.1.4-6.1.13).
+
+| Item | Decision | Reason | Reconsider when |
+| --- | --- | --- | --- |
+| Merge base | `c648c09` (v5.0.4), not v5.0.6 | The fork only ported parts of 5.0.5/5.0.6, so a v5.0.6 ancestor silently kept stale fork code in clean hunks (image endpoints, `--app-name`, token reserve). `src/` and the launcher runtime were redone against `c648c09`; the remaining auto-merged files were checked against it. | - |
+| Fork identity and scope | kept | Windows-only packaging and workflows, Bun 1.4.2, en/zh-CN/ja launcher languages (no ko, zh-TW, ja/zh-CN README), reviewed-release updater, `isChatGptUrl`, `pathIdentity` with `toNamespacedPath` (#376), and every previously ported fix. `README.ko.md` and its assets are not adopted; `fork-contract` asserts they stay absent. | The owner changes the supported platforms. |
+| Version | 6.0.0 in `package.json`, `launcher/package.json`, `src/version.ts` | The installer, `REVIEWED_RELEASE_VERSION`, READMEs, and release-contract tests still name 5.0.6; they move together when a release is cut. | A 6.x release is published. |
+| `--app-name` | removed from the launcher | Upstream 6.0 removed the flag from the core CLI (the #620 failure mode); the launcher now selects `DEV_CONNECTOR_NAME`/`CURRENT_CONNECTOR_NAME` by profile. | - |
+| Symlinked `config.toml` (#352) | adopt in core and launcher | Core already carried upstream's symlink handling; the launcher now matches it (write through the link, keep the link and directory mode). The earlier deferral of #352 is superseded. The restore path needs a host that can create symlinks to be exercised; local tests fall back to a regular file. | A symlink regression is found on a Windows host with Developer Mode. |
+| Connector identity | stay `Codex Native2` | Upstream 6.1.13 still uses `Codex Native2`; adopting the upstream contract needs no new identity, and no maintainer-side migration is required because the product is not in daily use. This supersedes the earlier idea of moving to `Codex Native3`. | The fork diverges from the upstream tools/list contract. |
+| Deleted tests | accepted | The six-kind retired-handle scrub (`call`/`control`/`handoff`) now follows upstream (turn/request/binding only; native `call_*` ids are preserved); one stripped end-marker hook-comment case follows upstream tolerance; two upstream symlink tests skip when symlinks cannot be created. | - |
