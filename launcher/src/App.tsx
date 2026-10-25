@@ -16,6 +16,7 @@ import { Icon, type IconName } from "./icons";
 import { LimitsSurface } from "./LimitsSurface";
 import { limitsCopyFor } from "./limits-copy";
 import { useLimits } from "./useLimits";
+import { describeTurnActivity } from "./turn-activity";
 import type {
   BrowserInteractionMode,
   BrowserState,
@@ -43,6 +44,7 @@ export function App() {
   const [operation, setOperation] = useState<OperationState | null>(null);
   const [logs, setLogs] = useState<LogRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const catalogError = useRef<string | null>(null);
   const documentLanguage = snapshot?.state.language ?? "en";
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export function App() {
       setLogs(next.logs);
       setOperation(next.operation);
       if (next.operation?.status === "failed" && next.operation.name !== "mcp-verification") {
+        if (next.operation.name === "catalog-verification") catalogError.current = next.operation.message;
         setError(next.operation.message);
       }
     }).catch((cause) => setError(messageOf(cause)));
@@ -78,6 +81,14 @@ export function App() {
     const unsubscribeBrowser = api.onBrowserState(setBrowser);
     const unsubscribeOperation = api.onOperation((next) => {
       setOperation(next);
+      if (next.name === "catalog-verification") {
+        if (next.status === "failed") catalogError.current = next.message;
+        if (next.status === "completed") {
+          const resolved = catalogError.current;
+          setError(current => current === resolved ? null : current);
+          catalogError.current = null;
+        }
+      }
       if (next.status === "failed" && next.name !== "mcp-verification") setError(next.message);
     });
     const unsubscribeLog = api.onLog((record) => setLogs((current) => [...current.slice(-299), record]));
@@ -358,6 +369,7 @@ function LauncherShell({
   const [biggerContextRecommendationOpen, setBiggerContextRecommendationOpen] = useState(
     snapshot.state.browserInteractionMode === "automatic"
       && snapshot.state.coreSetupComplete === true
+      && snapshot.state.biggerContextAvailable === true
       && !snapshot.state.experimentalBiggerContext,
   );
   const [biggerContextRecommendationBusy, setBiggerContextRecommendationBusy] = useState(false);
@@ -375,14 +387,15 @@ function LauncherShell({
   const updateBusy = snapshot.update.status === "downloading" || snapshot.update.status === "installing";
   const updateVersion = "version" in snapshot.update ? snapshot.update.version : null;
   const selectedManualTab = browser?.tabs.find(tab => tab.active && tab.interactionMode === "manual");
+  const approvalTabs = browser?.tabs.filter(tab => tab.status === "running" && tab.approvalPending) ?? [];
   const limits = useLimits(api!, snapshot.state.browserInteractionMode === "manual");
   const limitsCopy = limitsCopyFor(language);
 
   useEffect(() => {
-    if (snapshot.state.browserInteractionMode === "manual") {
+    if (snapshot.state.browserInteractionMode === "manual" || snapshot.state.biggerContextAvailable !== true) {
       setBiggerContextRecommendationOpen(false);
     }
-  }, [snapshot.state.browserInteractionMode]);
+  }, [snapshot.state.browserInteractionMode, snapshot.state.biggerContextAvailable]);
 
   useEffect(() => {
     if (!selectedManualTab) return;
@@ -651,6 +664,21 @@ function LauncherShell({
       </motion.aside>
 
       <section className="workspace">
+        {approvalTabs.map(tab => (
+          <div className="tool-approval-notice" key={tab.id} role="status">
+            <Icon name="alert" />
+            <div>
+              <strong>{copy.toolApprovalNeeded} · {browserTabTitleFromTitle(tab.title, copy)}</strong>
+              <p>{copy.toolApprovalPendingBody}</p>
+            </div>
+            <SecondaryButton onClick={() => {
+              navigateSurface("browser");
+              setBiggerContextRecommendationOpen(false);
+              void api!.selectBrowserTab(tab.id).then(() => activateBrowser(true))
+                .catch(cause => setError(messageOf(cause)));
+            }}>{copy.openChatgpt}</SecondaryButton>
+          </div>
+        ))}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             animate={{ opacity: 1 }}
@@ -704,7 +732,13 @@ function LauncherShell({
               />
             ) : null}
             {surface === "activity" ? (
-              <ActivitySurface copy={copy} language={language} logs={logs} setError={setError} />
+              <ActivitySurface copy={copy} language={language} logs={logs} browser={browser} setError={setError}
+                openTab={async id => {
+                  await api!.selectBrowserTab(id);
+                  navigateSurface("browser");
+                  setBiggerContextRecommendationOpen(false);
+                  await activateBrowser(true);
+                }} />
             ) : null}
             {surface === "limits" ? (
               <LimitsSurface
@@ -848,18 +882,27 @@ function BrowserSurface({
   platform: string;
   setError: (error: string | null) => void;
 }) {
+  const [passkeyStarting, setPasskeyStarting] = useState(false);
   const [passkeyContinuationRequested, setPasskeyContinuationRequested] = useState(false);
+  const passkeyPhase = browser?.passkeyPhase;
+  const passkeyActive = passkeyStarting || Boolean(passkeyPhase);
   const visible = browser?.visible === true;
   const manualInteraction = interactionMode === "manual";
   const passkeyAvailable = !manualInteraction
     && platform === "darwin"
-    && browser?.authenticated !== true;
+    && (browser?.authenticated !== true || passkeyActive);
   const selectedManualTab = browser?.tabs.find(tab => tab.active && tab.interactionMode === "manual");
-  const navigationLocked = browser?.status === "running" || browser?.status === "testing";
-  const passkeyWaiting = passkeyAvailable
-    && operation?.name === "passkey-login"
-    && operation.status === "running"
-    && browser?.authenticated !== true;
+  const navigationLocked = passkeyActive || browser?.status === "running" || browser?.status === "testing";
+  const passkeyWaiting = passkeyAvailable && passkeyPhase === "waiting";
+  const passkeyImporting = passkeyPhase === "importing" || passkeyContinuationRequested;
+  const passkeyBlocked = !passkeyActive && operation?.status === "running";
+  const passkeyDisabled = passkeyBlocked || (passkeyActive && (!passkeyWaiting || passkeyImporting));
+  const passkeyLabel = passkeyImporting ? copy.passkeyImporting
+    : passkeyWaiting ? copy.passkeyContinue : passkeyActive ? copy.passkeyOpening : copy.passkeySignIn;
+  const passkeyTitle = passkeyImporting ? copy.passkeyImporting
+    : passkeyWaiting ? copy.passkeyWaitingTitle : copy.passkeyOpening;
+  const passkeyBody = passkeyImporting ? copy.passkeyImportingBody
+    : passkeyWaiting ? copy.passkeyContinueBody : copy.passkeyOpeningBody;
   useEffect(() => {
     if (!passkeyWaiting) setPasskeyContinuationRequested(false);
   }, [passkeyWaiting]);
@@ -899,10 +942,17 @@ function BrowserSurface({
       setError(messageOf(cause));
     }
   };
-  const openPasskeyLogin = () => {
-    if (operation?.status === "running") return;
+  const openPasskeyLogin = async () => {
+    if (passkeyActive || passkeyBlocked) return;
+    setPasskeyStarting(true);
     setError(null);
-    void api!.openPasskeyLogin().catch(cause => setError(messageOf(cause)));
+    try {
+      await api!.openPasskeyLogin();
+    } catch (cause) {
+      setError(messageOf(cause));
+    } finally {
+      setPasskeyStarting(false);
+    }
   };
   const continuePasskeyLogin = async () => {
     if (!passkeyWaiting || passkeyContinuationRequested) return;
@@ -999,20 +1049,25 @@ function BrowserSurface({
         {passkeyAvailable ? (
           <button
             className="toolbar-text-button"
-            disabled={passkeyWaiting && passkeyContinuationRequested}
+            disabled={passkeyDisabled}
+            title={passkeyBlocked ? operation?.message : copy.passkeyOpeningBody}
             onClick={() => void (passkeyWaiting ? continuePasskeyLogin() : openPasskeyLogin())}
             type="button"
           >
-            {passkeyWaiting
-              ? passkeyContinuationRequested ? copy.passkeyImporting : copy.passkeyContinue
-              : copy.passkeySignIn}
+            {passkeyLabel}
           </button>
         ) : null}
-        <button className="toolbar-text-button" onClick={() => void toggle()} type="button">
+        <button className="toolbar-text-button" disabled={passkeyActive} onClick={() => void toggle()} type="button">
           {visible ? copy.hideBrowser : copy.openChatgpt}
         </button>
         {browser?.loading ? <i className="browser-loading-line" /> : null}
       </div>
+      {passkeyActive && visible ? (
+        <div className="passkey-login-guide" role="status">
+          <strong>{passkeyTitle}</strong>
+          <p>{passkeyBody}</p>
+        </div>
+      ) : null}
       {selectedManualTab
         && ["awaiting-user", "sent"].includes(selectedManualTab.manualState ?? "") ? (
         <ManualTurnGuide
@@ -1027,26 +1082,24 @@ function BrowserSurface({
         {!visible ? (
           <div className="browser-empty">
             <BrandMark />
-            <h1>{manualInteraction
+            <h1>{passkeyActive ? passkeyTitle : manualInteraction
               ? copy.browserReady
               : browser?.authenticated ? copy.noActiveTask : copy.stepAccount}</h1>
-            <p>{manualInteraction
+            <p>{passkeyActive ? passkeyBody : manualInteraction
               ? copy.stepAccountBody
               : browser?.authenticated
               ? copy.noActiveTaskBody
-              : passkeyWaiting ? copy.passkeyContinueBody : copy.stepAccountBody}</p>
+              : copy.stepAccountBody}</p>
             <div className="browser-empty-actions">
-              <PrimaryButton disabled={passkeyWaiting} onClick={() => void toggle()}>
+              <PrimaryButton disabled={passkeyActive} onClick={() => void toggle()}>
                 {manualInteraction || browser?.authenticated ? copy.openChatgpt : copy.signIn}
               </PrimaryButton>
               {passkeyAvailable ? (
                 <SecondaryButton
-                  disabled={passkeyWaiting && passkeyContinuationRequested}
+                  disabled={passkeyDisabled}
                   onClick={passkeyWaiting ? continuePasskeyLogin : openPasskeyLogin}
                 >
-                  {passkeyWaiting
-                    ? passkeyContinuationRequested ? copy.passkeyImporting : copy.passkeyContinue
-                    : copy.passkeySignIn}
+                  {passkeyLabel}
                 </SecondaryButton>
               ) : null}
             </div>
@@ -1559,15 +1612,59 @@ function ActivitySurface({
   copy,
   language,
   logs,
+  browser,
+  openTab,
   setError,
 }: {
   copy: Copy;
   language: Language;
   logs: LogRecord[];
+  browser: BrowserState | null;
+  openTab: (id: string) => Promise<void>;
   setError: (error: string | null) => void;
 }) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(timer);
+  }, []);
+  const states = {
+    preparing: copy.activityPreparing, sending: copy.activitySending, chatgpt: copy.activityChatgpt,
+    tools: copy.activityTools, approval: copy.activityApproval, unknown: copy.activityUnknown,
+    stale: copy.activityStale, "sign-in": copy.stepAccount,
+  };
+  const tasks = (browser?.tabs ?? []).flatMap(tab => {
+    const activity = describeTurnActivity(tab, now);
+    return activity ? [{ tab, activity }] : [];
+  });
+  const duration = (ms: number) => {
+    const seconds = Math.floor(ms / 1_000);
+    return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+  };
   return (
     <ContentSurface subtitle={copy.activitySubtitle} title={copy.activityTitle}>
+      {tasks.length > 0 ? (
+        <section className="activity-tasks" aria-label={copy.activityTasks}>
+          <div className="section-heading"><span>{copy.activityTasks}</span></div>
+          {tasks.map(({ tab, activity }) => (
+            <article className="activity-task" key={tab.id}>
+              <StateDot state={activity.state === "sign-in" ? "error" : ["unknown", "stale"].includes(activity.state) ? "idle" : "busy"} />
+              <div className="activity-task-detail">
+                <span className="activity-task-title">{browserTabTitleFromTitle(tab.title, copy)}</span>
+                <strong>{states[activity.state]}</strong>
+                <span className="activity-task-time">
+                  {activity.elapsedMs !== null && activity.state !== "unknown"
+                    ? copy.activityElapsed.replace("{time}", duration(activity.elapsedMs))
+                    : activity.ageMs !== null ? copy.activityObserved.replace("{time}", duration(activity.ageMs)) : null}
+                </span>
+              </div>
+              <SecondaryButton onClick={() => void openTab(tab.id).catch(cause => setError(messageOf(cause)))}>
+                {copy.openChatgpt}
+              </SecondaryButton>
+            </article>
+          ))}
+        </section>
+      ) : null}
       <div className="section-heading activity-heading">
         <span>{copy.recentActivity}</span>
         <SecondaryButton
@@ -1682,11 +1779,33 @@ function SettingsSurface({
       setBusy(false);
     }
   };
+  const setComposerPredictions = async (enabled: boolean) => {
+    setBusy(true);
+    setError(null);
+    try {
+      updateState(await api!.setComposerPredictions(enabled));
+    } catch (cause) {
+      setError(messageOf(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
   const setSkillAttachments = async (enabled: boolean) => {
     setBusy(true);
     setError(null);
     try {
       updateState(await api!.setSkillAttachments(enabled));
+    } catch (cause) {
+      setError(messageOf(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const setAutoApproveToolCalls = async (enabled: boolean) => {
+    setBusy(true);
+    setError(null);
+    try {
+      updateState(await api!.setAutoApproveToolCalls(enabled));
     } catch (cause) {
       setError(messageOf(cause));
     } finally {
@@ -1814,8 +1933,16 @@ function SettingsSurface({
             checked={snapshot.state.experimentalBiggerContext}
             disabled={busy
               || snapshot.state.browserInteractionMode === "manual"
+              || (snapshot.state.biggerContextAvailable !== true && !snapshot.state.experimentalBiggerContext)
               || snapshot.state.coreSetupComplete !== true}
             onChange={(checked) => void setBiggerContext(checked)}
+          />
+        </SettingRow>
+        <SettingRow body={copy.composerPredictionsBody} label={copy.composerPredictions}>
+          <Switch
+            checked={snapshot.state.composerPredictionsEnabled}
+            disabled={busy || !snapshot.state.coreSetupComplete}
+            onChange={(checked) => void setComposerPredictions(checked)}
           />
         </SettingRow>
         <SettingRow body={snapshot.state.browserInteractionMode === "manual"
@@ -1832,6 +1959,14 @@ function SettingsSurface({
             checked={snapshot.state.experimentalFreshConversationPerTurn}
             disabled={busy || snapshot.state.browserInteractionMode === "manual" || snapshot.state.coreSetupComplete !== true}
             onChange={(checked) => void setFreshConversationPerTurn(checked)}
+          />
+        </SettingRow>
+        <SettingRow body={snapshot.state.browserInteractionMode === "manual"
+          ? copy.manualAutoApproveUnavailable : copy.autoApproveToolsBody} label={copy.autoApproveTools}>
+          <Switch
+            checked={snapshot.state.browserInteractionMode !== "manual" && snapshot.state.autoApproveToolCalls}
+            disabled={busy || snapshot.state.browserInteractionMode === "manual" || !snapshot.state.coreSetupComplete}
+            onChange={(checked) => void setAutoApproveToolCalls(checked)}
           />
         </SettingRow>
         <SettingRow body={copy.savedChatsBody} label={copy.savedChats}>

@@ -87,7 +87,7 @@ test("a missing structural personalization control fails closed within its bound
   )).rejects.toMatchObject({
     status: 424,
     code: "connector_not_found",
-    message: "ChatGPT Temporary Chat did not expose a structural personalization control within its bounded availability window",
+    message: expect.stringContaining("ChatGPT Temporary Chat did not expose a structural personalization control within its bounded availability window"),
   });
   expect(diagnostics).toEqual(["personalization-unpersonalized"]);
   expect(cleanupAttempts).toBe(1);
@@ -640,7 +640,7 @@ test("the absolute personalization deadline always returns the connector deadlin
       .rejects.toMatchObject({
         status: 424,
         code: "connector_not_found",
-        message: "ChatGPT personalization preflight exceeded its readiness deadline",
+        message: expect.stringContaining("enable Launcher → Settings → Save chats in ChatGPT"),
       });
   } finally {
     Date.now = originalNow;

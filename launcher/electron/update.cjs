@@ -1,6 +1,5 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
-const https = require("node:https");
 const os = require("node:os");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
@@ -11,6 +10,9 @@ const REVIEWED_RELEASE_VERSION = "5.0.6";
 const REVIEWED_RELEASE_BASE_URL = `https://github.com/${REPOSITORY}/releases/download/v${REVIEWED_RELEASE_VERSION}`;
 const USER_AGENT = "codex-web-gpt-launcher-updater";
 const MAX_REDIRECTS = 5;
+// A launcher started at sign-in can run its only check before the network is up, or while a new
+// release is still uploading its assets. Retry failures a few times; success is still checked once.
+const UPDATE_CHECK_RETRY_DELAYS_MS = [60_000, 5 * 60_000, 30 * 60_000];
 
 function parseVersion(value) {
   const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(String(value || "").trim());
@@ -47,28 +49,100 @@ function validateReleaseAssetUrl(raw, version, assetName) {
   if (url.protocol !== "https:" || url.hostname !== "github.com" || url.pathname !== expectedPath) throw new Error(`GitHub returned an unexpected release asset URL for ${assetName}`);
   return url.toString();
 }
-function request(url, redirects = 0) {
-  return new Promise((resolve, reject) => {
-    if (redirects > MAX_REDIRECTS) return reject(new Error(`Too many redirects while downloading ${url}`));
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:") return reject(new Error(`Refusing non-HTTPS update URL: ${parsed.protocol}`));
-    const req = https.get(parsed, { headers: { Accept: "application/vnd.github+json", "User-Agent": USER_AGENT } }, (response) => {
-      if ([301, 302, 303, 307, 308].includes(response.statusCode) && response.headers.location) {
-        response.resume(); request(new URL(response.headers.location, parsed).toString(), redirects + 1).then(resolve, reject); return;
-      }
-      if (response.statusCode !== 200) { response.resume(); reject(new Error(`Update download failed with HTTP ${response.statusCode}`)); return; }
-      resolve(response);
+
+function createUpdateDownloader(createRequest, idleTimeoutMs = 60_000) {
+  const validateUrl = value => {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) {
+      throw new Error("Refusing non-HTTPS or credential-bearing update URL");
+    }
+    return url.toString();
+  };
+
+  async function* chunks(url) {
+    const request = createRequest({
+      url: validateUrl(url),
+      headers: { Accept: "application/vnd.github+json", "User-Agent": USER_AGENT },
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "manual",
     });
-    req.setTimeout(60_000, () => req.destroy(new Error("Update request timed out")));
-    req.once("error", reject);
-  });
+    let timer;
+    let response;
+    let failure;
+    let finished = false;
+    let rejectResponse;
+    const fail = error => {
+      if (finished || failure) return;
+      failure = error;
+      rejectResponse(error);
+      response?.destroy(error);
+      request.abort();
+    };
+    const armTimeout = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fail(new Error("Update request timed out")), idleTimeoutMs);
+      timer.unref?.();
+    };
+    try {
+      await new Promise((resolve, reject) => {
+        rejectResponse = reject;
+        let redirects = 0;
+        request.on("error", fail);
+        request.on("abort", () => fail(new Error("Update download was aborted")));
+        // net.fetch cancels manual redirects instead of exposing a 3xx response.
+        // ClientRequest lets us validate every destination before following it.
+        request.on("redirect", (_status, _method, destination) => {
+          try {
+            if (++redirects > MAX_REDIRECTS) throw new Error("Too many redirects while downloading update");
+            validateUrl(destination);
+            armTimeout();
+            request.followRedirect();
+          } catch (error) {
+            fail(error);
+          }
+        });
+        request.once("response", incoming => {
+          response = incoming;
+          response.on("error", fail);
+          response.on("aborted", () => fail(new Error("Update download was interrupted")));
+          resolve();
+        });
+        armTimeout();
+        request.end();
+      });
+      if (failure) throw failure;
+      if (response.statusCode !== 200) throw new Error(`Update download failed with HTTP ${response.statusCode}`);
+      armTimeout();
+      for await (const chunk of response) {
+        armTimeout();
+        yield chunk;
+      }
+    } finally {
+      finished = true;
+      clearTimeout(timer);
+      response?.destroy();
+      request.abort();
+    }
+  }
+
+  return {
+    async downloadText(url, maxBytes = 2 * 1024 * 1024) {
+      const parts = [];
+      let bytes = 0;
+      for await (const chunk of chunks(url)) {
+        bytes += chunk.length;
+        if (bytes > maxBytes) throw new Error("Update metadata exceeded its size limit");
+        parts.push(chunk);
+      }
+      return Buffer.concat(parts).toString("utf8");
+    },
+    async downloadFile(url, destination) {
+      await pipeline(chunks(url), fs.createWriteStream(destination, { flags: "wx", mode: 0o600 }));
+    },
+  };
 }
-async function downloadText(url, maxBytes = 2 * 1024 * 1024) {
-  const response = await request(url), chunks = []; let bytes = 0;
-  for await (const chunk of response) { bytes += chunk.length; if (bytes > maxBytes) throw new Error("Update metadata exceeded its size limit"); chunks.push(chunk); }
-  return Buffer.concat(chunks).toString("utf8");
-}
-async function downloadFile(url, destination) { await pipeline(await request(url), fs.createWriteStream(destination, { flags: "wx", mode: 0o600 })); }
+
 function sha256(filePath) {
   const hash = crypto.createHash("sha256"), fd = fs.openSync(filePath, "r"), buffer = Buffer.allocUnsafe(1024 * 1024);
   try { for (;;) { const count = fs.readSync(fd, buffer, 0, buffer.length, null); if (!count) break; hash.update(buffer.subarray(0, count)); } } finally { fs.closeSync(fd); }
@@ -90,18 +164,26 @@ function reviewedRelease(platform = process.platform, arch = process.arch) {
   };
 }
 function defaultDependencies() {
+  // Chromium owns the launcher's system proxy/PAC policy. Do not bypass it with
+  // Node HTTPS or borrow cookies from the authenticated ChatGPT browser profile.
+  const { downloadText, downloadFile } = createUpdateDownloader(
+    options => require("electron").net.request(options),
+  );
   return { fetchRelease: async () => reviewedRelease(), downloadText, downloadFile, sha256,
     spawnWorker(runtimeExecutable, workerPath, jobPath) { return spawn(runtimeExecutable, [workerPath, jobPath], { detached: true, stdio: "ignore", windowsHide: true }); },
   };
 }
-function createUpdateController({ currentVersion, platform, arch, packaged, executablePath, runtimeExecutable, logsDirectory, publish, logger, dependencies = {} }) {
+function createUpdateController({ currentVersion, platform, arch, packaged, executablePath, runtimeExecutable, logsDirectory, publish, logger, retryDelaysMs = UPDATE_CHECK_RETRY_DELAYS_MS, dependencies = {} }) {
   const deps = { ...defaultDependencies(), ...dependencies };
   const supportedAsset = releaseAssetName(currentVersion, platform, arch);
-  let state = packaged && supportedAsset ? { status: "idle" } : { status: "disabled" }, checked = false, pending = null, candidate = null;
+  let state = packaged && supportedAsset ? { status: "idle" } : { status: "disabled" }, checked = false, failedChecks = 0, pending = null, candidate = null;
   const transition = (next) => { state = next; publish?.(state); return state; };
   async function checkOnce() {
     if (state.status === "disabled" || checked) return state;
-    checked = true; transition({ status: "checking" });
+    checked = true; return check();
+  }
+  async function check() {
+    transition({ status: "checking" });
     try {
       const release = await deps.fetchRelease();
       if (release?.draft === true || release?.prerelease === true) { candidate = null; return transition({ status: "up-to-date" }); }
@@ -113,7 +195,24 @@ function createUpdateController({ currentVersion, platform, arch, packaged, exec
       if (!asset?.browser_download_url || !checksums?.browser_download_url) throw new Error(`Release v${version} is missing ${assetName} or checksums.txt`);
       candidate = { version, assetName, assetUrl: validateReleaseAssetUrl(asset.browser_download_url, version, assetName), checksumsUrl: validateReleaseAssetUrl(checksums.browser_download_url, version, "checksums.txt") };
       logger?.info("launcher.update_available", { currentVersion, version, platform, arch }); return transition({ status: "available", version });
-    } catch (error) { const message = error instanceof Error ? error.message : String(error); logger?.warn("launcher.update_check_failed", { message }); return transition({ status: "error", message }); }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const retryInMs = retryDelaysMs[failedChecks];
+      failedChecks += 1;
+      logger?.warn("launcher.update_check_failed", {
+        message,
+        ...(retryInMs !== undefined ? { retryInMs } : {}),
+      });
+      const failed = transition({ status: "error", message });
+      if (retryInMs !== undefined) {
+        const timer = setTimeout(() => {
+          // Only a still-failed check is repeated; nothing else leaves the error state.
+          if (state === failed) void check();
+        }, retryInMs);
+        timer.unref?.();
+      }
+      return failed;
+    }
   }
   async function beginInstall() {
     if (pending) throw new Error("An update is already being prepared");
@@ -139,4 +238,4 @@ function createUpdateController({ currentVersion, platform, arch, packaged, exec
   function cancelInstall(launch) { try { launch?.child?.kill(); } catch {} if (launch?.tempRoot) fs.rmSync(launch.tempRoot, { recursive: true, force: true }); if (candidate) transition({ status: "available", version: candidate.version }); }
   return { getState: () => state, checkOnce, beginInstall, cancelInstall };
 }
-module.exports = { REVIEWED_RELEASE_VERSION, buildJob, compareVersions, createUpdateController, expectedChecksum, parseVersion, releaseAssetName, releaseVersion, reviewedRelease, validateReleaseAssetUrl };
+module.exports = { REVIEWED_RELEASE_VERSION, buildJob, compareVersions, createUpdateController, createUpdateDownloader, expectedChecksum, parseVersion, releaseAssetName, releaseVersion, reviewedRelease, validateReleaseAssetUrl };

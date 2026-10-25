@@ -143,7 +143,6 @@ function abortReason(signal: AbortSignal): Error {
 export function withCompactionAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
   if (!signal) return promise;
   if (signal.aborted) {
-    // The abandoned promise may still reject later; nobody else observes it.
     void promise.catch(() => {});
     return Promise.reject(abortReason(signal));
   }
@@ -187,7 +186,7 @@ export async function settleActiveCompactionSource(
     let token: string | undefined;
     try {
       token = await source.runtime.token;
-      broker.requestCompaction(token, interruptedByActiveCompaction());
+      broker.requestCompaction(token, interruptedByActiveCompaction(), () => source.runtime.trace.recordProgress());
       for (const request of outstanding) {
         const result = results.get(request.callId)!;
         await broker.completeTool(
@@ -196,6 +195,7 @@ export async function settleActiveCompactionSource(
           toolResult(result),
         );
         source.runtime.externalProgress.recordToolResult();
+        source.runtime.trace.recordProgress();
         source.markResultDelivered(request.callId);
       }
       const browserOutcome = await withCompactionAbort(source.browserOutcome, signal);
@@ -314,12 +314,13 @@ export async function requestRetainedCompactionHandoff(
       }
     }, () => {});
     transaction = await withCompactionAbort(transactionPromise, operationSignal);
-    const instruction = structuredCompactionHandoffInstruction(transaction);
+    const instruction = structuredCompactionHandoffInstruction(transaction, worker.appName);
     const prepare = async () => ({ text: instruction, images: [], release: () => {} });
     browser = worker.run({
       traceId,
       modelId: parsed.modelId,
       reasoning: parsed.options.reasoning,
+      ...(parsed._chatgptModelFamily ? { modelFamily: parsed._chatgptModelFamily } : {}),
       // The retained connector exposes only the one-shot control token embedded above. It does
       // not receive an ordinary Codex tool environment for this checkpoint message.
       capabilities: { ...capabilities, localToolsEnabled: false },
@@ -328,6 +329,7 @@ export async function requestRetainedCompactionHandoff(
       prepareResume: prepare,
       conversationKey,
       requireRetainedConversation: true,
+      compaction: true,
       abortSignal: browserAbort.signal,
       onTextDelta: () => {},
     });
@@ -473,13 +475,18 @@ export function runStructuredCompactionOnce(
   });
   // Return a deadline failure promptly, while its physical browser owner still blocks retries
   // and cancel-all completion. A cancelled queued run must also retain its predecessor's gate.
-  const ownerSettlement = promise.then(() => false, () => true).then(async failed => {
+  const ownerSettlement = promise.then(() => false, error => {
+    // Native retries of the identical oversized input cannot fix a size rejection. Replay that
+    // terminal result under the existing cache lifetime; reduced input/model changes get a new key.
+    return !(error instanceof ChatGptWebAdapterError
+      && error.code === "context_length_exceeded" && !error.retryable);
+  }).then(async evict => {
     await Promise.allSettled(physicalSettlements);
     run.active = false;
     if (structuredCompactionOwners.get(owner.ownerKey) === ownerSettlement) {
       structuredCompactionOwners.delete(owner.ownerKey);
     }
-    if (failed && structuredCompactionRuns.get(key) === run) structuredCompactionRuns.delete(key);
+    if (evict && structuredCompactionRuns.get(key) === run) structuredCompactionRuns.delete(key);
   });
   const run: CachedCompactionRun = {
     createdAt: Date.now(),

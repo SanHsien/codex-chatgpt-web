@@ -134,6 +134,10 @@ Zero Risk 會保留本機 Responses 橋接程式和完整 Codex harness，但絕
 > **GPT-5.6 Sol Pro** 和 **GPT-6 Astra** 的 ChatGPT 訊息額度會隨賬戶和產品調整。Token 上下文上限取決於
 > 賬戶型別和所選 effort。Plus 的 Medium/High 使用實測的 90,000-token 視窗；啟用實驗性的
 > **3× context** 後最高為 270,000 tokens，並且全程支援原生 Codex compaction。
+>
+> GPT-6 Sol 在 Medium、High 與可用的 Extra High 支援 Bigger Context：Plus 為 **120,000 tokens**
+> （compaction 於 **110,000**），Pro 為 **240,000**（compaction 於 **220,000**）。GPT-6 Instant
+> 使用標準上下文。GPT-5.6 與 GPT-6 Pro 維持既有的 Bigger Context 上限。
 
 1. 完成啟動器中的必需設定。
 2. 在啟動器中開啟 **MCP**。請在將使用 ChatGPT 聯結器的同一個 OpenAI 賬戶中建立 Tunnel
@@ -155,6 +159,11 @@ Zero Risk 會保留本機 Responses 橋接程式和完整 Codex harness，但絕
 使用 **活動** 頁面檢視安全的本地診斷，並透過 **設定 → 執行診斷** 執行端到端健康檢查。設定頁還可
 取消保留的瀏覽器任務，或在解除安裝前移除 Codex 整合。僅在需要為每個瀏覽器檢查點儲存截圖時設定
 `CODEX_CHATGPT_WEB_BROWSER_DIAGNOSTICS=1`。
+
+**Save chats in ChatGPT** 會把任務對話保留在 ChatGPT 歷史中；新設定預設開啟，且與
+**New browser chat for each turn** 互相獨立，更新時會保留既有的明確選擇。關閉後改用臨時聊天，
+此時 ChatGPT 可能不會顯示你的聯結器。啟動器的通道（tunnel）使用系統代理；明確設定的代理環境變數
+優先，本機連線不經代理。
 
 新安裝預設使用 **Compatibility V1** 以支援跨後端 subagent。**Native** 會保留 Codex 自身的
 功能設定，並啟用明文 Web-to-Web V2 委派。切換協議後，請重啟 Codex 並建立新任務：

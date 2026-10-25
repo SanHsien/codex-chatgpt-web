@@ -5,7 +5,8 @@
     "": {
       "name": "codex-chatgpt-web",
       "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.30.1",
+        "@mixmark-io/domino": "2.2.0",
+        "@modelcontextprotocol/sdk": "^1.31.0",
         "ajv": "8.20.0",
         "ajv-formats": "3.0.1",
         "chromium-bidi": "12.1.0",
@@ -28,6 +29,8 @@
     "@hono/node-server": "2.1.1",
     "fast-uri": "3.1.9",
     "hono": "4.13.11",
+    "ip-address": "10.7.4",
+    "proxy-addr": "2.0.8",
     "qs": "6.16.0",
     "zod": "4.6.7",
     "zod-to-json-schema": "3.25.1",

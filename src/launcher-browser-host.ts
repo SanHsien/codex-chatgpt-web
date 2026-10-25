@@ -22,6 +22,13 @@ export class LauncherRetainedConversationUnavailableError extends Error {
   }
 }
 
+export class LauncherBrowserTurnOwnerLostError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LauncherBrowserTurnOwnerLostError";
+  }
+}
+
 export class LauncherManualTurnTimedOutError extends Error {
   constructor(message: string) {
     super(message);
@@ -264,7 +271,7 @@ export async function connectLauncherBrowserHost(
   await assertCdpReady(descriptor, Math.min(timeoutMs, 5_000));
   let browser: Browser;
   try {
-    browser = await chromium.connectOverCDP(descriptor.endpoint, { timeout: timeoutMs });
+    browser = await chromium.connectOverCDP(descriptor.endpoint, { timeout: timeoutMs, noDefaults: true });
   } catch (error) {
     throw new Error(`Could not connect Playwright to the launcher browser: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -281,6 +288,11 @@ export async function connectLauncherBrowserHost(
       surfaceId,
       abortSignal,
     );
+    // Preserve the host's theme and other pages. Only our owned page needs
+    // focus emulation for input while its Electron view is in the background.
+    const inputSession = await context.newCDPSession(page);
+    await inputSession.send("Emulation.setFocusEmulationEnabled", { enabled: true });
+    // The browser connection owns this session; disconnect releases the override.
     return { descriptor, browser, context, page };
   } catch (error) {
     await browser.close().catch(() => {});
@@ -358,6 +370,12 @@ export const LAUNCHER_CAPABILITY_INSPECTION_TIMEOUT_MS = 120_000;
 
 export type LauncherTurnActivity =
   | {
+      phase: "approval";
+      traceId: string;
+      helperPid: number;
+      pending: boolean;
+    }
+  | {
       phase: "usage";
       traceId: string;
       helperPid: number;
@@ -383,6 +401,10 @@ export type LauncherTurnActivity =
       helperPid: number;
       /** Re-establish the launcher's hidden viewport after the caller closes its CDP session. */
       refreshViewport?: boolean;
+      progress?: {
+        stage: "preparing" | "sending" | "chatgpt";
+        activeToolCalls: number;
+      };
     }
   | {
       phase: "end";
@@ -627,7 +649,7 @@ export async function notifyLauncherTurn(
   activity: LauncherTurnActivity,
   timeoutMs = activity.phase === "end"
     ? LAUNCHER_TURN_END_TIMEOUT_MS
-    : activity.phase === "heartbeat"
+    : activity.phase === "heartbeat" || activity.phase === "approval"
       ? LAUNCHER_TURN_HEARTBEAT_TIMEOUT_MS
       : LAUNCHER_TURN_START_TIMEOUT_MS,
   signal?: AbortSignal,
@@ -662,6 +684,11 @@ export async function notifyLauncherTurn(
       if (response.status === 409 && body.code === "retained_conversation_unavailable") {
         throw new LauncherRetainedConversationUnavailableError(
           typeof body.error === "string" ? body.error : "The retained ChatGPT conversation is no longer available",
+        );
+      }
+      if (response.status === 409 && body.code === "turn_owner_lost") {
+        throw new LauncherBrowserTurnOwnerLostError(
+          typeof body.error === "string" ? body.error : "The running ChatGPT turn lost its browser helper. Check its tab before retrying.",
         );
       }
       const detail = typeof body.error === "string" ? body.error : "";
@@ -702,6 +729,7 @@ export async function notifyLauncherTurn(
     if (signal?.aborted) throw new DOMException("Launcher browser acquisition cancelled", "AbortError");
     if (controller.signal.aborted) throw new Error(`Launcher browser control ${activity.phase} timed out after ${timeoutMs}ms`);
     if (error instanceof LauncherBrowserTurnCancelledError
+      || error instanceof LauncherBrowserTurnOwnerLostError
       || error instanceof LauncherRetainedConversationUnavailableError) throw error;
     throw new Error(`Launcher browser control channel failed: ${error instanceof Error ? error.message : String(error)}`);
   } finally {

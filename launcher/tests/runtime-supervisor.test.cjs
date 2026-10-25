@@ -298,6 +298,7 @@ test("launcher repairs its runtime before building the tunnel MCP command", asyn
       runtimeRepairs += 1;
       return repairedRuntime;
     },
+    resolveProxy: async () => "DIRECT",
     coreHome: root,
     browserDescriptorPath: config.browserHostDescriptorPath,
     runtimeInvocationFactory: ({ installedRuntimeRoot, args }) => ({
@@ -818,6 +819,7 @@ if (args[1] === "connect") {
     app: { getVersion: () => "0.2.0", isPackaged: false },
     logger: { info() {}, warn() {}, error() {} },
     sourceRoot: root, coreHome: root, browserDescriptorPath: path.join(root, "launcher.json"),
+    resolveProxy: async () => "DIRECT",
   });
   let monitored = false;
   const config = { mode: "full", brokerSocketPath: path.join(root, "broker.sock"), tunnel: {
@@ -2007,7 +2009,10 @@ test("observed CLI fresh-conversation changes retire completed tabs once and def
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-web-gpt-fresh-config-"));
   const descriptorPath = path.join(root, "launcher.json");
   const configPath = path.join(root, "config.json");
-  const state = { experimentalFreshConversationPerTurn: false, useSavedChats: false };
+  // Start with the same initialized defaults as the launcher, so adding a setting
+  // cannot be mistaken for a fresh-conversation update after setup rolls back.
+  const state = { ...require("../electron/state.cjs").createStateStore(path.join(root, "state.json")).read(),
+    biggerContextAvailable: true };
   const key = "a".repeat(64);
   const old = { id: "old", traceId: "old-trace", status: "ready", interactionMode: "automatic", conversationKey: key,
     connectorIdentity: "Codex Native2", connectorBound: true };
@@ -2027,11 +2032,11 @@ test("observed CLI fresh-conversation changes retire completed tabs once and def
     stateStore: { read: () => ({ ...state }), update: patch => { updates++; return Object.assign(state, patch); } },
     send() {},
   };
-  vm.runInNewContext(main.slice(main.indexOf("function syncFreshConversationPreference("), main.indexOf("function registerIpc(")), sandbox);
+  vm.runInNewContext(main.slice(main.indexOf("function syncBrowserPreferences("), main.indexOf("function registerIpc(")), sandbox);
   const supervisor = new RuntimeSupervisor({ coreHome: root, browserDescriptorPath: descriptorPath,
-    onConfigRead: config => sandbox.syncFreshConversationPreference(sandbox.stateStore, config) });
-  const persist = enabled => fs.writeFileSync(configPath, JSON.stringify(launcherConfig(descriptorPath, {
-    solAvailable: true, browserInteractionMode: "automatic", experimentalFreshConversationPerTurn: enabled,
+    onConfigRead: config => sandbox.syncBrowserPreferences(sandbox.stateStore, config) });
+  const persist = (enabled, autoApproveToolCalls = false) => fs.writeFileSync(configPath, JSON.stringify(launcherConfig(descriptorPath, {
+    solAvailable: true, browserInteractionMode: "automatic", experimentalFreshConversationPerTurn: enabled, autoApproveToolCalls,
   })));
   try {
     persist(true);
@@ -2043,11 +2048,18 @@ test("observed CLI fresh-conversation changes retire completed tabs once and def
     supervisor.readConfig();
     assert.equal(updates, 0, "rolled-back setup preserves the saved preference");
     for (const enabled of [true, false]) {
+      persist(false, enabled);
+      supervisor.readConfig();
+      assert.equal(state.autoApproveToolCalls, enabled);
+      assert.deepEqual(removed, [], "changing approval permissions must preserve retained chats");
+    }
+    assert.equal(updates, 2);
+    for (const enabled of [true, false]) {
       persist(enabled); // A separate CLI updates the persisted config.
       supervisor.readConfig();
       assert.equal(state.experimentalFreshConversationPerTurn, enabled);
       supervisor.readConfig();
-      assert.equal(updates, enabled ? 1 : 2, "unchanged observations do not commit or clear twice");
+      assert.equal(updates, enabled ? 3 : 4, "unchanged observations do not commit or clear twice");
     }
     assert.deepEqual(removed, [old.id]);
     assert.equal(browserHost.turnTabs.get(active.id), active);

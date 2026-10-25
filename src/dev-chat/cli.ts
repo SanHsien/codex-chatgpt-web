@@ -51,7 +51,7 @@ Interactive commands:
   /fill TOKENS         Append deterministic inert context without opening ChatGPT
   /send-fill TOKENS    Send deterministic inert text through the live browser now
   /compact             Run the real browser compaction path now
-  /model MODEL         Select gpt-5.6-luna, gpt-5.6-sol-instant, gpt-5.6-sol, gpt-5.6-pro, gpt-6-pro, or zero-risk
+  /model MODEL         Select gpt-6-sol-instant, gpt-6-sol, gpt-6-pro, gpt-5.6-luna, gpt-5.6-sol-instant, gpt-5.6-sol, gpt-5.6-pro, or zero-risk
   /reset yes           Clear this named DEV chat and create a new thread identity
   /help                Show this command list
   /exit                Exit
@@ -351,6 +351,9 @@ export async function runDevCommand(args: string[]): Promise<void> {
     if (automaticBrowserInteraction && manualBrowserInteraction) {
       throw new Error("Choose at most one browser interaction mode");
     }
+    const predictions = takeFlag(args, "--composer-predictions");
+    const noPredictions = takeFlag(args, "--no-composer-predictions");
+    if (predictions && noPredictions) throw new Error("Choose --composer-predictions or --no-composer-predictions");
     const skillAttachments = takeFlag(args, "--skill-attachments");
     const inlineSkills = takeFlag(args, "--inline-skills");
     if (skillAttachments && inlineSkills) throw new Error("Choose --skill-attachments or --inline-skills");
@@ -378,6 +381,7 @@ export async function runDevCommand(args: string[]): Promise<void> {
         ? { browserInteractionMode: manualBrowserInteraction ? "manual" : "automatic" }
         : {}),
       ...(biggerContext || standardContext ? { experimentalBiggerContext: biggerContext } : {}),
+      ...(predictions || noPredictions ? { composerPredictionsEnabled: predictions } : {}),
       ...(skillAttachments || inlineSkills ? { experimentalSkillAttachments: skillAttachments } : {}),
       ...(freshConversation || retainedConversation ? { experimentalFreshConversationPerTurn: freshConversation } : {}),
       ...(savedChats || temporaryChats ? { useSavedChats: savedChats } : {}),

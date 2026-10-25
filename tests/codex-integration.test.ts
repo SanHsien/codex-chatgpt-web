@@ -809,18 +809,18 @@ describe("reversible native Codex route integration", () => {
     const withoutHook = active.replace(installed.interruptHook.fragment, "");
     const journal = readFileSync(getCodexJournalPath(), "utf8");
     const recovery = readFileSync(getCodexJournalRecoveryPath(), "utf8");
-    for (const current of [
-      active.replace("timeout = 3", "timeout = 2"),
-      withoutHook + installed.interruptHook.fragment.split("[[hooks.Interrupt]]")[0],
-      withoutHook + `\n[hooks.state.${JSON.stringify(installed.interruptHook.stateKey)}]\ntrusted_hash = ${JSON.stringify(installed.interruptHook.trustedHash)}\n`,
-      withoutHook + '\n[[hooks.Interrupt]]\n[[hooks.Interrupt.hooks]]\ntype = "command"\ncommand = "user-modified-hook"\n',
-      withoutHook + '\n[hooks]\nInterrupt = []\n',
-      withoutHook + '\n[hooks]\nstate = "invalid"\n',
-      withoutHook + '\n[mcp_servers.invalid\n',
-    ]) {
+    for (const [current, diagnosis] of [
+      [active.replace("timeout = 3", "timeout = 2"), "command or settings in hooks.Interrupt"],
+      [withoutHook + installed.interruptHook.fragment.split("[[hooks.Interrupt]]")[0], "entry is missing from hooks.Interrupt"],
+      [withoutHook + `\n[hooks.state.${JSON.stringify(installed.interruptHook.stateKey)}]\ntrusted_hash = ${JSON.stringify(installed.interruptHook.trustedHash)}\n`, "entry is missing from hooks.Interrupt"],
+      [withoutHook + '\n[[hooks.Interrupt]]\n[[hooks.Interrupt.hooks]]\ntype = "command"\ncommand = "user-modified-hook"\n', "command or settings in hooks.Interrupt"],
+      [withoutHook + '\n[hooks]\nInterrupt = []\n', "entry is missing from hooks.Interrupt"],
+      [withoutHook + '\n[hooks]\nstate = "invalid"\n', "entry is missing from hooks.Interrupt"],
+      [withoutHook + '\n[mcp_servers.invalid\n', "could not be parsed as TOML"],
+    ] as const) {
       writeFileSync(configPath, current);
-      expect(() => preflightCodexIntegration(config, { replaceExistingRoute: true })).toThrow();
-      expect(() => installCodexIntegration(config, { replaceExistingRoute: true })).toThrow();
+      expect(() => preflightCodexIntegration(config, { replaceExistingRoute: true })).toThrow(diagnosis);
+      expect(() => installCodexIntegration(config, { replaceExistingRoute: true })).toThrow(diagnosis);
       expect(readFileSync(configPath, "utf8")).toBe(current);
       expect(readFileSync(getCodexJournalPath(), "utf8")).toBe(journal);
       expect(readFileSync(getCodexJournalRecoveryPath(), "utf8")).toBe(recovery);
@@ -1238,4 +1238,36 @@ describe("reversible native Codex route integration", () => {
     expect(readFileSync(configPath, "utf8")).not.toContain("multi_agent");
   });
 
+});
+
+
+test("startup recovery and upgrades respect explicit route disconnects", () => {
+  const { codexHome } = fixture();
+  const configPath = join(codexHome, "config.toml");
+  const original = 'model = "gpt-6-sol"\n';
+  writeFileSync(configPath, original);
+  installCodexIntegration(nativeConfig("browser-only"));
+  deactivateCodexIntegration();
+  expect(activateCodexIntegration({ recoveryOnly: true })).toEqual({ changed: false, active: false });
+  const upgraded = { ...nativeConfig("browser-only"), port: 17855 };
+  installCodexIntegration(upgraded, { preserveDisconnectedRoute: true });
+  expect(inspectCodexIntegration().active).toBeFalse();
+  expect(readFileSync(configPath, "utf8")).toBe(original);
+  expect(activateCodexIntegration({ recoveryOnly: true }).active).toBeFalse();
+  expect(activateCodexIntegration().active).toBeTrue();
+  expect(readFileSync(configPath, "utf8")).toContain("17855");
+
+  deactivateCodexIntegration({ forRuntimeRecovery: true });
+  installCodexIntegration(upgraded, { preserveDisconnectedRoute: true });
+  expect(inspectCodexIntegration().active).toBeFalse();
+  expect(activateCodexIntegration({ recoveryOnly: true })).toEqual({ changed: true, active: true });
+
+  deactivateCodexIntegration({ forRuntimeRecovery: true });
+  expect(deactivateCodexIntegration()).toEqual({ changed: false, active: false });
+  expect(activateCodexIntegration({ recoveryOnly: true }).active).toBeFalse();
+  expect(readFileSync(configPath, "utf8")).toBe(original);
+  // A failed start cannot turn an already deliberately disconnected route into recovery.
+  deactivateCodexIntegration({ forRuntimeRecovery: true });
+  expect(activateCodexIntegration({ recoveryOnly: true }).active).toBeFalse();
+  expect(activateCodexIntegration().active).toBeTrue();
 });
