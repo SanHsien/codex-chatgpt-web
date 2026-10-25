@@ -494,6 +494,10 @@ export function extractChatGptSteeringEnvironmentClaim(parsed: CodexParsedReques
   return undefined;
 }
 
+// The root list keeps a single trailing \s* after the last <root>: a \s* both before and after each root let a run of
+// whitespace split between neighbouring roots in exponentially many ways (CodeQL js/redos).
+export const CALENDAR_ENVIRONMENT_PATTERN = /^<environment_context>\s*<current_date>\d{4}-\d{2}-\d{2}<\/current_date>\s*(?:<timezone>[^<>]+<\/timezone>\s*)?<filesystem>\s*(?:<workspace_roots>((?:\s*<root>[^<>]+<\/root>)+\s*)<\/workspace_roots>\s*)?(<permission_profile type="(?:disabled|managed)">[\s\S]*?<\/permission_profile>)\s*<\/filesystem>\s*(?:<subagents>\s*(?:<agent name="[^<>"\r\n]+"\s*\/>\s*)*<\/subagents>\s*)?<\/environment_context>$/;
+
 /**
  * Native world-state diffs omit unchanged cwd/shell at midnight but repeat the filesystem
  * profile. Recognize the calendar fragment as a claim only: the store
@@ -531,7 +535,7 @@ export function extractChatGptCalendarEnvironmentDelta(
     // profile, a malformed cwd, or any additional permission declaration must fail closed.
     // Native midnight updates can also repeat a worker inventory. Its exact name-only
     // shape is contextual; it grants neither filesystem authority nor child ownership.
-    const match = /^<environment_context>\s*<current_date>\d{4}-\d{2}-\d{2}<\/current_date>\s*(?:<timezone>[^<>]+<\/timezone>\s*)?<filesystem>\s*(?:<workspace_roots>((?:\s*<root>[^<>]+<\/root>\s*)+)<\/workspace_roots>\s*)?(<permission_profile type="(?:disabled|managed)">[\s\S]*?<\/permission_profile>)\s*<\/filesystem>\s*(?:<subagents>\s*(?:<agent name="[^<>"\r\n]+"\s*\/>\s*)*<\/subagents>\s*)?<\/environment_context>$/.exec(text);
+    const match = CALENDAR_ENVIRONMENT_PATTERN.exec(text);
     if (!match
       || !sandboxMetadataMatchesEnvironment(canonicalSandboxMetadata(metadata), text)
       || [metadata.sandbox_mode, metadata.sandbox].some(value => (
