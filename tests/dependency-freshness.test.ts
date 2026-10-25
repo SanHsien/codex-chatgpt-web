@@ -30,3 +30,14 @@ test("fails closed for malformed output and renders checker detail", () => {
   expect(renderReport(failed)).toContain("offline");
   expect(renderReport(checkFailure("invalid deferrals\nwith detail"))).toContain("invalid deferrals with detail");
 });
+
+test("strips every Bun dependency-kind suffix so deferrals still match", () => {
+  const kinds = ["dev", "peer", "optional"];
+  const output = `bun outdated v1.4.2 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n${kinds.map((kind) => `| pkg-${kind} (${kind}) | 1.0.0 | 1.1.0 | 2.0.0 |`).join("\n")}\n`;
+  expect(parseBunOutdated(output).map((row) => row.package)).toEqual(kinds.map((kind) => `pkg-${kind}`));
+});
+
+test("rejects non-object deferral entries with the documented error", () => {
+  expect(() => validateDeferrals({ schemaVersion: 1, deferrals: [null] })).toThrow("invalid or incomplete");
+  expect(() => validateDeferrals({ schemaVersion: 1, deferrals: ["pkg"] })).toThrow("invalid or incomplete");
+});

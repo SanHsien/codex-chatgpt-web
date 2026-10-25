@@ -16,7 +16,7 @@ const detail = (value: string) => value.replace(/[\x00-\x1f\x7f]/g, " ").replace
 export function validateDeferrals(value: unknown): Deferrals {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Dependency deferrals must be a JSON object.");
   const parsed = value as Record<string, unknown>, items = parsed.deferrals;
-  if (parsed.schemaVersion !== 1 || !Array.isArray(items) || !items.every((item) => { const entry = item as Record<string, unknown>; return (entry.workspace === "root" || entry.workspace === "launcher") && isText(entry.package) && isText(entry.latest) && isDate(entry.reviewed) && isText(entry.reason); })) throw new Error("Dependency deferrals are invalid or incomplete; refusing to continue.");
+  if (parsed.schemaVersion !== 1 || !Array.isArray(items) || !items.every((item) => { const entry = item as Record<string, unknown> | null; return !!entry && typeof entry === "object" && (entry.workspace === "root" || entry.workspace === "launcher") && isText(entry.package) && isText(entry.latest) && isDate(entry.reviewed) && isText(entry.reason); })) throw new Error("Dependency deferrals are invalid or incomplete; refusing to continue.");
   const keys = new Set<string>();
   for (const item of items as Array<Record<string, unknown>>) {
     const key = `${item.workspace}\u0000${item.package}`;
@@ -33,7 +33,7 @@ export function parseBunOutdated(output: string): OutdatedDependency[] {
     const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
     if (cells.length !== 4 || cells[0] === "Package") continue;
     if (!cells.every(isText)) throw new Error("Bun outdated returned a malformed table row.");
-    rows.push({ package: cells[0].replace(/ \(dev\)$/, ""), current: cells[1], update: cells[2], latest: cells[3] });
+    rows.push({ package: cells[0].replace(/ \((?:dev|peer|optional)\)$/, ""), current: cells[1], update: cells[2], latest: cells[3] });
   }
   if (!/bun outdated v1\.4\.2/.test(output)) throw new Error("Bun outdated output is unavailable or not from pinned Bun 1.4.2.");
   return rows;
