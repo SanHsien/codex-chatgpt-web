@@ -19,3 +19,7 @@
   [loop engineering](docs/loop-engineering.md). It is disabled by default; Quick is feedback only,
   and only a successful Full gate may create completion evidence. The loop may not auto-merge,
   push `main`, deploy, authenticate, or perform another approval-bound action.
+
+## Roadmap
+
+- `ROADMAP.md` is the single source of truth for this repository's next work. When you finish or add work, update it in the same commit: delete finished rows, add new ones. Do not keep a to-do list in any other file.
