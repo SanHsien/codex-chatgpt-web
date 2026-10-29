@@ -10,7 +10,6 @@
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
 | 分批移植已審 6.1.14～6.1.17 的 Windows 適用修正 | #932 已有 Windows 模型偵測失敗；新差量另含 MCP 契約、權限、壓縮（含 6.1.17 `760ab5a` 的 Full Access 附加工作區，需與 `e6ed93a`／`b48477e` 一起移植）與偏好遷移 | 依 DECISIONS 逐項移植；優先 inline picker／正向 Luna 能力證據；每個修 bug 先紅後綠，保留既有模型／effort 與 Windows 路徑防線；MCP ABI 與 Temporary Chat 預設先由維護者決定；通過完整本機閘門，帳戶與打包依原條件獨立驗收，不升公開安裝器 pin | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-10-29-upstream-review-6114-6117-912-934) |
-| 校正 fork 文件的舊基準與維護紀錄入口 | FORK 還列舊基準，CHANGELOG 未反映後續主要同步 | 對照 git log 與 DECISIONS 修正來源基準、來源版與發布版的描述；保留已發布安裝器 pin；待辦只連本路線圖 | Claude Sonnet | [FORK.md:12](FORK.md)、[CHANGELOG.md:6](CHANGELOG.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md) |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |

@@ -9,8 +9,25 @@ This file records maintained-fork work and release identity. See this fork's
   non-PR issues #912-#933; recorded each decision and reconsideration condition.
 - Advanced only the strict four-axis reviewed-history ledger and its contract assertions.
   Fork source stays 6.1.13; the public Windows installer/updater stays v5.0.6.
-- Updated the roadmap and review evidence; source ports, account and package acceptance
+- Updated [ROADMAP.md](ROADMAP.md) and review evidence; source ports, account and package acceptance
   remain separate work.
+
+## 2026-10-25
+
+- Adopted upstream 6.x in three single-parent merge stages (A: 6.0 line `7579422`,
+  B: 6.1.0-6.1.3 `fa2d2c6`, C: 6.1.4-6.1.13 `0901b9f`), bringing fork source to 6.1.13
+  while keeping the public Windows release and installer pinned to v5.0.6.
+- Restored ChatGPT Web browser automation for the updated ChatGPT UI (composer, model picker,
+  power slider, turn keys, send/stop selectors), aligned launcher with 6.0 CLI and symlinked
+  `config.toml`, and adopted saved chats, composer predictions, attachment upload, tunnel proxy,
+  and `skills/pro-researcher`.
+- Preserved Windows named-pipe handling, `toNamespacedPath`, `Codex Native2` connector identity,
+  Windows-only packaging/updater, Electron 44.9.1, Bun 1.4.2, and the 80 s tool timeout cap (#904).
+- Added fork fix in `chatGptModelFamilyMatches` to accept observed Chinese effort labels
+  (`即时`, `中`, `高`) from upstream issue #911.
+- Monitored upstream issue #910 and advanced the reviewed ledger through PR #909 and issue #911.
+- Updated dependency overrides (Hono 4.13.12, `@hono/node-server` 2.1.3).
+- Backlog and follow-up work are tracked in [ROADMAP.md](ROADMAP.md).
 
 ## 2026-09-20
 
