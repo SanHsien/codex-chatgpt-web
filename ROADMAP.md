@@ -4,11 +4,12 @@
 > 現況段的數字是 2026-10-29 依 `main` `03cf40ba9fb3` 查的快照，開工前先重查 GitHub。
 
 ## 現況
-本 fork 將 ChatGPT Web 接入 Windows Codex 工作流；原始碼已採用上游 6.1.13，公開安裝器仍釘在 v5.0.6，這是刻意的發版邊界（[README.md:26](README.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md)）。2026-10-29 `gh` 查詢記錄各主要 workflow 最近結果成功、開啟安全告警為 0，issues 停用而未查到 issue；上游最新 release 為 v6.1.14（2026-10-26），因此舊 Upstream check 成功不能證明新版本已審（2026-10-29 `gh` 查詢）。登入、MCP 與打包後實機行為仍需獨立驗收（[docs/REVIEW.md:15](docs/REVIEW.md)）。
+本 fork 將 ChatGPT Web 接入 Windows Codex 工作流；原始碼已採用上游 6.1.13，公開安裝器仍釘在 v5.0.6，這是刻意的發版邊界（[README.md:26](README.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md)）。2026-10-29 `gh` 查詢記錄各主要 workflow 最近一次（2026-10-25）結果成功、開啟安全告警為 0；但 2026-10-29 推送後沒有任何 workflow 被觸發，`gh workflow run CI` 回 HTTP 422「Actions has been disabled for this repository」，而 `actions/permissions` 顯示 enabled，所以此後的 commit 都沒有 CI 證據；issues 停用而未查到 issue；上游最新 release 為 v6.1.14（2026-10-26），因此舊 Upstream check 成功不能證明新版本已審（2026-10-29 `gh` 查詢）。登入、MCP 與打包後實機行為仍需獨立驗收（[docs/REVIEW.md:15](docs/REVIEW.md)）。
 
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
+| 恢復 Actions 的觸發 | 推送不觸發任何 workflow，之後的改動都沒有 CI 把關；API 與實際行為不一致，要從 repo 設定頁處理 | 到 https://github.com/SanHsien/codex-chatgpt-web/settings/actions 確認設定，並看 https://github.com/SanHsien/codex-chatgpt-web/actions 有沒有要求重新啟用的提示；之後 `gh workflow run CI -R SanHsien/codex-chatgpt-web` 不再回 422，最新 commit 有 CI run 且 success | 維護者 | 2026-10-29 `gh workflow run` 回 422；`gh api repos/SanHsien/codex-chatgpt-web/actions/permissions` |
 | 審查 baseline 之後的上游更新與新 release | 上游 v6.1.14（2026-10-26）晚於已審 `0901b9f`（6.1.13） | 重新取得四軸資料，讀差量與 release；逐筆採用／延後／拒絕記入既有決策，通過嚴格 baseline 檢查才推進水位，不直接升安裝器 | Codex | [tools/upstream_baseline.json:9](tools/upstream_baseline.json)；2026-10-29 `gh release list -R miuuyy/codex-chatgpt-web` |
 | 校正 fork 文件的舊基準與維護紀錄入口 | FORK 還列舊基準，CHANGELOG 未反映後續主要同步 | 對照 git log 與 DECISIONS 修正來源基準、來源版與發布版的描述；保留已發布安裝器 pin；待辦只連本路線圖 | Claude Sonnet | [FORK.md:12](FORK.md)、[CHANGELOG.md:6](CHANGELOG.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md) |
 
