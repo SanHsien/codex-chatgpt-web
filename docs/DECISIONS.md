@@ -678,3 +678,127 @@ Read-only re-check; upstream `main` is still `0901b9fb1976b4a984c7e9b4082c286876
 | Issue #911 (v6.1.13 rejects a valid GPT-6 High selection in the Simplified Chinese picker because the announcement says `高`), open | adopt (own fix) | Reproduced by reading the code: `chatGptModelFamilyMatches` compared the announced mode with English words only, and upstream has the same code. The fork now also accepts the labels seen in the report (`即时`, `中`, `高`; the Traditional form `即時` was not observed, so it is not accepted); the slider position is still checked separately, and unknown translations stay rejected. Extra High and Pro labels were not observed in the report and are not guessed. | Upstream lands its own fix (compare, then drop the local list), or an Extra High / Pro label is observed. |
 
 Advance the reviewed ledger to non-PR issue #911.
+
+## 2026-10-29 upstream review: 6.1.14-6.1.17, #912-#934
+
+This is a reviewed-history update, not a source merge or release adoption. The read-only
+[comparison](https://github.com/miuuyy/codex-chatgpt-web/compare/0901b9fb1976b4a984c7e9b4082c2868767bbf7c...860fa576eb47d9e20d7d8289235bfea94392d2fd)
+contains 38 commits: the first pass stopped at `b618281` (36 commits), and upstream then added
+`760ab5a` and `860fa57` before this ledger was promoted, so the review was extended to them.
+Release notes for [v6.1.14](https://github.com/miuuyy/codex-chatgpt-web/releases/tag/v6.1.14)
+(2026-10-26), [v6.1.15](https://github.com/miuuyy/codex-chatgpt-web/releases/tag/v6.1.15),
+[v6.1.16](https://github.com/miuuyy/codex-chatgpt-web/releases/tag/v6.1.16) and
+[v6.1.17](https://github.com/miuuyy/codex-chatgpt-web/releases/tag/v6.1.17) (the last three
+all 2026-10-29) were read alongside the code and test delta. Release dates do not prove Windows
+acceptance.
+All product ports below are deferred or rejected; the fork source stays 6.1.13, the public
+installer/updater stays 5.0.6, and Bun stays 1.4.2. Follow-up work belongs only in ROADMAP.md.
+Earlier decisions are superseded only where explicitly stated below.
+
+### Main commits, including merge-only history
+
+Commit prefixes below uniquely identify commits in the exact comparison above. A deferral is
+about local adoption, even where upstream has already merged or released the change.
+
+| Commit | Decision | Reason and reconsideration condition |
+| --- | --- | --- |
+| `d3cf95a70387` rich JSON rendering (#886) | defer | Escapes string lexemes and changes multipart size accounting. Port with round-trip and partition-budget regressions before any browser acceptance. |
+| `afa35a7bd76c` remove Temporary Chat | reject this intermediate design | Superseded upstream by `7c7c10e`/`ad9a611`; do not remove and then restore a user preference. Review the final migration separately. |
+| `e6ed93a4006b` cwd-less updates (#894) | defer | Replaces first-root cwd inference with current native rollout authority across environment/store types. Reconsider with reordered-root, missing-rollout and restricted-mode negative regressions. Supersedes the earlier monitor trigger: a fix now exists. |
+| `3790e3f46c51` native steering test synchronization | defer | Accompanies native-task restoration; import with that implementation, not as an unrelated test-only change. |
+| `794e5769e5e3` accepted native task after compaction | defer | Restores authenticated task messages and attribution in the prompt; needs repeated-compaction, new-steering and forged-source negative tests against this fork. |
+| `3b47927089e4` native goal source | defer | Extends checkpoint provenance to synthetic goals; review with `794e576` so older human messages cannot replace the current task. |
+| `6140f0b0a6ee` observed Chinese effort labels (#911) | reject duplicate replacement | The fork already accepts exactly the same observed labels (即时/中/高) and rejects unknown labels. Keep the local regression; reconsider parser consolidation with the picker port, without guessing new translations. |
+| `53b60503b432` 60 s command polls (#904) | defer | Fork already advertises 80 s for the dedicated tool. Upstream additionally bounds generic/native exec and rejects excessive durations without rewriting them. This changes tools/list and its ABI; requires focused transport tests and a coordinated connector refresh. The local cap is not claimed equivalent. |
+| `7b7f2f807d2e` merge #896 | defer | Same native-task restoration as `794e576`/`3b47927`; merge status satisfies the earlier re-review trigger, not local acceptance. |
+| `150787819816` merge main into context branch | reject direct merge | Integration history is not an independent port; component decisions above apply. |
+| `ffe041f880f0` delayed finals/token diagnostics | defer | Extends missing-final grace to ten minutes and adds context counts. Needs a deterministic delayed-final versus explicit-failure test; does not prove a generic #910 repair. |
+| `a738f0485c6a` MCP setup/catalog separation (#893/#895) | defer | Separates core installation readiness from catalog health. Reconsider with failed catalog, healthy proxy and incomplete-installation cases; a catalog error must remain visible. |
+| `988f45a15201` dependencies/Electron preparation | defer remaining dependency removal; reject pin replacement | Fork locks already contain body-parser 2.4.0, fast-uri 3.1.9, ip-address 10.7.4, qs 6.16.2, Zod 4.6.7 and Undici 7.30.1/6.29.1. Keep Electron 44.9.1 rather than upstream 42.11.16 and Bun 1.4.2 rather than 1.4.0. Bootstrap already prepares Electron; verify already avoids duplicate renderer typecheck. Removing chromium-bidi is a separate unused-dependency assessment, not a forced major upgrade. |
+| `467dea6b99d7` merge main into context branch | reject direct merge | Integration history; retain per-component decisions and both fork lockfiles. |
+| `cfeaf04bc7f5` release 6.1.14 | defer source/release adoption | Includes removed Temporary Chat, authority and MCP contract changes above. Never move the fork installer from release notes alone. |
+| `b48477ea8ada` Full Access worktrees | defer | Uses runtime_workspace_roots and permits authenticated Full Access cwd outside retained roots. Changes authorization boundaries in rollout, store and broker; retain namespace path normalization and prove restricted modes still reject out-of-root cwd. |
+| `dc29540a0f99` current Think sprite (#902) | defer | Observed icon addition is portable, but needs retained and current sprite fixtures against the fork's composer before porting; no signed-in Windows verification in this task. |
+| `7e6e1a0bfae4` Doctor compaction override (#919) | defer | Read-only global/default-profile TOML inspection is a bounded candidate. Port with malformed profile, context limit and no-mutation tests; it cannot observe running CLI/project overrides. |
+| `7c7c10edee41` restore Temporary Chat (#918) | defer | Renames useSavedChats to useTemporaryChats across CLI, IPC, settings and worker. Needs explicit-opt-out migration, connector-unavailable and Zero Risk tests plus opted-in account acceptance. |
+| `ad9a6114a598` default Temporary Chat on | defer | A product default and privacy migration decision; evaluate with the preceding migration instead of silently changing existing saved-chat behavior. |
+| `d80bf0d49cef` BOM settings/verification | defer BOM port; reject duplicate verification change | BOM-tolerant JSON reads need Windows state/window preservation tests. Fork verify already uses build:renderer; keep the canonical repair-free gate. |
+| `d3734f1f378c` cancellation measurement | defer | Changes live smoke timing to start at provider terminal. Not needed for this read-only maintenance task; reassess when explicitly running cancellation acceptance. |
+| `0a8f233f88d3` owned runtime persistence failure (#905) | defer | Earlier deferral now has a bounded upstream implementation: waits for lifecycle/recovery tasks, stops only owned children and blocks unsafe starts. Requires fault injection for initial/recovery state writes and Windows process ownership before adoption. |
+| `89f0ead030f1` exact explicit model picker (#921) | defer | Exact Sol/Astra rows, six positions and Astra Max verification change model routing. Port with old/new picker fixtures, missing/duplicate/locked/wrong-version negative tests; do not treat Linux live evidence as Windows acceptance. |
+| `b6043e022eaf` rendered identity/stream diagnostics (#914) | defer | innerText handles BR boundaries while raw text rejects hidden/duplicate identities; diagnostics add stream observers. Needs identity adversarial tests, teardown and content-free log review. This does not adopt draft #914's reload/recovery bundle. |
+| `0286265634a4` native session reminder layer | defer | Adds native view, restricted preload and renderer entry. Requires Windows browser focus, layering, resize and dismissal checks; offline build alone is insufficient. |
+| `87449745382b` merge #921 | defer | Same exact-picker candidate as `89f0ead`; no additional independent implementation. |
+| `b95b38a0f45b` merge main into worktree branch | reject direct merge | Integration history; authority and UI components require their own acceptance. |
+| `30e7ad9deb73` isolate ChatGPT UI contracts | defer | Moves shared selectors/parsers to chatgpt-ui and adds observed-variant diagnostics/fixtures. Review with the picker candidate to avoid a partial import breaking callers and losing the local #911 handling. |
+| `8a75f1ba3916` release 6.1.15 | defer source/release adoption | Includes exact picker, Temporary Chat default, native reminder and Full Access changes; preserve fork source/release separation. |
+| `2f0936b6360b` inline model control (#924/#927/#928) | defer | Narrow observed reasoning selector is a high-priority Windows candidate. Port to the fork with retained variants and unrelated-button negatives, then verify exact model/effort before Send. No fallback or guessed selector. |
+| `f9325c967be3` multipart compaction ceiling (#930) | defer | Trims only compaction history while preserving checkpoint/final instruction, counts the omission notice and uses the actual exclusive transport ceiling. Needs exact-boundary, atomic-record, attachment and ordinary-request-no-trim regressions. |
+| `e1780b1c1b87` delivery/staging retry guards (#929) | defer | Retry only a bound explicit delivery alert with settled native tool state; malformed staging ACK retries before commit, never accepts a near-match. Requires outstanding/late/duplicate tool-result tests to prove no command replay. |
+| `1a0e8934e608` connector navigation diagnostics (#925) | defer | Records failed home navigation checkpoint; inspect sanitization and cancellation classification before porting. It does not establish a turn_id-conflict fix. |
+| `9c3633c6e260` positive Luna evidence (#932) | defer | Missing paid controls must not overwrite the catalog with Luna-only. Pair with inline picker support and tests for unknown UI, verified Think and unchanged prior config; model reinstall remains an account-bound step. |
+| `b6182818bb14` release 6.1.16 | defer source/release adoption | Important Windows model-control fix, but source incorporation and account/package acceptance remain separate work. Do not raise package versions or the 5.0.6 installer pin in a review-only update. |
+| `760ab5a8ad87` preserve added Full Access workspaces after compaction (#933) | defer port | Keeps the rollout's declared roots and adds the current claim's extra roots (Codex's per-thread visualization/output folder), only when rollout and claim are both Full Access, cwd matches and every declared native root is already in the claim; cwd, permissions and task identity still come from the exact rollout. The patch sits on top of the 6.1.14 authority changes (`e6ed93a`, `b48477e`) that the fork has deferred, and the fork's `thread-environment.ts` is still the 6.1.13 shape, so it is not a standalone cherry-pick. Reconsider it together with those two commits: import its `tests/environment.test.ts` cases (declared session/turn roots plus an added output root) and add Windows drive-letter/namespace path-identity cases, a restricted-mode negative (an extra root must still be rejected) and dropped/replaced/foreign-root negatives. Whether the fork's 6.1.13 code shows the same `workspace_roots, writable_roots` conflict was not reproduced in this review; a fresh Windows report of that conflict on the fork moves this to high priority. |
+| `860fa576eb47` release 6.1.17 | defer source/release adoption | The commit changes only version strings (four READMEs, two package manifests, `scripts/install.sh`, `src/version.ts`); the comparison file list shows the only other changes are `760ab5a` and its test. The notes add one fix (#933) and restate Electron 42.11.16 and Bun 1.4.0, which the fork deliberately keeps at 44.9.1 and 1.4.2 (see `988f45a`). Do not raise package versions or the 5.0.6 installer pin in a review-only update. |
+
+### New pull requests
+
+The seven heads were read from the newest-PR inventory's first 30 results; its last
+number is below the previous #909 waterline, so the new range is complete. Exact heads are
+recorded because closed, merged and draft are different states, not acceptance verdicts.
+
+| PR | Observed state / head | Decision | Reason and reconsideration condition |
+| --- | --- | --- | --- |
+| [#914](https://github.com/miuuyy/codex-chatgpt-web/pull/914) | open draft; `71a8def2be770cda978461b627de605ab3cfef2c` | defer | Native goals plus vanished-response reload/expansion recovery; author reports longer-run failures after bounded successes. Only its separately released rendered-marker fix is considered above. Reconsider a stabilized, bounded Windows reproduction and no-resubmit/ownership tests. |
+| [#915](https://github.com/miuuyy/codex-chatgpt-web/pull/915) | closed, unmerged draft; `12e9f4d659393bdd89c974bc6ccb5ff8e69dde04` | reject withdrawn implementation | Superseded by #917; archive mutation succeeded but persistence readback remained unreliable. Do not introduce account writes through this review. |
+| [#921](https://github.com/miuuyy/codex-chatgpt-web/pull/921) | merged; `89f0ead030f1b7889aa86d30518a0259ee3df5a0` | defer | Reviewed as the exact-model candidate above. Retain strict family/effort verification and the local Chinese-label regression. |
+| [#927](https://github.com/miuuyy/codex-chatgpt-web/pull/927) | closed unmerged; `745fbf3b1d6bffcbc9fad3375f65863cf58fef93` | reject direct import | Same observed inline selector is released in `2f0936b`; use the canonical implementation candidate. Reported Windows success is useful evidence, not this fork's acceptance; its Full verify was interrupted. |
+| [#928](https://github.com/miuuyy/codex-chatgpt-web/pull/928) | closed unmerged draft; `383ac18c42b55a492ebcffc497db76b4cb0cc633` | reject bundled import | Inline selector is covered by `2f0936b`. The additional empty-new-chat reload is not established as a generic missing-final repair; reassess only a bounded Windows recovery case. |
+| [#931](https://github.com/miuuyy/codex-chatgpt-web/pull/931) | closed unmerged; `2cfdd4322e4a07f2f22ce4920f1c4bfe9bed115f` | reject bundle | Canonical #929/#930 fixes are reviewed above. Synthetic native identity and /v1/chat/completions expand the authenticated Codex contract, and Linux flags are outside scope. A new API requires an explicit separate requirement. |
+| [#934](https://github.com/miuuyy/codex-chatgpt-web/pull/934) | open draft; `891e7b752f7e78401fdc2d1b0c3334644a44008f` | defer | Native clipboard paste above 32,768 characters changes clipboard ownership, IPC and accepted-turn proof for pasted attachments. Bun suite was not run by the author. Reconsider stable tests proving clipboard restoration and exact acceptance without resubmission on Windows. |
+
+### New non-PR issues and unavailable numbers
+
+The newest-first issues endpoint returned 100 items and crossed below #911; filtering out
+pull_request records leaves the complete 14 new non-PR issues below. API 404 is recorded as
+absent or removed, not proof that a number was never allocated. Reporter diagnostics were not
+downloaded; issue bodies, public release notes and source/test patches were sufficient for deferral.
+
+| Issue | Observed state | Decision | Reason and reconsideration condition |
+| --- | --- | --- | --- |
+| [#912](https://github.com/miuuyy/codex-chatgpt-web/issues/912) normal chats | closed, not-planned; Windows | defer preference redesign | Review final #918 migration, not the removed 6.1.14 intermediate design; verify existing explicit settings before changing defaults. |
+| [#913](https://github.com/miuuyy/codex-chatgpt-web/issues/913) context/OpenCode hardening | open; macOS, needs logs | defer | Measurements and local patches do not establish this fork's Windows/OpenCode contract. #904 and #930 have separate bounded candidates; do not infer one shared cause. |
+| #916 | API 404 | reject as actionable item | Absent or removed at review time; reconsider if retrievable. |
+| [#917](https://github.com/miuuyy/codex-chatgpt-web/issues/917) retired-chat archival | closed, not-planned | reject current proposal | Upstream declined the feature; account mutation and persistence remain unverified. Reconsider only a separately requested feature with explicit account acceptance. |
+| [#918](https://github.com/miuuyy/codex-chatgpt-web/issues/918) Temporary Chat | closed, released; Windows | defer | Free/Luna report establishes a Windows candidate, not Bigger Context/compaction support. Follow the migration decision above. |
+| [#919](https://github.com/miuuyy/codex-chatgpt-web/issues/919) compaction override | closed, released; Windows | defer | Bounded read-only Doctor candidate in `7e6e1a0`; require profile and no-write tests. |
+| #920 | API 404 | reject as actionable item | Absent or removed at review time; reconsider if retrievable. |
+| [#922](https://github.com/miuuyy/codex-chatgpt-web/issues/922) UI/quota question | closed | defer documentation assessment | No confirmed shared-quota bug. Upstream removed a blanket no-Work/Codex-quota promise; evaluate any matching fork wording in both README languages without claiming account billing evidence. |
+| [#923](https://github.com/miuuyy/codex-chatgpt-web/issues/923) Astra effort menu | closed, released; macOS | defer linked portable fix | Exact-picker candidate #921; strict selection already failed closed. Requires fork fixtures and Windows acceptance. |
+| [#924](https://github.com/miuuyy/codex-chatgpt-web/issues/924) inline picker | closed, released; macOS | defer linked portable fix | Independent Windows evidence exists in #927; inspect and test `2f0936b` against fork callers rather than guessing menu labels. |
+| [#925](https://github.com/miuuyy/codex-chatgpt-web/issues/925) connector navigation/turn identity | closed, partial release; macOS | defer | Navigation diagnostic and selector changes are distinct from the unresolved turn_id report; require fresh Windows evidence before relaxing identity checks. A comment added after the first pass (2026-10-29T15:33Z, v6.1.16, macOS) reports a turn accepted by ChatGPT whose assistant response the bridge did not detect in the DOM; it has no Windows evidence and stays a separate, unreproduced item. |
+| [#926](https://github.com/miuuyy/codex-chatgpt-web/issues/926) Luna-only Plus | closed, released; Linux | defer linked portable fix | Shared paid-capability detection has a confirmed Windows counterpart #932; no Linux packaging is imported. |
+| [#929](https://github.com/miuuyy/codex-chatgpt-web/issues/929) delivery/ACK/frozen page | open, partial release; macOS | defer bounded retry fix | Canonical alert and staging changes differ from reporter's broad retry/near-match proposal. Preserve exact ACK and no-replay guards; generic frozen/missing-final behavior still needs evidence. |
+| [#930](https://github.com/miuuyy/codex-chatgpt-web/issues/930) multipart compaction | closed, released; macOS | defer linked portable fix | Reproducible budget branch in shared prompt code; port `f9325c9` only with checkpoint, ceiling and no ordinary-history trimming regressions. |
+| [#932](https://github.com/miuuyy/codex-chatgpt-web/issues/932) Luna-only/crash | closed, released; Windows/cross-platform | defer high-priority fix | Confirms Windows relevance of inline picker/positive capability detection; requires coordinated model-catalog tests and separate opted-in reinstall validation. |
+| [#933](https://github.com/miuuyy/codex-chatgpt-web/issues/933) declared visualization roots | closed, completed 2026-10-29T15:38Z by v6.1.17 (open at the first pass); macOS report, Windows confirmation comment, 6.1.16 | defer port | Fixed upstream by `760ab5a` in v6.1.17, which supersedes the earlier note that 6.1.16 did not fix it. The fix keeps declared native roots and only adds claim roots when both sides are Full Access; restricted tasks keep their native grants. The local port waits with `e6ed93a`/`b48477e`, as in the commit row above. Reconsider when those authority commits are ported, or on a fresh Windows report of the `workspace_roots, writable_roots` conflict; require current/parent thread-only visualization roots, dropped/replaced/foreign-root negatives and Windows namespace regressions first. |
+
+### Four-axis promotion evidence
+
+The first candidate ledger (`main` `b6182818bb14d108a63cfa548b9c6684d82cfacc`) was checked with UPSTREAM_BASELINE_PATH before
+replacing the tracked baseline: exit 0, all four axes current. While it was being promoted,
+upstream `main` advanced to `860fa576eb47d9e20d7d8289235bfea94392d2fd` (`760ab5a`, `860fa57`) and v6.1.17 was published, so the
+same stale candidate then failed strict (exit 1) with the main and branch axes `attention`; the review was extended
+and the ledger re-pointed. A second read-only pass re-queried the other axes: the newest PR is
+still #934 (head unchanged), the newest non-PR issue is still #933, and the branch inventory is
+still `main` only. Items #913, #914, #929 and #934 stayed open, every other reviewed item kept
+its state, and #933 moved from open to closed (completed). The reviewed values are:
+
+- main and sole branch `main`: `860fa576eb47d9e20d7d8289235bfea94392d2fd`;
+- latest PR #934, head `891e7b752f7e78401fdc2d1b0c3334644a44008f`;
+- latest non-PR issue #933; reviewedAt `2026-10-29`.
+
+The canonical gate rechecks these live values; unavailable or newly advanced axes must fail.
+Only read-only GitHub API queries and a local `git fetch` of upstream objects (to read the two new
+commits) were used. No merge, cherry-pick, Git staging/commit, upstream write, account operation
+or release was performed. The tracked fork-contract assertions advance with this reviewed ledger.

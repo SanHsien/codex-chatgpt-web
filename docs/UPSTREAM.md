@@ -476,3 +476,18 @@ did not move again. Reviewed read-only, same pass:
 Advance the reviewed ledger to `main` `757942251222ee0f71953c35636679c6d92dd636`, PR #664 at
 `39dbceaee47f8821a5df0bc06a9785bb1b9e9cfc`, non-PR issue #668, and branch inventory `main` only
 (the `6.0.0` branch was merged and removed). Neither axis is a merge target.
+
+## 2026-10-29 current review: v6.1.14-v6.1.17
+
+The historical inventories above remain immutable. The current four-axis ledger is main and
+sole branch `main` at `860fa576eb47d9e20d7d8289235bfea94392d2fd`, latest PR
+[#934](https://github.com/miuuyy/codex-chatgpt-web/pull/934) at
+`891e7b752f7e78401fdc2d1b0c3334644a44008f`, and latest non-PR issue
+[#933](https://github.com/miuuyy/codex-chatgpt-web/issues/933).
+
+[DECISIONS.md](DECISIONS.md#2026-10-29-upstream-review-6114-6117-912-934) records all
+38 comparison commits, seven new PR heads, 14 new issues, two API-404 gaps, four releases,
+and explicit deferral/rejection reasons with reconsideration conditions. The candidate baseline
+passed the strict four-axis check before tracked promotion. Reviewed does not mean adopted:
+fork source remains 6.1.13; public Windows installer/updater remains 5.0.6. Neither release
+notes nor source checks establish signed-in UI, MCP or packaged Windows acceptance.

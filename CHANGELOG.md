@@ -3,6 +3,15 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-10-29
+
+- Reviewed the 38-commit upstream delta through v6.1.17 (`860fa57`), new PRs #914-#934 and
+  non-PR issues #912-#933; recorded each decision and reconsideration condition.
+- Advanced only the strict four-axis reviewed-history ledger and its contract assertions.
+  Fork source stays 6.1.13; the public Windows installer/updater stays v5.0.6.
+- Updated the roadmap and review evidence; source ports, account and package acceptance
+  remain separate work.
+
 ## 2026-09-20
 
 - Added a disabled-by-default, bounded quality-loop contract. Quick verification is

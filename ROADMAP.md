@@ -1,15 +1,15 @@
 # 路線圖
 
 > 本 repo 後續工作的單一真相源。做完一項，就在同一個 commit 刪掉那一列；新工作只加在這裡。
-> 現況段的數字是 2026-10-29 依 `main` `03cf40ba9fb3` 查的快照，開工前先重查 GitHub。
+> 現況段的 GitHub 資料為 2026-10-29 快照；上游四軸已重查，fork Actions 與安全告警仍沿用當日先前查詢，開工前先重查。
 
 ## 現況
-本 fork 將 ChatGPT Web 接入 Windows Codex 工作流；原始碼已採用上游 6.1.13，公開安裝器仍釘在 v5.0.6，這是刻意的發版邊界（[README.md:26](README.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md)）。2026-10-29 `gh` 查詢記錄各主要 workflow 最近一次（2026-10-25）結果成功、開啟安全告警為 0；2026-10-29 曾因 GitHub 自動停用 fork 的 workflow 而推送不觸發（API 仍顯示 enabled），同日在 Actions 頁按「re-enable」後恢復；issues 停用而未查到 issue；上游最新 release 為 v6.1.14（2026-10-26），因此舊 Upstream check 成功不能證明新版本已審（2026-10-29 `gh` 查詢）。登入、MCP 與打包後實機行為仍需獨立驗收（[docs/REVIEW.md:15](docs/REVIEW.md)）。
+本 fork 將 ChatGPT Web 接入 Windows Codex 工作流；原始碼已採用上游 6.1.13，公開安裝器仍釘在 v5.0.6，這是刻意的發版邊界（[README.md:26](README.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md)）。2026-10-29 `gh` 查詢記錄各主要 workflow 最近一次（2026-10-25）結果成功、開啟安全告警為 0；2026-10-29 曾因 GitHub 自動停用 fork 的 workflow 而推送不觸發（API 仍顯示 enabled），同日在 Actions 頁按「re-enable」後恢復；issues 停用而未查到 issue；上游最新 release 為 v6.1.17（2026-10-29），已逐筆審查 baseline 後 38 筆 commit、7 筆新 PR 與 14 筆新 issue；四軸已推進至 `860fa57`／PR #934／issue #933／僅 main，這是審查水位而非來源升級（[docs/DECISIONS.md](docs/DECISIONS.md#2026-10-29-upstream-review-6114-6117-912-934)）。登入、MCP 與打包後實機行為仍需獨立驗收（[docs/REVIEW.md:15](docs/REVIEW.md)）。
 
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 審查 baseline 之後的上游更新與新 release | 上游 v6.1.14（2026-10-26）晚於已審 `0901b9f`（6.1.13） | 重新取得四軸資料，讀差量與 release；逐筆採用／延後／拒絕記入既有決策，通過嚴格 baseline 檢查才推進水位，不直接升安裝器 | Codex | [tools/upstream_baseline.json:9](tools/upstream_baseline.json)；2026-10-29 `gh release list -R miuuyy/codex-chatgpt-web` |
+| 分批移植已審 6.1.14～6.1.17 的 Windows 適用修正 | #932 已有 Windows 模型偵測失敗；新差量另含 MCP 契約、權限、壓縮（含 6.1.17 `760ab5a` 的 Full Access 附加工作區，需與 `e6ed93a`／`b48477e` 一起移植）與偏好遷移 | 依 DECISIONS 逐項移植；優先 inline picker／正向 Luna 能力證據；每個修 bug 先紅後綠，保留既有模型／effort 與 Windows 路徑防線；MCP ABI 與 Temporary Chat 預設先由維護者決定；通過完整本機閘門，帳戶與打包依原條件獨立驗收，不升公開安裝器 pin | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-10-29-upstream-review-6114-6117-912-934) |
 | 校正 fork 文件的舊基準與維護紀錄入口 | FORK 還列舊基準，CHANGELOG 未反映後續主要同步 | 對照 git log 與 DECISIONS 修正來源基準、來源版與發布版的描述；保留已發布安裝器 pin；待辦只連本路線圖 | Claude Sonnet | [FORK.md:12](FORK.md)、[CHANGELOG.md:6](CHANGELOG.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md) |
 
 ## 中期：等條件成立再做
