@@ -831,9 +831,9 @@ class BrowserHost {
       if (parsed.protocol === "https:" || parsed.protocol === "http:") void shell.openExternal(parsed.toString());
       return { action: "deny" };
     });
-    const blockAuthenticationNavigation = (event, url, _inPlace, mainFrame) => {
-      if (mainFrame === false || !allowedAuthUrl(url)) return;
-      event.preventDefault();
+    const blockAuthenticationNavigation = (details) => {
+      if (details.isMainFrame === false || !allowedAuthUrl(details.url)) return;
+      details.preventDefault();
       this.markTurnAuthenticationRequired(tab);
     };
     contents.on("will-navigate", blockAuthenticationNavigation);

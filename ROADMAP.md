@@ -10,12 +10,12 @@
 
 2026-11-03 依賴重審本機快照（基底 SHA `545cd44a5159a83878182fe7a7ee9e58426dea82`）：Electron 已採用 45.2.1，Windows package 與獨立 installer smoke 通過；chromium-bidi 159.0.8138-0 因 Playwright 載入路徑不相容、motion 14.9.0 因動畫視覺驗收條件未滿足、plugin-react 6.2.1 因要求 Vite 8，均依精確版本延後。`check:dependencies` exit 0、無 attention；root audit clean，launcher 仍明示既有 minimatch 安全延後。`bun run verify` exit 0；完整 dev_check exit 1，仍停在上游 strict gate（PR #958／issue #957／額外分支），未產生 Full 完成紀錄。installer smoke 首次超時、單獨重試通過；決策與完整結果見 [DECISIONS](docs/DECISIONS.md#2026-11-03-dependency-rereview) 與 [REVIEW](docs/REVIEW.md#2026-11-03-dependency-rereview)。
 
+2026-11-03 導航與版本線界線本機驗證快照（基底 SHA `da1513e5d0625d0e052a1fc491a4d4d0163f10c0`）：導航 guard 已使用 Electron event details；依賴延後支援精確 `latest` 與數字 `latestPrefix`，chromium-bidi 採用 159 版本線界線。`check:dependencies` exit 0；獨立 `bun run verify` exit 0（核心 1,103 pass／98 skip／0 fail；launcher 419 pass／1 skip／0 fail；runtime smoke 通過）。完整 dev_check exit 1，仍停在上游 strict gate（PR #958／issue #957／額外分支），未產生 Full 完成紀錄。回歸紅綠與完整證據見 [REVIEW](docs/REVIEW.md#2026-11-03-navigation-details-and-dependency-version-line-bounds)。
+
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 依賴延後支援「整條版本線」的界線 | `scripts/check-dependency-freshness.ts:44` 只在 `latest` 完全相等時才套用延後；chromium-bidi 幾乎每天發版，2026-11-03 記錄的 `159.0.8138-0` 推送當天就被 `159.0.8139-2` 取代，延後一出新版就失效、freshness 轉紅，但不相容的理由（新版不再提供 Playwright 需要的 `lib/cjs/`）對整條 159 線都成立 | 延後紀錄可宣告版本前綴或主版號界線（例如 `159`），比對時依宣告精度判斷；完全相等的舊條目行為不變；測試釘住「同前綴新版仍延後、跨越界線就提醒」 | Codex | `scripts/check-dependency-freshness.ts:44`；`.github/dependency-deferrals.json` 的 chromium-bidi 條目 |
 | 續移植 6.1.14～6.1.17 其餘 defer 項的 Windows 適用修正 | 已移植 #924、#932、#902，以及獨立修正 #919 Doctor 壓縮檢查（`7e6e1a0`）、#905 runtime 持久化失敗清理（`0a8f233`）、#921 精確 model picker 與 Astra Max（`89f0ead`）、#914 渲染身分診斷（`b6043e0`）；其餘仍 defer 的差量含 MCP 契約（`53b6050`、`a738f04`）、權限與工作區（`760ab5a` 的 Full Access 附加工作區，需與 `e6ed93a`／`b48477e` 一起移植）、傳遞／重試與多段壓縮（`e1780b1`、`f9325c9`、`ffe041f`）與 Temporary Chat 預設遷移（`7c7c10e`／`ad9a611`）；完整清單見 DECISIONS 該段表格與 2026-11-02 移植記錄 | 依 DECISIONS 逐項移植；每個修 bug 先紅後綠，保留既有模型／effort 與 Windows 路徑防線；MCP ABI 與 Temporary Chat 預設先由維護者決定；通過完整本機閘門，帳戶與打包依原條件獨立驗收，不升公開安裝器 pin | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-10-29-upstream-review-6114-6117-912-934)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-10-31-port-inline-model-control-924927928-and-positive-luna-capability-evidence-932)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-02-port-independent-fixes-7e6e1a0-0a8f233-89f0ead-b6043e0) |
-| 導航安全 guard 改讀 `details.url` | `launcher/electron/browser-host.cjs:834` 與 `launcher/electron/main.cjs:400` 的 `will-navigate` guard 讀位置參數 `url`，Electron 45 已標 @deprecated；日後 Electron 移除時 guard 會拿到 `undefined` | 兩處 guard 都改讀 `details.url`（必要時才加 fallback），並有測試證明不允許的 URL 仍被擋下 | Codex | `launcher/electron/browser-host.cjs:834`、`launcher/electron/main.cjs:400` |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
@@ -24,7 +24,7 @@
 | 發布已驗證的 Windows 新版 | 實機與打包驗收完成，維護者決定發布 | 版本、README、安裝腳本、`REVIEWED_RELEASE_VERSION` 與 release-contract 同步；以 Bun 1.4.2 通過 canonical gate，驗證資產雜湊與更新路徑 | Codex | [docs/DECISIONS.md:620](docs/DECISIONS.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md)、[AGENTS.md:3](AGENTS.md) |
 | 重評回覆提早中止與本地 effort 標籤補丁 | 上游 #910 有平台通用根因／Windows 重現，或 #911 上游修正／新標籤被實際觀察 | 用實際失敗輸入先重現；修正後驗證完成偵測、滑桿位置與模型家族，不猜測未見翻譯 | Codex | [docs/DECISIONS.md:662](docs/DECISIONS.md)、[docs/DECISIONS.md:672](docs/DECISIONS.md) |
 | 重審 minimatch 舊 API 安全延後 | 2026-11-17 到期，或相容父套件發布／告警與受影響 lock 節點變動 | 移除舊 API 路徑或重新審查精確延後；audit、verify 與 archive/filter 回歸通過，打包行為另依 release 驗收 | Codex | [.github/audit-deferrals.json](.github/audit-deferrals.json)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-launcher-minimatch-advisory-ghsa-g3hv-75wg-m249) |
-| 重審 chromium-bidi、motion、@vitejs/plugin-react 延後升級 | freshness 回報新的 latest 超過延後界線，或相容工具鏈／動畫視覺驗收條件成立 | 依精確版本重評升級或延後理由；兩個 workspace audit 與完整 verify 通過；Motion 升級另查頁面／提示動畫，plugin-react 與相容 Vite 一起驗證，chromium-bidi 須通過相容性測試 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-dependency-rereview) |
+| 重審 chromium-bidi、motion、@vitejs/plugin-react 延後升級 | freshness 回報新的 latest 超過延後界線，或相容工具鏈／動畫視覺驗收條件成立 | 依宣告的精確版本或版本線界線重評升級或延後理由；兩個 workspace audit 與完整 verify 通過；Motion 升級另查頁面／提示動畫，plugin-react 與相容 Vite 一起驗證，chromium-bidi 須通過相容性測試 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-dependency-rereview) |
 
 ## 刻意不做
 | 不做什麼 | 理由 | 什麼情況下重新考慮 |
@@ -34,4 +34,4 @@
 | 引進非 Windows 發布與重寫歷史 | 平台邊界見 [AGENTS.md:7](AGENTS.md)；無共同祖先是已知狀態 | 維護者另立平台或歷史遷移需求 |
 
 ## 維護方式
-每週依 [tools/upstream_baseline.json](tools/upstream_baseline.json) 四軸查增量，採用理由連到 [docs/DECISIONS.md](docs/DECISIONS.md)，不從版本號推定已合併。依賴 latest 超過精確延後版本就重審；離線、canonical gate、帳戶與發布驗收分別留證，發布前才同步公開版本入口。
+每週依 [tools/upstream_baseline.json](tools/upstream_baseline.json) 四軸查增量，採用理由連到 [docs/DECISIONS.md](docs/DECISIONS.md)，不從版本號推定已合併。依賴 latest 超出宣告的精確版本或版本線界線就重審；離線、canonical gate、帳戶與發布驗收分別留證，發布前才同步公開版本入口。

@@ -1208,6 +1208,26 @@ test("session verification distinguishes a missing login from network and invali
   }
 });
 
+test("turn navigation guards read details without deprecated positional arguments", () => {
+  for (const name of ["will-navigate", "will-redirect"]) {
+    const contents = Object.assign(new EventEmitter(), { setWindowOpenHandler() {}, setBackgroundThrottling() {} });
+    let marked = 0;
+    const host = Object.assign(Object.create(BrowserHost.prototype), { markTurnAuthenticationRequired() { marked++; } });
+    host.bindTurnContents({ view: { webContents: contents } });
+    let prevented = 0;
+    const emit = (url, isMainFrame = true, ...legacy) => contents.emit(name, { url, isMainFrame, preventDefault() { prevented++; } }, ...legacy);
+    emit("https://chatgpt.com/c/current");
+    emit("https://auth.openai.com/authorize", false);
+    assert.equal(prevented, 0);
+    emit("https://auth.openai.com/authorize");
+    assert.equal(prevented, 1);
+    assert.equal(marked, 1);
+    emit("https://auth.openai.com/authorize", true, "https://chatgpt.com/c/current", false, false);
+    assert.equal(prevented, 2, "details take precedence over deprecated arguments");
+    assert.equal(marked, 2);
+  }
+});
+
 test("authentication windows stay inside the launcher-owned browser partition", () => {
   assert.equal(allowedAuthUrl("https://accounts.google.com/o/oauth2/v2/auth"), true);
   assert.equal(allowedAuthUrl("https://chatgpt.com/auth/login"), true);
@@ -1246,11 +1266,11 @@ test("a turn sign-in redirect updates the launcher and survives stale session pr
   fixture.bindTurnContents(tab);
   let prevented = 0;
   const event = { preventDefault() { prevented++; } };
-  contents.emit("will-redirect", event, "https://chatgpt.com/c/current", false, true);
-  contents.emit("will-redirect", event, "https://auth.openai.com/authorize", false, false);
+  contents.emit("will-redirect", { ...event, url: "https://chatgpt.com/c/current", isMainFrame: true });
+  contents.emit("will-redirect", { ...event, url: "https://auth.openai.com/authorize", isMainFrame: false });
   assert.equal(prevented, 0);
   assert.equal(fixture.state.authenticated, true);
-  contents.emit("will-redirect", event, "https://auth.openai.com/authorize", false, true);
+  contents.emit("will-redirect", { ...event, url: "https://auth.openai.com/authorize", isMainFrame: true });
   assert.equal(prevented, 1);
   assert.equal(fixture.state.authenticated, false);
   assert.equal(fixture.state.status, "signed-out");

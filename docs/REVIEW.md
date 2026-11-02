@@ -8,8 +8,8 @@ Review the exact proposed SHA and record evidence for:
   permission; canonical gates use only authenticated read-only GitHub and package-registry access,
   never ChatGPT account activity;
 - upstream: all four strict baseline axes are current, or the documented decision explains attention;
-- dependencies: both workspaces have passing audits and every lagging package is either exact-version
-  deferred with an honest reason or surfaced for action;
+- dependencies: both workspaces have passing audits and every lagging package is either deferred
+  within a declared exact-version or numeric-prefix bound with an honest reason, or surfaced for action;
 - verification: focused tests, canonical gate, and `git diff --check` are tied to the reviewed SHA.
 
 Do not claim browser, MCP, account, live-model, or packaged-release acceptance from source tests.
@@ -209,3 +209,52 @@ The package smoke uses the existing current-user NSIS install path and leaves th
 cleaned by the runbook script. The smoke verifies packaged startup and the durable runtime,
 not account login, ChatGPT/MCP/model calls, animation inspection or signed release acceptance.
 Motion's visual condition remains deferred; the recurring roadmap row remains a future plan.
+
+## 2026-11-03 navigation details and dependency version-line bounds
+
+Base HEAD: `da1513e5d0625d0e052a1fc491a4d4d0163f10c0`. Scope: the two navigation guards,
+their event fixtures and regressions, dependency-bound validation/matching and its tests,
+the chromium-bidi 159-line deferral, maintenance guidance, changelog and roadmap.
+Electron 45's installed declarations expose `details.url` and `details.isMainFrame` for both
+`will-navigate` and `will-redirect`; the guards no longer depend on deprecated positional fields.
+Renderer tests execute the registered handlers with the real destination policy in both development
+and packaged modes. Turn tests check main-frame authentication interception and subframe exclusion.
+These are offline event fixtures, not browser, account, MCP or packaged-release acceptance.
+
+Dependency entries declare exactly one of `latest` (unchanged exact equality) or `latestPrefix`
+(whole numeric components, one to three). Only chromium-bidi changes to a version-line bound;
+the existing Playwright layout rationale and re-review conditions remain in the policy. Tests use
+synthetic versions to cover prereleases, build metadata, prefix collisions, crossing boundaries,
+workspace/package isolation and rejected malformed/ambiguous bounds. The two finished roadmap
+rows contain no unique revisit date; the separate minimatch deadline and recurring review row remain.
+
+Observed with Bun 1.4.2 on Windows; logs use the ignored `.maintenance-reports/roadmap-` prefix:
+
+- `bun test tests/dependency-freshness.test.ts`: before implementation, exit 1,
+  7 pass / 2 fail (prefix-only entry rejected; ambiguous bounds accepted). After implementation,
+  exit 0, 9 pass / 0 fail, 69 assertions.
+- `node --test --test-name-pattern="guards read details" launcher/tests/browser-host.test.cjs
+  launcher/tests/renderer-wiring.test.cjs`: before implementation, exit 1, 0 pass / 2 fail;
+  main-frame authentication was not blocked and the allowed renderer destination was blocked.
+- `node --test --test-name-pattern="guards read details|a turn sign-in redirect"
+  launcher/tests/browser-host.test.cjs launcher/tests/renderer-wiring.test.cjs`: after implementation,
+  exit 0, 3 pass / 0 fail. This also verifies the existing sign-out/session-probe behavior.
+- `pwsh -NoProfile -File tools/bootstrap_dev.ps1`: exit 0;
+  `BOOTSTRAP PASSED: Bun 1.4.2, both frozen lockfiles, and Electron runtime.`
+- `pwsh -NoProfile -File tools/dev_check.ps1`: exit 1 after 20 focused tests passed;
+  `Command failed (1): bun run scripts/check-upstream-baseline.ts --strict`.
+  Main is current; PR #958, issue #957, the latest PR head and additional
+  `fix/current-workspace-roots` branch exceed the reviewed ledger. The gate stops before
+  freshness/verify and does not produce a successful Full completion record. Reviewing those
+  upstream changes is outside the two roadmap items; the baseline is unchanged.
+- Independent `bun run check:dependencies`: exit 0, `Status: **current**`;
+  root audit clean, launcher audit explicitly deferred under the existing exact-node minimatch
+  exception (`revisit` 2026-11-17). The chromium-bidi 159-line latest is deferred.
+- Independent `bun run verify`: exit 0; root 1,103 pass / 98 skip / 0 fail
+  (1,201 tests across 90 files); launcher 419 pass / 1 skip / 0 fail (420 tests).
+  Both typechecks, renderer/runtime builds and notices generation passed. Final output:
+  `RELOCATABLE_RUNTIME_SMOKE_OK`.
+- `git diff --check`: exit 0. Both lockfiles are unchanged; modified files retain LF.
+  Only verification-result documentation was appended after the gates; final whitespace and scope
+  checks were repeated. Final input hashes and base SHA are retained in ignored
+  `.maintenance-reports/roadmap-worktree.json`.

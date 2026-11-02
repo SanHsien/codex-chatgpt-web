@@ -10,6 +10,38 @@ const electronMain = fs.readFileSync(path.join(launcherRoot, "electron", "main.c
 const browserHostSource = fs.readFileSync(path.join(launcherRoot, "electron", "browser-host.cjs"), "utf8");
 const preloadSource = fs.readFileSync(path.join(launcherRoot, "electron", "preload.cjs"), "utf8");
 
+test("renderer navigation guards read details and block external destinations", () => {
+  const vm = require("node:vm");
+  const { EventEmitter } = require("node:events");
+  for (const isDev of [false, true]) {
+    const contents = new EventEmitter();
+    const warnings = [];
+    const start = electronMain.indexOf("  const guardRendererNavigation =");
+    const end = electronMain.indexOf("  window.webContents.setWindowOpenHandler", start);
+    const policyStart = electronMain.indexOf("function rendererNavigationAllowed(");
+    const policyEnd = electronMain.indexOf("function windowStateSnapshot(", policyStart);
+    vm.runInNewContext(electronMain.slice(policyStart, policyEnd) + electronMain.slice(start, end), {
+      window: { webContents: contents }, URL, isDev,
+      process: { env: { VITE_DEV_SERVER_URL: "http://localhost:5173" } },
+      PACKAGED_RENDERER_URL: "file:///app/index.html", logger: { warn: (...args) => warnings.push(args) },
+    });
+    for (const name of ["will-navigate", "will-redirect"]) {
+      let prevented = 0;
+      const emit = (url, ...legacy) => contents.emit(name, { url, preventDefault() { prevented++; } }, ...legacy);
+      const allowed = isDev ? "http://localhost:5173/page" : "file:///app/index.html#settings";
+      emit(allowed);
+      assert.equal(prevented, 0);
+      emit("https://example.com/private?query=fixture");
+      emit("invalid URL");
+      assert.equal(prevented, 2);
+      emit("https://example.com/", allowed);
+      assert.equal(prevented, 3, "details take precedence over deprecated arguments");
+      assert.equal(warnings.at(-1)[1].destination, "https://example.com");
+      assert.ok(!JSON.stringify(warnings).includes("query="));
+    }
+  }
+});
+
 test("Bigger Context waits for startup and route recovery without invalidating healthy setup", async () => {
   const vm = require("node:vm");
   for (const fails of [false, true]) {

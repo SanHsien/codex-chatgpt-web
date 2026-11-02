@@ -5,6 +5,11 @@ This file records maintained-fork work and release identity. See this fork's
 
 ## 2026-11-03
 
+- Read Electron navigation and redirect guard URLs from event details, preserving renderer
+  destination restrictions and main-frame authentication interception without deprecated arguments.
+- Support explicit numeric `latestPrefix` dependency deferrals alongside unchanged exact `latest`
+  matching; apply the chromium-bidi 159-line bound and test component boundaries and invalid policies.
+
 - Upgrade the Windows launcher to Electron 45.2.1 and remove its freshness deferral.
 - Re-review chromium-bidi, Motion and the React build plugin against exact registry releases;
   retain bounded deferrals for Playwright import-layout compatibility, animation inspection,

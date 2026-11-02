@@ -1,7 +1,7 @@
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-export interface DeferredDependency { workspace: "root" | "launcher"; package: string; latest: string; reviewed: string; reason: string }
+export type DeferredDependency = { workspace: "root" | "launcher"; package: string; reviewed: string; reason: string } & ({ latest: string; latestPrefix?: never } | { latest?: never; latestPrefix: string });
 export interface Deferrals { schemaVersion: 1; deferrals: DeferredDependency[] }
 export interface CommandResult { exitCode: number; stdout: string; stderr: string }
 export type CommandRunner = (command: string, args: string[], cwd: string) => CommandResult;
@@ -10,13 +10,21 @@ export interface FreshnessRow extends OutdatedDependency { workspace: "root" | "
 export interface FreshnessResult { rows: FreshnessRow[]; outdatedChecks: Array<{ workspace: "root" | "launcher"; status: "current" | "check-failure"; detail: string }>; audits: Array<{ workspace: "root" | "launcher"; status: "clean" | "deferred" | "check-failure"; detail: string }>; status: "current" | "attention" | "check-failure"; checkDetail?: string }
 
 const isText = (value: unknown): value is string => typeof value === "string" && value.length > 0;
+const isVersionPrefix = (value: unknown): value is string => typeof value === "string" && /^(0|[1-9]\d*)(\.(0|[1-9]\d*)){0,2}$/.test(value);
+const versionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const isDate = (value: unknown): value is string => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value;
 const detail = (value: string) => value.replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240) || "checker failed";
 
 export function validateDeferrals(value: unknown): Deferrals {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Dependency deferrals must be a JSON object.");
   const parsed = value as Record<string, unknown>, items = parsed.deferrals;
-  if (parsed.schemaVersion !== 1 || !Array.isArray(items) || !items.every((item) => { const entry = item as Record<string, unknown> | null; return !!entry && typeof entry === "object" && (entry.workspace === "root" || entry.workspace === "launcher") && isText(entry.package) && isText(entry.latest) && isDate(entry.reviewed) && isText(entry.reason); })) throw new Error("Dependency deferrals are invalid or incomplete; refusing to continue.");
+  if (parsed.schemaVersion !== 1 || !Array.isArray(items) || !items.every((item) => {
+    const entry = item as Record<string, unknown> | null;
+    return !!entry && typeof entry === "object" && !Array.isArray(entry)
+      && (entry.workspace === "root" || entry.workspace === "launcher") && isText(entry.package)
+      && ((isText(entry.latest) && !("latestPrefix" in entry)) || (isVersionPrefix(entry.latestPrefix) && !("latest" in entry)))
+      && isDate(entry.reviewed) && isText(entry.reason);
+  })) throw new Error("Dependency deferrals are invalid or incomplete; refusing to continue.");
   const keys = new Set<string>();
   for (const item of items as Array<Record<string, unknown>>) {
     const key = `${item.workspace}\u0000${item.package}`;
@@ -41,7 +49,12 @@ export function parseBunOutdated(output: string): OutdatedDependency[] {
 
 export function evaluateFreshness(workspace: "root" | "launcher", outdated: OutdatedDependency[], deferrals: Deferrals): FreshnessRow[] {
   return outdated.map((item) => {
-    const deferred = deferrals.deferrals.find((entry) => entry.workspace === workspace && entry.package === item.package && entry.latest === item.latest);
+    const deferred = deferrals.deferrals.find((entry) => {
+      if (entry.workspace !== workspace || entry.package !== item.package) return false;
+      if (entry.latest !== undefined) return entry.latest === item.latest;
+      const version = versionPattern.exec(item.latest);
+      return !!version && entry.latestPrefix.split(".").every((part, index) => part === version[index + 1]);
+    });
     return { workspace, ...item, status: deferred ? "deferred" : "attention" };
   });
 }

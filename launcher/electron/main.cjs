@@ -397,9 +397,10 @@ function createWindow({ logger, stateStore, windowStatePath, startHidden }) {
     if (mainFrame) logger.error("launcher.renderer_load_failed", { errorCode });
   });
   window.webContents.on("unresponsive", () => logger.warn("launcher.renderer_unresponsive", {}));
-  const guardRendererNavigation = (event, url) => {
+  const guardRendererNavigation = (details) => {
+    const url = details.url;
     if (rendererNavigationAllowed(url)) return;
-    event.preventDefault();
+    details.preventDefault();
     let destination = "invalid URL";
     try { destination = new URL(url).origin; } catch {}
     logger.warn("launcher.renderer_navigation_blocked", { destination });

@@ -4,6 +4,28 @@ import { checkFailure, checkFreshness, evaluateFreshness, parseBunOutdated, rend
 const table = "bun outdated v1.4.2 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n| pkg (dev) | 1.0.0 | 1.1.0 | 2.0.0 |\n";
 const deferrals = { schemaVersion: 1, deferrals: [{ workspace: "root", package: "pkg", latest: "2.0.0", reviewed: "2026-09-06", reason: "Requires packaged desktop verification." }] } as const;
 
+test("version-line deferrals honor numeric component precision and workspace scope", () => {
+  for (const [prefix, inside, outside] of [
+    ["3", ["3.0.0", "3.8.9-2", "3.99.0+build"], ["4.0.0", "30.0.0"]],
+    ["3.8", ["3.8.0", "3.8.99-2"], ["3.9.0", "3.80.0"]],
+    ["3.8.9", ["3.8.9", "3.8.9-2", "3.8.9+build"], ["3.8.10", "3.8.90"]],
+  ] as const) {
+    const policy = validateDeferrals({ schemaVersion: 1, deferrals: [{ workspace: "root", package: "pkg", latestPrefix: prefix, reviewed: "2026-11-03", reason: "Incompatible version line." }] });
+    const status = (latest: string, workspace: "root" | "launcher" = "root", name = "pkg") => evaluateFreshness(workspace, [{ package: name, current: "1.0.0", update: "1.0.0", latest }], policy)[0].status;
+    for (const latest of inside) expect(status(latest)).toBe("deferred");
+    for (const latest of [...outside, "garbage", "3.8", "v3.8.9", "3.8.9junk"]) expect(status(latest)).toBe("attention");
+    expect(status(inside[0], "launcher")).toBe("attention");
+    expect(status(inside[0], "root", "other")).toBe("attention");
+  }
+});
+
+test("deferral bounds reject missing, ambiguous and malformed prefixes", () => {
+  const base = { workspace: "root", package: "pkg", reviewed: "2026-11-03", reason: "Reviewed." };
+  for (const bound of [{}, { latest: "3.8.9", latestPrefix: "3" }, ...["", "03", "3.", "3.08", "3.8.9.1", "3.8.x", ">=3", "3-rc", 3, null].map(latestPrefix => ({ latestPrefix }))]) {
+    expect(() => validateDeferrals({ schemaVersion: 1, deferrals: [{ ...base, ...bound }] })).toThrow("invalid or incomplete");
+  }
+});
+
 test("parses Bun 1.4 text tables and applies exact-version deferrals", () => {
   expect(parseBunOutdated(table)).toEqual([{ package: "pkg", current: "1.0.0", update: "1.1.0", latest: "2.0.0" }]);
   expect(evaluateFreshness("root", parseBunOutdated(table), validateDeferrals(deferrals))[0].status).toBe("deferred");

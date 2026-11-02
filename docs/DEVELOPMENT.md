@@ -28,9 +28,14 @@ See [TEST_PLAN.md](TEST_PLAN.md), [REVIEW.md](REVIEW.md), and [UPSTREAM.md](UPST
 
 `bun run check:dependencies` checks root and launcher using Bun `outdated` and `audit` without
 installing or editing manifests. Bun 1.4.2 emits a text table even with `--json`; the checker parses
-that pinned format defensively. Exact latest-version deferrals in
-`.github/dependency-deferrals.json` require reviewed upstream or packaged desktop verification and
-must be renewed when a newer release appears.
+that pinned format defensively. Deferrals in `.github/dependency-deferrals.json` require reviewed
+upstream or packaged desktop verification. Each entry declares exactly one bound: `latest` retains
+exact string equality; `latestPrefix` accepts one, two or three numeric components (for example
+`159`, `159.0`, `159.0.8139`). Prefix matching compares whole major/minor/patch components,
+including prerelease and build variants within that line; `159` never matches `1590`.
+Malformed or ambiguous bounds fail closed. Releases outside the declared bound require review.
+The chromium-bidi 159 line is deferred for the Playwright import-layout incompatibility; re-review
+also applies when Playwright adopts that layout or a compatible shim is reviewed.
 
 Launcher `audit` still runs live `bun audit --json`; `scripts/audit-launcher.ts` applies the
 separate security exceptions in `.github/audit-deferrals.json`. Freshness invokes that same
