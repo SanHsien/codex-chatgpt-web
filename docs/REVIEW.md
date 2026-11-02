@@ -156,3 +156,56 @@ Ignored local logs use `.maintenance-reports/minimatch-*.log`. This work makes n
 MCP, live-model or Windows installer acceptance claim. The new roadmap follow-up is a plan for
 re-review; the original unrelated port row stays open, and the completed security fix had no row
 to remove. The audit checker reads the revisit deadline directly from the policy file.
+
+## 2026-11-03 dependency rereview
+
+Base HEAD: `545cd44a5159a83878182fe7a7ee9e58426dea82`. Scope: Electron launcher pin/lock,
+exact freshness policy, the Playwright/BiDi import regression, CHANGELOG, DECISIONS and ROADMAP.
+Root manifest/lockfile, Bun 1.4.2, app version 6.1.13, public installer pin v5.0.6 and the
+minimatch security exception/deadline are unchanged. Decisions and re-review conditions:
+[DECISIONS.md](DECISIONS.md#2026-11-03-dependency-rereview).
+
+Observed on Windows x64 with Bun 1.4.2:
+
+- `pwsh -NoProfile -File tools/bootstrap_dev.ps1`: exit 0;
+  `BOOTSTRAP PASSED: Bun 1.4.2, both frozen lockfiles, and Electron runtime.`
+  The installed Electron executable independently reports Electron 45.2.1, Node 24.22.1,
+  Chromium 156.0.8078.75. Node 24 typings remain appropriate.
+- `bun run check:dependencies` before changes: exit 1, four attention rows.
+  After adoption/deferrals: exit 0, `Status: **current**`, no attention rows.
+  Root audit is clean; launcher audit is explicitly `deferred` for three exact minimatch
+  nodes under GHSA-g3hv-75wg-m249, with the existing 2026-11-17 deadline. This is not zero
+  vulnerabilities. The verify run independently passed both audit commands.
+- Red: trial-install chromium-bidi latest, then
+  `bun test tests/chromium-bidi-compatibility.test.ts`: exit 1, 0 pass / 1 fail;
+  `Cannot find module 'chromium-bidi/lib/cjs/bidiMapper/BidiMapper'`.
+  Green: restore the original chromium-bidi dependency, then the same command: exit 0,
+  1 pass / 0 fail, 3 assertions. No dependency version is hardcoded in the test.
+  This guards a rejected upgrade's import compatibility; no product bug fix is claimed.
+- `pwsh -NoProfile -File tools/dev_check.ps1`: exit 1. The focused contracts passed
+  (18 pass / 0 fail), then strict upstream tracking reported
+  `Upstream check requires attention: attention.` PR #958, issue #957, changed latest PR head
+  and the extra `fix/current-workspace-roots` branch exceed the reviewed ledger. Main is current.
+  This existing upstream-review requirement is outside dependency maintenance; the gate stops
+  before freshness/verify and produces no successful Full completion record.
+- Independent `bun run verify`: exit 0; root 1,101 pass / 98 skip / 0 fail, 8,892 assertions
+  (1,199 tests across 90 files); launcher 417 pass / 1 skip / 0 fail (418 tests).
+  Both typechecks, renderer/runtime builds and notices generation passed. Final output:
+  `RELOCATABLE_RUNTIME_SMOKE_OK`.
+- `bun run app:package`: exit 0; NSIS installer and blockmap built with Electron 45.2.1.
+  Installer `codex-web-gpt-6.1.13-win-x64.exe` SHA-256:
+  `e5b5e6a5cc83741d8c780c09b887c4b1daa34cd14b1f8418ab24f412b6b3930b`.
+- First `bun run app:smoke`: exit 1, installer `/S /currentuser` timed out at 120 seconds
+  (`ETIMEDOUT`) while verify was also running. No installation registry entry existed afterward.
+  One isolated repeat of the same command, after verify completed, exited 0:
+  `PACKAGED_LAUNCHER_SMOKE_OK win32/x64`. Timeouts were not increased. Resource contention is
+  a hypothesis, not a confirmed cause. No third attempt was made.
+- `git diff --check`: exit 0. Final relative-path input hashes and base SHA are retained in
+  ignored `.maintenance-reports/dependency-worktree.json`; command logs share the
+  `.maintenance-reports/dependency-` prefix.
+
+The package smoke uses the existing current-user NSIS install path and leaves the installed
+6.1.13 launcher in place; application/Codex/core data paths for the smoke are isolated and
+cleaned by the runbook script. The smoke verifies packaged startup and the durable runtime,
+not account login, ChatGPT/MCP/model calls, animation inspection or signed release acceptance.
+Motion's visual condition remains deferred; the recurring roadmap row remains a future plan.

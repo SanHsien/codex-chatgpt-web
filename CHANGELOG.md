@@ -5,6 +5,11 @@ This file records maintained-fork work and release identity. See this fork's
 
 ## 2026-11-03
 
+- Upgrade the Windows launcher to Electron 45.2.1 and remove its freshness deferral.
+- Re-review chromium-bidi, Motion and the React build plugin against exact registry releases;
+  retain bounded deferrals for Playwright import-layout compatibility, animation inspection,
+  and the Vite 8 peer requirement. Add a version-independent Playwright/BiDi import regression.
+
 - Override modern launcher minimatch consumers to the patched line for GHSA-g3hv-75wg-m249.
   Preserve legacy callable APIs for ASAR/glob/directory filters under an exact-node,
   advisory-specific audit deferral expiring on 2026-11-17 (Asia/Taipei).

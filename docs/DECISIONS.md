@@ -916,3 +916,37 @@ evidence is recorded in [REVIEW.md](REVIEW.md).
    - `f9325c9` (multipart compaction ceiling #930): Strongly coupled with `ffe041f` token breakdown logic; skipped to maintain independent stability.
    - `e1780b1` (delivery / staging retry guards #929): Involves staging ACK retries and native tool state machines; requires outstanding tool result replay tests before adoption.
    - MCP ABI changes (`53b6050`, `a738f04`), Temporary Chat defaults (`7c7c10e`, `ad9a611`), and Full Access worktree restructuring (`760ab5a`, `e6ed93a`, `b48477e`): Kept deferred awaiting maintainer decisions or grouped adoption.
+
+## 2026-11-03 dependency rereview
+
+Base: `545cd44a5159a83878182fe7a7ee9e58426dea82`. The registry recheck reproduced the four
+freshness attention rows before changes. This review supersedes the earlier bounds for those
+packages; unrelated deferrals and the separate minimatch security deadline stay in force.
+
+| Package / reviewed latest | Decision | Evidence and reconsideration condition |
+| --- | --- | --- |
+| `chromium-bidi` 159.0.8138-0 | defer; retain 12.1.0 | Trial installation contains `out/`, while the installed Playwright core bundle requires `chromium-bidi/lib/cjs/bidiMapper/BidiMapper` and `chromium-bidi/lib/cjs/cdp/CdpConnection`. The import contract fails with `MODULE_NOT_FOUND`; restoring 12.1.0 passes. Reconsider when Playwright supports the new layout, a compatibility shim is reviewed, or latest advances. |
+| `electron` 45.2.1 | adopt from 44.9.1 | Exact launcher manifest and lock pin move together; the Electron freshness deferral is removed. Node remains on major 24, so Node 24 typings remain appropriate (their reason is refreshed). Windows package and installer smoke are required; results are recorded in REVIEW. |
+| `motion` 14.9.0 | defer; retain 12.43.0 | The React upgrade guide describes changed prop filtering in 13 and no breaking changes in 14. This is not evidence of a known failure in this fork. The existing visual acceptance condition remains unmet: `App.tsx` uses `AnimatePresence` for onboarding/page transitions and toast enter/exit; `smoke:package` only loads the renderer and verifies the runtime, then exits. Reconsider after isolated packaged UI inspection of these transitions, a relevant animation/security fix, or newer latest. |
+| `@vitejs/plugin-react` 6.2.1 | defer; retain 5.2.0 | Exact registry metadata requires peer `vite: ^8.0.0`; installed Vite is 6.4.5. Adopt together with the already-deferred Vite 8 toolchain after renderer build, package and smoke verification, or re-review when latest advances. Do not force an incompatible peer into the current build. |
+
+Sources checked on 2026-11-03: exact npm metadata for
+[chromium-bidi](https://registry.npmjs.org/chromium-bidi/159.0.8138-0),
+[Electron](https://registry.npmjs.org/electron/45.2.1),
+[Motion](https://registry.npmjs.org/motion/14.9.0) and
+[plugin-react](https://registry.npmjs.org/@vitejs%2fplugin-react/6.2.1);
+[Electron 45](https://www.electronjs.org/blog/electron-45-0) and
+[Motion React upgrade guide](https://motion.dev/docs/react-upgrade-guide).
+The BiDi trial also attempted one isolated headless Edge launch with a 30-second bound; it timed
+out, so it provides no browser compatibility claim. The deterministic import failure above is
+the reason for retaining the old dependency. No account login or model call was involved.
+
+`tests/chromium-bidi-compatibility.test.ts` extracts the actual lazy imports from installed
+Playwright and loads each against installed chromium-bidi. It asserts resolvability/loadability,
+not a dependency version. The same test failed on the trial upgrade and passed after restoration.
+The root manifest and root lockfile return exactly to their base contents; the launcher lockfile
+changes only the Electron node and workspace pin.
+
+Re-review is machine-triggered by a latest version exceeding its exact
+`.github/dependency-deferrals.json` bound; there is no separate untracked revisit date.
+See [REVIEW.md](REVIEW.md#2026-11-03-dependency-rereview) for local acceptance and its limits.
