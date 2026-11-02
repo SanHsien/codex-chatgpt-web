@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "deferrals": [
+    {
+      "package": "minimatch",
+      "url": "https://github.com/advisories/GHSA-g3hv-75wg-m249",
+      "vulnerable_versions": "<11.0.1",
+      "severity": "moderate",
+      "reviewed": "2026-11-03",
+      "revisit": "2026-11-17",
+      "nodes": {
+        "@electron/asar/minimatch": "3.1.5",
+        "dir-compare/minimatch": "3.1.5",
+        "glob/minimatch": "3.1.5"
+      },
+      "reason": "electron-builder 26.18.0 is latest and still pins asar 3.4.1; asar and dir-compare call minimatch as a function, incompatible with minimatch 11's named exports. Legacy glob also relies on the old API. Only local packaging tools consume these patterns; no untrusted glob input is accepted by this fork. Modern consumers are overridden to the patched line. This is risk acceptance, not a claim that legacy versions are unaffected.",
+      "reconsider": "Re-review on the revisit date, any advisory range/severity or affected lock-node change, or an electron-builder/asar/glob/dir-compare release supporting patched minimatch; then verify Windows archive/filter and packaged installer behavior."
+    }
+  ]
+}

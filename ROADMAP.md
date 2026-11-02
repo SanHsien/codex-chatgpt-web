@@ -6,6 +6,8 @@
 ## 現況
 本 fork 將 ChatGPT Web 接入 Windows Codex 工作流；原始碼已採用上游 6.1.13，公開安裝器仍釘在 v5.0.6，這是刻意的發版邊界（[README.md:26](README.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md)）。2026-10-29 `gh` 查詢記錄各主要 workflow 最近一次（2026-10-25）結果成功、開啟安全告警為 0；2026-10-29 曾因 GitHub 自動停用 fork 的 workflow 而推送不觸發（API 仍顯示 enabled），同日在 Actions 頁按「re-enable」後恢復；issues 停用而未查到 issue；上游最新 release 為 v6.1.17（2026-10-29），已逐筆審查 baseline 後 38 筆 commit、7 筆新 PR 與 14 筆新 issue；四軸已推進至 `860fa57`／PR #934／issue #933／僅 main，這是審查水位而非來源升級（[docs/DECISIONS.md](docs/DECISIONS.md#2026-10-29-upstream-review-6114-6117-912-934)）。6.1.14～6.1.17 差量已移植 #924 inline model picker、#932 正向 Luna 能力證明及其前置 #902 Think sprite，以及 2026-11-02 移植的 4 項獨立修正：#919 Doctor 壓縮覆蓋檢查（`7e6e1a0`）、#905 runtime 失敗清理（`0a8f233`）、#921 精確 model picker 與 Astra Max（`89f0ead`）、#914 渲染身分與串流診斷（`b6043e0`；DOM 案例須設定 `CHATGPT_DOM_TEST_BROWSER` 才會執行，本輪 Edge 離線 fixture 已執行，結果見 [REVIEW](docs/REVIEW.md)）；其餘 MCP ABI、Temporary Chat 預設、Full Access 工作區等項目維持維護者決定／延後狀態（[docs/DECISIONS.md](docs/DECISIONS.md#2026-10-31-port-inline-model-control-924927928-and-positive-luna-capability-evidence-932)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-02-port-independent-fixes-7e6e1a0-0a8f233-89f0ead-b6043e0)）。登入、MCP 與打包後實機行為仍需獨立驗收（[docs/REVIEW.md:15](docs/REVIEW.md)）。
 
+2026-11-03 本機依賴驗證快照（基底 SHA `1bbf072d0c913549fa2dea3d593cbd2cd25450ff`）：launcher 的 minimatch 5／9／10 路徑已以 scoped override 採用修補版；3 個舊 callable API 節點依正式安全延後紀錄保留，`launcher:audit` exit 0 並明示 deferred，仍有受延後告警。`bun run verify` exit 0（runtime smoke 通過）；完整 dev_check exit 1，停在上游 strict gate（PR #958／issue #957／額外分支）；獨立 freshness exit 1，因 chromium-bidi、motion、plugin-react、Electron 的 latest 超過既有延後界線。期限由檢查器讀取 `.github/audit-deferrals.json` 的 `revisit`（2026-11-17）強制執行；決策與驗證見 [DECISIONS](docs/DECISIONS.md#2026-11-03-launcher-minimatch-advisory-ghsa-g3hv-75wg-m249) 與 [REVIEW](docs/REVIEW.md)。
+
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
@@ -18,6 +20,7 @@
 | 發布已驗證的 Windows 新版 | 實機與打包驗收完成，維護者決定發布 | 版本、README、安裝腳本、`REVIEWED_RELEASE_VERSION` 與 release-contract 同步；以 Bun 1.4.2 通過 canonical gate，驗證資產雜湊與更新路徑 | Codex | [docs/DECISIONS.md:620](docs/DECISIONS.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md)、[AGENTS.md:3](AGENTS.md) |
 | 重評回覆提早中止與本地 effort 標籤補丁 | 上游 #910 有平台通用根因／Windows 重現，或 #911 上游修正／新標籤被實際觀察 | 用實際失敗輸入先重現；修正後驗證完成偵測、滑桿位置與模型家族，不猜測未見翻譯 | Codex | [docs/DECISIONS.md:662](docs/DECISIONS.md)、[docs/DECISIONS.md:672](docs/DECISIONS.md) |
 | 重審 chromium-bidi 與 Electron 延後升級 | freshness 提醒新 latest，或具備打包實測條件 | 依精確版本重評延後理由；兩個 workspace audit 與相關測試通過，Electron 跨版另驗打包執行 | Codex | commit `03cf40b`；[AGENTS.md:11](AGENTS.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md) |
+| 重審 minimatch 舊 API 安全延後 | 2026-11-17 到期，或相容父套件發布／告警與受影響 lock 節點變動 | 移除舊 API 路徑或重新審查精確延後；audit、verify 與 archive/filter 回歸通過，打包行為另依 release 驗收 | Codex | [.github/audit-deferrals.json](.github/audit-deferrals.json)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-launcher-minimatch-advisory-ghsa-g3hv-75wg-m249) |
 
 ## 刻意不做
 | 不做什麼 | 理由 | 什麼情況下重新考慮 |

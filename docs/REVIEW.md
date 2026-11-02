@@ -103,3 +103,56 @@ Observed with Bun 1.4.2 on Windows:
 Local logs are ignored under `.maintenance-reports/fix-*.log`; a final worktree fingerprint is
 retained there for the uncommitted inputs. Source/fixture tests do not prove signed-in ChatGPT,
 MCP, model-service behavior or packaged-release acceptance.
+
+## 2026-11-03 launcher minimatch security maintenance
+
+Base HEAD: `1bbf072d0c913549fa2dea3d593cbd2cd25450ff`. Scope: launcher manifest/lockfile,
+version-scoped minimatch override, advisory-specific audit policy and checker, freshness integration,
+regressions and maintenance documentation. The root lockfile, product versions, installer pins,
+Electron version and workflow permissions are unchanged. The required launcher lockfile delta is
+limited to the scoped override, patched minimatch and its dependency graph (Bun lock format 3).
+
+Observed with Bun 1.4.2 on Windows:
+
+- Raw `bun run launcher:audit` before the fix: exit 1, GHSA-g3hv-75wg-m249 reported
+  minimatch 10.2.6, 3.1.5, 9.0.9 and 5.1.9; dependency parents were confirmed from `bun pm why`
+  and the lockfile.
+- Red regression: `node --test launcher/tests/minimatch-compatibility.test.cjs`, exit 1,
+  1 pass / 1 fail. Legacy archive/filter behavior passed; modern consumers failed the missing
+  reviewed override assertion. No changing package version is hardcoded in the assertions.
+- Same regression after override/install: exit 0, 2 pass / 0 fail. Real ASAR creation/extraction
+  (with unpack pattern), FileMatcher, filelist, glob and dir-compare were exercised.
+- A regular Bun install left old nested minimatch artifacts in this existing node_modules tree;
+  the consumer regression detected them. `bun install --cwd launcher --force --frozen-lockfile`
+  refreshed the installed tree (exit 0); this step does not modify the generated lockfile.
+- `pwsh -NoProfile -File tools/bootstrap_dev.ps1`: exit 0;
+  `BOOTSTRAP PASSED: Bun 1.4.2, both frozen lockfiles, and Electron runtime.`
+- `bun run launcher:audit`: exit 0; explicitly reports the three deferred legacy lock nodes,
+  revisit 2026-11-17, and ends `LAUNCHER_AUDIT_OK`. Raw Bun audit is still executed; remaining
+  findings are accepted only through the checked policy, not reported as zero vulnerabilities.
+- `bun test tests/launcher-audit.test.ts tests/dependency-freshness.test.ts`: exit 0,
+  11 pass / 0 fail, 53 assertions. Covers expiry, future/malformed/duplicate policies,
+  unknown advisories, changed range/severity/nodes/versions, process/parse errors and honest
+  `deferred` reporting in freshness.
+- `pwsh -NoProfile -File tools/dev_check.ps1 -Quick`: exit 0, 18 pass / 0 fail, 201 assertions;
+  `VERSION_SYNC_OK 6.1.13 bun@1.4.2`; ends
+  `QUICK CHECK PASSED: Bun 1.4.2, focused fork tests, version, typecheck, and whitespace.`
+- `pwsh -NoProfile -File tools/dev_check.ps1`: exit 1 at strict upstream tracking;
+  `Upstream check requires attention: attention.` Observed PR #958, issue #957 and branch
+  `fix/current-workspace-roots` exceed the reviewed ledger. This is outside minimatch maintenance;
+  the gate stopped before freshness/verify and produced no Full completion evidence.
+- Independent `bun run check:dependencies`: exit 1, `Dependency freshness requires attention: attention.`
+  Existing exact latest bounds are exceeded by chromium-bidi 159.0.8138-0, motion 14.9.0,
+  @vitejs/plugin-react 6.2.1 and Electron 45.2.1. Root audit is clean; launcher audit is explicitly
+  `deferred`. No unrelated deferral bounds were silently renewed.
+- The `bun run verify` test stages passed: root 1,100 pass / 98 skip / 0 fail,
+  8,889 assertions (1,198 tests across 89 files); launcher 417 pass / 1 skip / 0 fail
+  (418 tests). Both typechecks, renderer/runtime builds and third-party notices generation passed.
+  The final Quick and focused runs also cover freshness's explicit deferred-status presentation.
+- `bun run verify`: exit 0, ending `RELOCATABLE_RUNTIME_SMOKE_OK`. This includes relocated
+  runtime startup, HTTP/lifecycle checks and graceful shutdown, without browser/account activity.
+
+Ignored local logs use `.maintenance-reports/minimatch-*.log`. This work makes no signed-in UI,
+MCP, live-model or Windows installer acceptance claim. The new roadmap follow-up is a plan for
+re-review; the original unrelated port row stays open, and the completed security fix had no row
+to remove. The audit checker reads the revisit deadline directly from the policy file.

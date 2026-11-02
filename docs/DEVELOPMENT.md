@@ -31,3 +31,11 @@ installing or editing manifests. Bun 1.4.2 emits a text table even with `--json`
 that pinned format defensively. Exact latest-version deferrals in
 `.github/dependency-deferrals.json` require reviewed upstream or packaged desktop verification and
 must be renewed when a newer release appears.
+
+Launcher `audit` still runs live `bun audit --json`; `scripts/audit-launcher.ts` applies the
+separate security exceptions in `.github/audit-deferrals.json`. Freshness invokes that same
+launcher script, while root audit remains raw Bun audit. A security exception binds the advisory
+URL, affected range, severity and every affected lock node/version; it requires a reason,
+reconsideration condition and machine-enforced `revisit` deadline (Asia/Taipei, exclusive).
+Unknown findings, changed nodes, invalid output, command failures and expired exceptions fail closed.
+The existing dependency deferrals cover latest-version lag only, not vulnerabilities.

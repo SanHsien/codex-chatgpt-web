@@ -840,6 +840,46 @@ red-then-green test. Only #924 (`2f0936b`), #932 (`9c3633c`) and their prerequis
    decisions. Release version bumps stay deferred: the installer pin remains v5.0.6 and the fork package
    remains 6.1.13.
 
+## 2026-11-03 launcher minimatch advisory GHSA-g3hv-75wg-m249
+
+The [GitHub advisory](https://github.com/advisories/GHSA-g3hv-75wg-m249) reports all minimatch
+versions below 11.0.1 as affected, with glob preprocessing amplification at optimizationLevel >= 2.
+The registry latest electron-builder/app-builder-lib was already the installed 26.18.0;
+upgrading the direct dependency cannot remove these paths. The reviewed dependency tree was:
+
+```text
+electron-builder -> app-builder-lib -> minimatch 10.2.6
+                  -> @electron/universal -> minimatch 9.0.9
+                  -> ejs -> jake -> filelist -> minimatch 5.1.9
+                  -> @electron/asar -> minimatch 3.1.5
+                                   -> glob -> minimatch 3.1.5
+                  -> @electron/universal -> dir-compare -> minimatch 3.1.5
+```
+
+Use Bun 1.4.2's version-scoped `minimatch@>=5` override to 11.0.4 for the named-export consumers.
+The launcher lockfile becomes format 3, generated and frozen-install tested with pinned Bun 1.4.2.
+The root lockfile and Electron 44.9.1 remain unchanged. Actual consumer tests cover FileMatcher,
+filelist, glob, dir-compare, and ASAR creation/extraction including an unpack pattern.
+
+Do not globally override minimatch: asar 3.4.1 and dir-compare 4.2.0 invoke its default export
+as a function, whereas minimatch 11 exports an object. Glob 7 also uses the legacy interface.
+The latest asar 4.3.1 still requires minimatch ^10; universal 3.0.6 requires asar ^4,
+filelist 2.0.2 still requires ^10, and dir-compare 5.0.0 still requires ^3. A broad tooling migration
+would therefore neither remove the advisory nor preserve the reviewed packaging contract by itself.
+
+Accept only the remaining three exact minimatch 3.1.5 lock nodes under
+`.github/audit-deferrals.json`, until 2026-11-17 (Asia/Taipei). This is time-bounded risk acceptance,
+not a claim that those versions are unaffected. These are local build-time consumers of packaging
+patterns; the product has no remote packaging-glob endpoint. Reconsider on compatible parent releases,
+advisory/lock changes or the deadline. Windows installer acceptance remains separate.
+
+Extend the existing exact-bound dependency-review convention with a distinct security exception
+file: latest-version deferrals do not waive audit findings. Launcher audit always executes raw Bun
+audit first, then validates the exact URL/range/severity and all vulnerable lock nodes. Expiry,
+new findings, changed nodes and process/parse failures remain fatal. Dependency freshness uses the
+same launcher audit script; no audit is disabled or severity-filtered. The checker reads `revisit`
+directly, so the deadline does not depend on a roadmap row alone. Evidence: [REVIEW.md](REVIEW.md).
+
 ## 2026-11-02 port: independent fixes (7e6e1a0, 0a8f233, 89f0ead, b6043e0)
 
 Ported four independent, non-defer-dependent fixes from the 6.1.14-6.1.17 reviewed delta, preserving

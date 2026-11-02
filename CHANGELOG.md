@@ -3,6 +3,15 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-11-03
+
+- Override modern launcher minimatch consumers to the patched line for GHSA-g3hv-75wg-m249.
+  Preserve legacy callable APIs for ASAR/glob/directory filters under an exact-node,
+  advisory-specific audit deferral expiring on 2026-11-17 (Asia/Taipei).
+- Keep live Bun audit enabled in verify and dependency freshness; reject other advisories,
+  changed vulnerable nodes/ranges/severity, malformed results and expired exceptions.
+- Add archive, file-filter and audit-policy regressions; retain Bun, Electron and installer pins.
+
 ## 2026-11-02
 
 - Ported four independent upstream 6.1.14-6.1.17 fixes: Doctor compaction-override check

@@ -19,6 +19,28 @@ test("checks both workspaces and audits with an injected command runner", () => 
   expect(result.rows[0].status).toBe("deferred");
 });
 
+test("launcher freshness runs its policy-aware audit script and propagates failures", () => {
+  const calls: string[][] = [];
+  const clean = "bun outdated v1.4.2\n";
+  const result = checkFreshness("/repo", validateDeferrals(deferrals), (_command, args) => {
+    calls.push(args);
+    return { exitCode: args[0] === "run" ? 1 : 0, stdout: clean, stderr: args[0] === "run" ? "Undeferred advisory" : "" };
+  });
+  expect(calls).toContainEqual(["audit"]);
+  expect(calls).toContainEqual(["run", "audit"]);
+  expect(result.status).toBe("check-failure");
+  expect(result.audits[1].detail).toContain("Undeferred advisory");
+});
+
+test("freshness labels accepted security exceptions as deferred rather than clean", () => {
+  const result = checkFreshness("/repo", validateDeferrals(deferrals), (_command, args) => ({
+    exitCode: 0, stdout: args[0] === "run" ? "DEFERRED advisory: exact nodes; revisit deadline\nLAUNCHER_AUDIT_OK\n" : "bun outdated v1.4.2\n", stderr: "",
+  }));
+  expect(result.status).toBe("current");
+  expect(result.audits[1].status).toBe("deferred");
+  expect(renderReport(result)).toContain("DEFERRED advisory");
+});
+
 test("fails closed for malformed output and renders checker detail", () => {
   expect(() => parseBunOutdated("{}\n")).toThrow("unavailable");
   expect(() => validateDeferrals({ schemaVersion: 1, deferrals: [{ workspace: "root", package: "pkg", latest: "2.0.0", reason: "missing reviewed" }] })).toThrow("invalid or incomplete");
