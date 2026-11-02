@@ -11,7 +11,16 @@ function familyError(family: ChatGptWebModelFamily, cause?: unknown): ChatGptWeb
   );
 }
 
-function familyOption(menu: EffortMenu, family: ChatGptWebModelFamily) {
+async function familyOption(menu: EffortMenu, family: ChatGptWebModelFamily, effort?: ChatGptWebAdapterEffort) {
+  // The explicit picker lists Sol and Astra together, beside GPT-6.1. Select
+  // the requested name before consulting the legacy shared-family selector.
+  if (family === "6") {
+    const explicit = menu.menu.getByRole("menuitemradio", {
+      name: effort === "max" ? /^GPT[-\s]?6\s+Astra$/i : /^GPT[-\s]?6\s+Sol$/i,
+      exact: true, includeHidden: true,
+    });
+    if (await explicit.count() > 0) return explicit;
+  }
   return menu.menu.getByRole("menuitemradio", {
     name: family === "5.6" ? /^GPT[-\s]?5\.6\s+Sol(?:\s+Pro)?$/i
       // Simplified/Traditional Chinese and Japanese share 最新; Korean uses 최신.
@@ -26,9 +35,10 @@ export async function selectChatGptModelFamily(
   menu: EffortMenu,
   family: ChatGptWebModelFamily,
   activate: () => Promise<EffortMenu>,
+  effort?: ChatGptWebAdapterEffort,
 ): Promise<EffortMenu> {
   try {
-    const option = familyOption(menu, family);
+    const option = await familyOption(menu, family, effort);
     if (await option.count() > 1) throw familyError(family);
     if (await option.count() === 1 && await option.getAttribute("aria-checked") === "true") return menu;
     // The attached radio rows are inert while this composer-owned advanced view is collapsed.
@@ -54,7 +64,7 @@ export async function selectChatGptModelFamily(
     const selected = await activate();
     const deadline = Date.now() + 1_000;
     do {
-      const current = familyOption(selected, family);
+      const current = await familyOption(selected, family, effort);
       if (await current.count() > 1) throw familyError(family);
       if (await current.count() === 1 && await current.getAttribute("aria-checked") === "true") return selected;
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -86,7 +96,8 @@ export function chatGptModelFamilyMatches(
   });
   return states.length > 0 && states.every(state => state.version === family
     && (!state.name || state.name === expectedName)
-    && expectedModes.includes(state.mode.toLowerCase()));
+    && (expectedModes.includes(state.mode.toLowerCase())
+      || family === "6" && effort === "max" && state.name === "astra" && /^max$/i.test(state.mode)));
 }
 
 export async function assertChatGptModelFamily(
@@ -98,7 +109,7 @@ export async function assertChatGptModelFamily(
 ): Promise<void> {
   const deadline = Date.now() + settleMs;
   do {
-    const option = familyOption(menu, family);
+    const option = await familyOption(menu, family, effort);
     const checked = await option.count() === 1 && await option.getAttribute("aria-checked") === "true";
     const state = parseChatGptEffortSliderState(
       await menu.slider.getAttribute("aria-valuemin"), await menu.slider.getAttribute("aria-valuemax"),

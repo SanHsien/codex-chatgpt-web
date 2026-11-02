@@ -372,6 +372,19 @@ If the error remains or reports invalid workspace/permission records, export **A
 safe log** and include the exact error. Keep the preserved file private; do not delete your launcher
 settings or upload the saved task environments.
 
+## A custom compaction limit causes `context_window_exceeded`
+
+Run **Settings → Run doctor**. A global or default-profile `model_auto_compact_token_limit` overrides
+the model's advertised threshold. A value chosen for a native model may exceed a Web model's
+limit. Remove that override to use per-model defaults, then restart Codex. Also check any
+`model_context_window` override; a context window smaller than the compaction threshold can fail
+before compaction starts. Doctor reports conflicting saved settings without editing them.
+
+Doctor cannot inspect command-line or project-specific overrides. If the error remains, include
+the selected model, launcher/Codex versions, these two settings and the failure time with your safe
+log. Do not post your entire configuration or credentials. An error message alone does not prove
+that these settings caused the failure.
+
 ## Native compaction returns `404 Not Found`
 
 For an ordinary Codex model, `/v1/responses/compact` forwards to the native legacy compact

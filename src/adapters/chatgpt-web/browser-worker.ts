@@ -5,6 +5,7 @@ import { observeChatGptAttachmentUploads } from "./attachment-upload";
 import { chatGptResponseStructureLogEntries, chatGptResponseStructures } from "./browser-response-structure";
 import { chatGptInteractionState } from "./browser-interaction-state";
 import { BrowserDiagnosticHistory } from "./browser-diagnostic-history";
+import { ChatGptStreamDiagnostics } from "./stream-diagnostics";
 import { readChatGptUserMessage } from "./browser-user-message";
 import { skillFileTokens, validateSkillFiles } from "./skill-attachments";
 import { detectChatGptLimitsPlan, readChatGptUsageAccount, readChatGptUsageModel, supportsChatGptUsageTracking, type ChatGptUsageModel } from "./limits";
@@ -2748,7 +2749,7 @@ export class ChatGptBrowserWorker {
     await throwIfChatGptRateLimitDialog(page);
     let activation = await activateChatGptEffortMenu(page, currentEffort);
     if (modelFamily) activation = await selectChatGptModelFamily(
-      activation, modelFamily, () => activateChatGptEffortMenu(page, currentEffort),
+      activation, modelFamily, () => activateChatGptEffortMenu(page, currentEffort), mode.effort,
     );
     if (activation.method === "pointerdown") {
       await captureDiagnostic?.("effort-menu-pointerdown-fallback");
@@ -3542,8 +3543,33 @@ export class ChatGptBrowserWorker {
         // exact broker identity for this turn, never a shared prompt prefix or a
         // token inferred from the rendered message. Expand first to expose its tail.
         return withChatGptBrowserObservationTimeout(withBrowserTurnAbort(content.evaluate((element, token) => {
-          const tokens = (element.textContent ?? "").match(/(?<![A-Za-z0-9_-])turn_[A-Za-z0-9_-]{32}(?![A-Za-z0-9_-])/g) ?? [];
-          return tokens.length === 1 && tokens[0] === token;
+          // textContent concatenates BR/block boundaries with the next word.
+          // Read rendered boundaries, but inspect all source text for ambiguity.
+          const raw = element.textContent ?? "";
+          const candidates = [...raw.matchAll(/turn_[A-Za-z0-9_-]{32}/g)];
+          const tokens = (element as HTMLElement).innerText
+            .match(/(?<![A-Za-z0-9_-])turn_[A-Za-z0-9_-]{32}(?![A-Za-z0-9_-])/g) ?? [];
+          if (tokens.length !== 1 || tokens[0] !== token
+            || candidates.length !== 1 || candidates[0]![0] !== token) return false;
+          // innerText includes transparent text and falls back to textContent
+          // for hidden roots. Every source character of the identity must render.
+          const start = candidates[0]!.index!;
+          const end = start + token.length;
+          const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+          let offset = 0;
+          for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+            const next = offset + (node.textContent?.length ?? 0);
+            if (next > start && offset < end) {
+              for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+                const style = getComputedStyle(parent);
+                if (parent.hidden || style.display === "none"
+                  || style.visibility === "hidden" || style.opacity === "0") return false;
+              }
+            }
+            offset = next;
+            if (offset >= end) break;
+          }
+          return element.isConnected;
         }, turnToken), signal));
       }
       const observed = await withChatGptBrowserObservationTimeout(withBrowserTurnAbort(
@@ -5300,6 +5326,9 @@ export class ChatGptBrowserWorker {
     const originalAbortSignal = turn.abortSignal;
     const rejectionAbort = new AbortController();
     const submissionRejection = new ChatGptSubmissionRejectionObserver(error => rejectionAbort.abort(error));
+    const streamDiagnostics = new ChatGptStreamDiagnostics(state => {
+      console.info(`[chatgpt-web] stream_lifecycle ${JSON.stringify({ traceId: turn.traceId, ...state })}`);
+    });
     let lastGenerationProgress = 0;
     const generation = {
       active: () => submissionRejection.hasActiveResponse(),
@@ -5421,6 +5450,7 @@ export class ChatGptBrowserWorker {
       });
       if (!maintenancePage && !launcherSurfaceId) managedPage = page;
       diagnosticPage = page;
+      await streamDiagnostics.attach(page);
       const rebindLauncherPage = async (
         attempt: number,
         cause: Error,
@@ -5475,6 +5505,7 @@ export class ChatGptBrowserWorker {
         turnConnection = connection.browser;
         page = connection.page;
         diagnosticPage = page;
+        await streamDiagnostics.attach(page);
         console.warn(
           `[chatgpt-web] browser turn ${turn.traceId} rebound its existing launcher page after a stalled DOM probe`,
         );
@@ -5637,6 +5668,7 @@ export class ChatGptBrowserWorker {
               { onSubmitted: recordStageUsage, onSendActivated: async () => {
                 await this.assertSelectedEffort(page, mode);
                 submissionRejection.begin(page);
+                streamDiagnostics.begin();
                 await submissionRejection.captureAlertBaseline();
               } },
               undefined,
@@ -5818,6 +5850,7 @@ export class ChatGptBrowserWorker {
               estimatedInputTokens, proAvailable: browserCapabilities.proAvailable,
             })}`);
             submissionRejection.begin(page);
+            streamDiagnostics.begin();
             await submissionRejection.captureAlertBaseline();
             await turn.onSendActivated?.();
           } },
@@ -6187,6 +6220,7 @@ export class ChatGptBrowserWorker {
     } finally {
       diagnostics.finish(diagnosticCompleted ? "completed" : "failed");
       submissionRejection.dispose();
+      await streamDiagnostics.dispose();
       await Promise.all(usageWrites);
       prepared.release();
       if (turnConnection) {

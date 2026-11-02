@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import type { AppConfig } from "./config";
 import { getConfigDir, getConfigPath, loadConfig } from "./config";
 import { join } from "node:path";
+import { inspectCodexCompaction } from "./doctor-compaction";
 import { inspectCodexIntegration } from "./codex-integration";
 import { browserLoginStateExists, loginVerificationMarkerPath } from "./browser-login";
 import { getServiceStatus } from "./service";
@@ -149,6 +150,7 @@ export async function runDoctor(): Promise<DoctorReport> {
   }
 
   const codex = inspectCodexIntegration();
+  checks.push(...inspectCodexCompaction(config, codex.configPath));
   if (!codex.installed) {
     checks.push({ id: "codex", status: "error", message: "Codex model route is not installed" });
   } else if (codex.errors.length > 0) {

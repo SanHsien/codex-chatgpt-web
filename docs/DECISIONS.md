@@ -719,14 +719,14 @@ about local adoption, even where upstream has already merged or released the cha
 | `cfeaf04bc7f5` release 6.1.14 | defer source/release adoption | Includes removed Temporary Chat, authority and MCP contract changes above. Never move the fork installer from release notes alone. |
 | `b48477ea8ada` Full Access worktrees | defer | Uses runtime_workspace_roots and permits authenticated Full Access cwd outside retained roots. Changes authorization boundaries in rollout, store and broker; retain namespace path normalization and prove restricted modes still reject out-of-root cwd. |
 | `dc29540a0f99` current Think sprite (#902) | ported (2026-11-02) | Upstream captured the renamed `#codex-icon-brain-regular-20` sprite in English and zh-TW; the fork's `CHATGPT_THINK_BUTTON_SELECTOR` now lists it beside the older `#brain-regular-20` fragment. It is the prerequisite of `9c3633c`: without it a Luna account with the new sprite would fail `chatgpt_model_controls_unavailable`. Fixture `tests/fixtures/chatgpt-composer-think-2026-10-28.html` and a red-then-green selector test were added; no signed-in Windows verification in this task. See the port section below. |
-| `7e6e1a0bfae4` Doctor compaction override (#919) | defer | Read-only global/default-profile TOML inspection is a bounded candidate. Port with malformed profile, context limit and no-mutation tests; it cannot observe running CLI/project overrides. |
+| `7e6e1a0bfae4` Doctor compaction override (#919) | ported (2026-11-02) | Read-only global/default-profile TOML inspection ported to `src/doctor-compaction.ts` and `src/doctor.ts` with no-override, safe override, window-ceiling warning, default profile, BOM/syntax handling, and no-mutation regressions in `tests/doctor-compaction.test.ts`. See the 2026-11-02 port section below. |
 | `7c7c10edee41` restore Temporary Chat (#918) | defer | Renames useSavedChats to useTemporaryChats across CLI, IPC, settings and worker. Needs explicit-opt-out migration, connector-unavailable and Zero Risk tests plus opted-in account acceptance. |
 | `ad9a6114a598` default Temporary Chat on | defer | A product default and privacy migration decision; evaluate with the preceding migration instead of silently changing existing saved-chat behavior. |
 | `d80bf0d49cef` BOM settings/verification | defer BOM port; reject duplicate verification change | BOM-tolerant JSON reads need Windows state/window preservation tests. Fork verify already uses build:renderer; keep the canonical repair-free gate. |
 | `d3734f1f378c` cancellation measurement | defer | Changes live smoke timing to start at provider terminal. Not needed for this read-only maintenance task; reassess when explicitly running cancellation acceptance. |
-| `0a8f233f88d3` owned runtime persistence failure (#905) | defer | Earlier deferral now has a bounded upstream implementation: waits for lifecycle/recovery tasks, stops only owned children and blocks unsafe starts. Requires fault injection for initial/recovery state writes and Windows process ownership before adoption. |
-| `89f0ead030f1` exact explicit model picker (#921) | defer | Exact Sol/Astra rows, six positions and Astra Max verification change model routing. Port with old/new picker fixtures, missing/duplicate/locked/wrong-version negative tests; do not treat Linux live evidence as Windows acceptance. |
-| `b6043e022eaf` rendered identity/stream diagnostics (#914) | defer | innerText handles BR boundaries while raw text rejects hidden/duplicate identities; diagnostics add stream observers. Needs identity adversarial tests, teardown and content-free log review. This does not adopt draft #914's reload/recovery bundle. |
+| `0a8f233f88d3` owned runtime persistence failure (#905) | ported (2026-11-02) | Ported bounded recovery tasks, safe child termination and unsafe start guards to `launcher/electron/runtime-supervisor.cjs`, covered in `launcher/tests/runtime-supervisor.test.cjs` by three parameterized unsafe-cleanup cases (active-turn, unverified-pid, shutdown-error), one cleanup-wait case, and a real-child integration case that forces a filesystem write failure, confirms child exit and blocks starts until persistence recovers. See the 2026-11-02 port section below. |
+| `89f0ead030f1` exact explicit model picker (#921) | ported (2026-11-02) | Ported exact Sol/Astra matching, 6 slider positions and Astra Max verification while retaining local #911 Simplified Chinese effort labels. Verified with `tests/chatgpt-model-selection.test.ts` and `tests/chatgpt-model-family-browser.test.ts`. See the 2026-11-02 port section below. |
+| `b6043e022eaf` rendered identity/stream diagnostics (#914) | ported (2026-11-02) | Ported DOM BR boundary normalization, hidden/duplicate identity rejection and `src/adapters/chatgpt-web/stream-diagnostics.ts` lifecycle observers without adopting #914 draft reload recovery. Verified by `tests/stream-diagnostics.test.ts` and `tests/browser-turn-binding.test.ts`. See the 2026-11-02 port section below. |
 | `0286265634a4` native session reminder layer | defer | Adds native view, restricted preload and renderer entry. Requires Windows browser focus, layering, resize and dismissal checks; offline build alone is insufficient. |
 | `87449745382b` merge #921 | defer | Same exact-picker candidate as `89f0ead`; no additional independent implementation. |
 | `b95b38a0f45b` merge main into worktree branch | reject direct merge | Integration history; authority and UI components require their own acceptance. |
@@ -827,15 +827,52 @@ red-then-green test. Only #924 (`2f0936b`), #932 (`9c3633c`) and their prerequis
 
 4. **Upstream `tests/chatgpt-capabilities-browser.test.ts`**:
    - Ported its second case (a unique recognized Think control proves Luna; unknown or ambiguous controls are rejected; the draft is never touched) as `tests/chatgpt-capabilities-browser.test.ts`, gated by `CHATGPT_DOM_TEST_BROWSER` like the other real-browser tests.
-   - Its first case is not ported: it reads `chatgpt-model-picker-power-2026-09-29.html`, a fixture of the deferred exact picker (`89f0ead`, #921) that this fork does not have. The paid inline-control behavior it checks is covered offline in `tests/chatgpt-session.test.ts`. Reconsider it with the #921 port.
+   - Its first case is not ported: it reads `chatgpt-model-picker-power-2026-09-29.html`, a fixture belonging to the still-deferred UI-contract extraction (`30e7ad9`), not the now-ported exact picker (`89f0ead`, #921). The paid inline-control behavior it checks is covered offline in `tests/chatgpt-session.test.ts`. Reconsider the fixture with `30e7ad9`.
 
 5. **Still deferred or rejected from the 2026-10-29 review**: the table above is the complete
-   list; nothing there changed except the three rows marked `ported`. The items still open, which
-   [ROADMAP.md](../ROADMAP.md) tracks as one follow-up, are: `d3cf95a` (#886), `e6ed93a` (#894), `3790e3f`,
-   `794e576`, `3b47927`, `53b6050` (#904), `7b7f2f8`, `ffe041f`, `a738f04` (#893/#895), `988f45a`
-   (dependency removal only), `b48477e`, `7e6e1a0` (#919), `7c7c10e` (#918), `ad9a611`, `d80bf0d`
-   (BOM port only), `d3734f1`, `0a8f233` (#905), `89f0ead` (#921), `b6043e0` (#914 diagnostics),
-   `0286265`, `8744974`, `30e7ad9`, `f9325c9` (#930), `e1780b1` (#929), `1a0e893` (#925), `760ab5a`
-   (#933), the three release-version commits (`cfeaf04`, `8a75f1b`, `b618281`) and `860fa57`;
-   plus the open PR #914 and #934 and the deferred issue decisions. Release version bumps stay
-   deferred: the installer pin remains v5.0.6 and the fork package remains 6.1.13.
+   list; nothing there changed except the seven rows marked `ported` (`dc29540`, `2f0936b`, `9c3633c`,
+   `7e6e1a0`, `0a8f233`, `89f0ead`, `b6043e0`). The items still open, which [ROADMAP.md](../ROADMAP.md) tracks
+   as one follow-up, are: `d3cf95a` (#886), `e6ed93a` (#894), `3790e3f`, `794e576`, `3b47927`, `53b6050`
+   (#904), `7b7f2f8`, `ffe041f`, `a738f04` (#893/#895), `988f45a` (dependency removal only), `b48477e`,
+   `7c7c10e` (#918), `ad9a611`, `d80bf0d` (BOM port only), `d3734f1`, `0286265`, `8744974`, `30e7ad9`,
+   `f9325c9` (#930), `e1780b1` (#929), `1a0e893` (#925), `760ab5a` (#933), the three release-version commits
+   (`cfeaf04`, `8a75f1b`, `b618281`) and `860fa57`; plus the open PR #914 and #934 and the deferred issue
+   decisions. Release version bumps stay deferred: the installer pin remains v5.0.6 and the fork package
+   remains 6.1.13.
+
+## 2026-11-02 port: independent fixes (7e6e1a0, 0a8f233, 89f0ead, b6043e0)
+
+Ported four independent, non-defer-dependent fixes from the 6.1.14-6.1.17 reviewed delta, preserving
+existing models, effort parameters, and Windows path / security boundaries without modifying the
+public installer pin. The prior blanket red-then-green claim is withdrawn: DOM tests are gated by
+`CHATGPT_DOM_TEST_BROWSER`, and a skipped case is not execution evidence. The correction run executed
+these DOM fixtures locally through Microsoft Edge (187 pass / 0 fail across five focused files,
+exit 0); no historical DOM red result is claimed. Current correction-run
+evidence is recorded in [REVIEW.md](REVIEW.md).
+
+1. **Doctor compaction override (`7e6e1a0`, #919)**:
+   - Added read-only inspection of Codex `config.toml` in `src/doctor-compaction.ts` and integrated it into `src/doctor.ts` as `inspectCodexCompaction`.
+   - Reads `model_auto_compact_token_limit` after merging the selected default profile over global settings. For a recognized Web model route it checks that route; otherwise it checks all available Web routes. It warns when the override exceeds a route threshold: the minimum of its advertised auto-compaction limit and `model_context_window` (or the route context window when unset). Handles missing config, safe limits, BOM and syntax errors without mutating disk.
+   - Verified by `tests/doctor-compaction.test.ts` (offline unit and `runDoctor` integration); documentation added to `TROUBLESHOOTING.md`.
+
+2. **Owned runtime persistence failure handling (`0a8f233`, #905)**:
+   - Updated `launcher/electron/runtime-supervisor.cjs` to catch state write failures, track cleanup completion via `stateWriteCleanup`, ensure bounded termination of owned runtime children, and prevent overlapping starts when state writing fails.
+   - Covered by three parameterized unsafe-cleanup tests (active-turn, unverified-pid, shutdown-error), one cleanup-wait test, and the real-child filesystem-failure integration segment in `launcher/tests/runtime-supervisor.test.cjs`. The latter confirms `child.exitCode !== null`, rejects a new start while persistence is blocked, and permits restart after restoring the state path. The upstream `/ENOTDIR|EEXIST/` regex passed locally on Windows unchanged.
+
+3. **Exact explicit model picker and Astra Max (`89f0ead`, #921)**:
+   - Extended `CHATGPT_EFFORT_SLIDER_MAX_OPTIONS = 6` in `src/chatgpt-session.ts`.
+   - Updated `src/adapters/chatgpt-web/limits.ts` and `src/adapters/chatgpt-web/model-selection.ts` to recognize `GPT-6 Sol` and `GPT-6 Astra`, map Astra Max to `gpt-6-pro`, verify exact 6-position slider effort, and forward `mode.effort` in `browser-worker.ts`.
+   - Retained fork's `#911` Simplified Chinese effort labels (`即时`, `中`, `高`).
+   - Verified by offline unit tests in `tests/chatgpt-model-selection.test.ts` and real-browser fixture tests in `tests/chatgpt-model-family-browser.test.ts`.
+
+4. **Rendered turn identity and stream diagnostics (`b6043e0`, #914)**:
+   - Ported `src/adapters/chatgpt-web/stream-diagnostics.ts` directly from upstream commit history.
+   - Updated `src/adapters/chatgpt-web/browser-worker.ts` to use `innerText` for `<br>` boundary handling, filter hidden/duplicate token identities, and attach stream lifecycle diagnostic callbacks.
+   - Deliberately omitted the experimental vanished-response reload and expansion recovery from draft #914.
+   - Verified by `tests/stream-diagnostics.test.ts` (7 unit tests) and `tests/browser-turn-binding.test.ts` (DOM boundary turnToken extraction).
+
+5. **Items skipped and remaining deferred**:
+   - `ffe041f` (delayed finals / token diagnostics): Missing-final 10-minute timeout relaxation lacks deterministic reproduction tests and does not prove a generic fix for #910.
+   - `f9325c9` (multipart compaction ceiling #930): Strongly coupled with `ffe041f` token breakdown logic; skipped to maintain independent stability.
+   - `e1780b1` (delivery / staging retry guards #929): Involves staging ACK retries and native tool state machines; requires outstanding tool result replay tests before adoption.
+   - MCP ABI changes (`53b6050`, `a738f04`), Temporary Chat defaults (`7c7c10e`, `ad9a611`), and Full Access worktree restructuring (`760ab5a`, `e6ed93a`, `b48477e`): Kept deferred awaiting maintainer decisions or grouped adoption.

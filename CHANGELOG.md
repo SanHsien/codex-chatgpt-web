@@ -3,6 +3,17 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-11-02
+
+- Ported four independent upstream 6.1.14-6.1.17 fixes: Doctor compaction-override check
+  (`7e6e1a0`, #919), stopping the owned runtime when ownership persistence fails (`0a8f233`, #905),
+  exact model selection in the explicit ChatGPT picker with the six-position effort slider
+  (`89f0ead`, #921, keeping this fork's #911 effort labels), and rendered turn identity with stream
+  completion tracing (`b6043e0`, #914).
+- Each port carries upstream's regression tests, including the owned-runtime real-child segment and
+  the Doctor no-mutation assertion. Fork source stays 6.1.13; the public Windows installer/updater
+  stays v5.0.6. The remaining roadmap port row (decision-gated and dependent commits) stays open.
+
 ## 2026-10-29
 
 - Reviewed the 38-commit upstream delta through v6.1.17 (`860fa57`), new PRs #914-#934 and

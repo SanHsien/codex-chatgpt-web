@@ -62,3 +62,44 @@ The gate was run on the ledger pointing at `860fa576eb47` (v6.1.17), after the e
 `b618281` ledger went stale when upstream advanced; its counts matched the earlier run. Only
 this verification-result text was appended after the gate; final whitespace and scope checks
 were repeated. No product behavior changed.
+
+## 2026-11-02 port of 7e6e1a0, 0a8f233, 89f0ead, b6043e0
+
+Base HEAD: `147a062`. Acceptance covers the four ported upstream fixes together with the review
+corrections: the six-position slider contract, the real-child ownership-persistence segment, the
+Doctor integration no-mutation assertion, stream diagnostics stored as LF, and the corrected
+decision register. Both lockfiles are unchanged; the roadmap port row remains open for the
+decision-gated and dependent commits.
+
+Observed with Bun 1.4.2 on Windows:
+
+- `pwsh -NoProfile -File tools/bootstrap_dev.ps1`: exit 0; both frozen lockfiles and Electron ready.
+- `bun test tests/browser-worker-contract.test.ts -t "effort slider ARIA state"` before the
+  correction: exit 1, 0 pass / 1 fail; the old max=5 rejection received a valid slider state.
+- Real-child red check: temporarily substituted only `launcher/electron/runtime-supervisor.cjs`
+  with its HEAD bytes, ran `node --test --test-name-pattern="starts, health-checks, drains, and
+  stops its daemon" launcher/tests/runtime-supervisor.test.cjs`, and restored the exact saved
+  worktree bytes in a finally block. Exit 1: expected null daemon, received a live ChildProcess.
+  With the ported implementation the same test passed: exit 0, 1 pass / 0 fail; the later full
+  launcher test run also exercised the restored implementation and the child exit assertion.
+- Set `CHATGPT_DOM_TEST_BROWSER` to the installed Microsoft Edge executable for the offline
+  fixture run: `bun test tests/browser-turn-binding.test.ts tests/chatgpt-model-family-browser.test.ts
+  tests/browser-worker-contract.test.ts tests/doctor-compaction.test.ts tests/stream-diagnostics.test.ts`.
+  Exit 0, 187 pass / 0 fail / 0 skip, 1,119 assertions. This actually executed the new explicit-picker
+  and rendered-token DOM cases. No historical red result is claimed for those DOM cases.
+- `bun run test`: exit 0, 1,094 pass / 98 skip / 0 fail, 8,854 assertions
+  (1,192 tests across 88 files, 150.57 seconds). DOM fixtures gated by the unset environment
+  variable are skipped here; their separate Edge run above provides execution evidence.
+- `bun run launcher:test`: exit 0, 415 pass / 1 skip / 0 fail (416 tests).
+- `pwsh -NoProfile -File tools/dev_check.ps1 -Quick`: exit 0, 16 pass / 0 fail;
+  `VERSION_SYNC_OK 6.1.13 bun@1.4.2`, typecheck and whitespace passed;
+  `QUICK CHECK PASSED: Bun 1.4.2, focused fork tests, version, typecheck, and whitespace.`
+- `pwsh -NoProfile -File tools/dev_check.ps1`: exit 1 at the strict upstream gate:
+  `Upstream check requires attention: attention.` Observed PR #955, issue #956 and the additional
+  `fix/current-workspace-roots` branch exceed the reviewed ledger. The gate stopped before
+  dependency freshness/audits and verify, so this run makes no new minimatch audit claim and
+  provides no Full completion evidence. These pre-existing maintenance items are outside this fix.
+
+Local logs are ignored under `.maintenance-reports/fix-*.log`; a final worktree fingerprint is
+retained there for the uncommitted inputs. Source/fixture tests do not prove signed-in ChatGPT,
+MCP, model-service behavior or packaged-release acceptance.

@@ -2531,12 +2531,13 @@ test("image attachment readiness uses exact file tiles and not localized remove-
 
 test("effort slider ARIA state fails closed on malformed and unsupported ranges", () => {
   expect(parseChatGptEffortSliderState("0", "4", "3")).toEqual({ min: 0, max: 4, value: 3 });
+  expect(parseChatGptEffortSliderState("0", "5", "4")).toEqual({ min: 0, max: 5, value: 4 });
   for (const attributes of [
     [null, "4", "3"],
     ["", "4", "3"],
     ["0", "4", null],
     ["0", "4", "9"],
-    ["0", "5", "3"],
+    ["0", "6", "3"],
     ["9007199254740992", "9007199254740993", "9007199254740992"],
   ] as const) {
     expect(parseChatGptEffortSliderState(attributes[0], attributes[1], attributes[2])).toBeUndefined();

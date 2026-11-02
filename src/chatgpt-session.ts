@@ -28,7 +28,9 @@ export const CHATGPT_EFFORT_MENU_SELECTOR = [
 export const CHATGPT_EFFORT_ITEM_SELECTOR = '[role="menuitemradio"]';
 export const CHATGPT_EFFORT_SLIDER_CONTAINER_SELECTOR = '[data-model-reasoning-effort-slider], [data-model-picker-power-slider]';
 export const CHATGPT_EFFORT_SLIDER_SELECTOR = '[data-model-reasoning-effort-slider] [role="slider"], [data-model-picker-power-slider] [role="slider"]';
-export const CHATGPT_EFFORT_SLIDER_MAX_OPTIONS = 5;
+// Explicit Astra and the mixed Default picker expose six positions. Exact
+// requested model/effort verification still runs before any submission.
+export const CHATGPT_EFFORT_SLIDER_MAX_OPTIONS = 6;
 
 /** Model identity precedes the localized slider position; punctuation is not language-specific. */
 export function parseChatGptModelAnnouncement(text: string): {
