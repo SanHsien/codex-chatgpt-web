@@ -17,6 +17,7 @@ export const CHATGPT_EFFORT_CONTROL_SELECTOR = [
   'button[aria-haspopup="menu"][data-tone="neutral"]',
   'button[data-testid="model-switcher-dropdown-button"][aria-haspopup="menu"]',
   'button[data-codex-intelligence-trigger="true"][data-composer-navigation-target="reasoning"][aria-haspopup="menu"]',
+  'button[aria-haspopup="menu"][data-composer-navigation-target="reasoning"][data-selected-reasoning-effort]',
 ].join(", ");
 export const CHATGPT_EFFORT_MENU_SELECTOR = [
   '[data-testid="composer-intelligence-picker-content"]:has([role="menuitemradio"], [data-model-reasoning-effort-slider])',
@@ -89,11 +90,22 @@ export const CHATGPT_STOP_BUTTON_SELECTOR = '[data-testid="stop-button"], '
 // composer pill and pressed state identify this action independently of its label.
 // Other composer pills (search, tools, attachments) must not be treated as Think.
 // The Free account in the DEV launcher (2026-10-11) uses an SVG sprite instead.
-// The sprite fragment stays the same with Think on/off; the asset hash does not.
+// #902 (upstream dc29540) captured the renamed codex-icon- sprite in both English and zh-TW.
+// Match the observed fragments exactly, independently of asset hash and language.
 export const CHATGPT_THINK_BUTTON_SELECTOR = [
   'button[type="button"].__composer-pill[aria-pressed]:has(> .__composer-pill-icon > svg[viewBox="0 0 24 24"] > path[d^="M14.8974 2.29998C15.8303 2.29013 16.802 2.58194 17.5566 3.22577"])',
   'button[type="button"][aria-pressed]:has(> svg[viewBox="0 0 20 20"] > use[href$="#brain-regular-20"])',
+  'button[type="button"][aria-pressed]:has(> svg[viewBox="0 0 20 20"] > use[href$="#codex-icon-brain-regular-20"])',
 ].join(", ");
+
+export function chatGptThinkButtons(composer: Locator): Locator {
+  const form = composer.locator("xpath=ancestor::form[1]");
+  // Keep the semantic button used before 6.1.8 alongside the captured localized
+  // glyph. Both identify the same action; never substitute a composer command.
+  return form.locator(CHATGPT_THINK_BUTTON_SELECTOR)
+    .or(form.getByRole("button", { name: "Think", exact: true }))
+    .filter({ visible: true });
+}
 // The new footer is shared with user messages. Response extraction additionally requires
 // this control to FOLLOW the last assistant answer, excluding the user's earlier footer.
 export const CHATGPT_COMPLETION_ACTION_SELECTOR = 'button[data-testid="copy-turn-action-button"], [data-turn-key] .turn-action-controls button';
@@ -354,6 +366,15 @@ export async function waitForChatGptEffortControl(
       // A short absence is not a capability result; use the complete inspection budget.
       if (absenceSince !== undefined && Date.now() - absenceSince >= stableAbsenceMs) {
         options.signal?.throwIfAborted();
+        // #932: UI drift on paid accounts must not overwrite the catalog with Luna-only.
+        const think = chatGptThinkButtons(composer);
+        const pressed = await think.count() === 1
+          ? await think.first().getAttribute("aria-pressed", { timeout: 5_000, signal: options.signal })
+          : null;
+        options.signal?.throwIfAborted();
+        if (pressed !== "true" && pressed !== "false") {
+          throw new Error("Could not identify ChatGPT's model controls. Reload ChatGPT in the launcher and retry setup.");
+        }
         return undefined;
       }
       throw new Error("ChatGPT account capability probe did not reach a stable composer state");

@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { ChatGptBrowserWorker } from "../src/adapters/chatgpt-web/browser-worker";
 import {
   CHATGPT_COMPOSER_SELECTOR,
   CHATGPT_EFFORT_CONTROL_SELECTOR,
   CHATGPT_EFFORT_MENU_SELECTOR,
   CHATGPT_EFFORT_SLIDER_CONTAINER_SELECTOR,
+  CHATGPT_THINK_BUTTON_SELECTOR,
   activateChatGptEffortMenu,
   assertNewChatPage,
   chatGptNewChatUrl,
@@ -53,6 +55,44 @@ test("composer and effort selectors exclude unrelated editable fields and menu b
   const matches = (selector: string) => Array.from(document.querySelectorAll(selector)).map(element => element.id);
   expect(matches(CHATGPT_COMPOSER_SELECTOR)).toEqual(["composer-testid", "prompt-textarea", "composer-lexical", "power-editor"]);
   expect(matches(CHATGPT_EFFORT_CONTROL_SELECTOR)).toEqual(["effort", "model", "power-effort"]);
+});
+
+// 2026-10-29, #924: the trigger lost all three older identifying attributes.
+test.each(["选择 ChatGPT 模型", "Select ChatGPT model", ""])("inline reasoning control is structural, independent of label (%s)", label => {
+  const { createDocument } = require("@mixmark-io/domino") as { createDocument(html: string): Document };
+  const document = createDocument(`<form>
+    <button type="button" aria-label="${label}" aria-haspopup="menu"
+      data-composer-navigation-target="reasoning" data-selected-reasoning-effort="max" id="inline">思考强度</button>
+    <button aria-haspopup="menu" data-composer-navigation-target="reasoning"></button>
+    <button aria-haspopup="menu" data-selected-reasoning-effort="max"></button>
+    <button data-composer-navigation-target="reasoning" data-selected-reasoning-effort="max"></button>
+    <button aria-haspopup="dialog" data-composer-navigation-target="reasoning" data-selected-reasoning-effort="max"></button>
+    <button aria-haspopup="menu" data-composer-navigation-target="attachments" data-selected-reasoning-effort="max"></button>
+    <button aria-label="${label}" aria-haspopup="menu"></button>
+    <div role="button" aria-haspopup="menu" data-composer-navigation-target="reasoning" data-selected-reasoning-effort="max"></div>
+  </form>`);
+  expect(Array.from(document.querySelectorAll(CHATGPT_EFFORT_CONTROL_SELECTOR)).map(element => element.id)).toEqual(["inline"]);
+});
+
+// #902 (upstream dc29540): the sprite fragment was renamed to codex-icon-brain-regular-20 in both
+// English and zh-TW. domino cannot evaluate :has(), so this pins the property that matters instead:
+// every captured Think sprite href ends with a fragment the selector lists, on the same button shape.
+test.each([
+  ["chatgpt-composer-think-2026-10-11.html", "Think"],
+  ["chatgpt-composer-think-2026-10-28.html", "Think"],
+  ["chatgpt-composer-think-2026-10-28.html", "思考"],
+])("Think selector recognizes the captured sprite in %s labelled %s", (fixture, label) => {
+  const { createDocument } = require("@mixmark-io/domino") as { createDocument(html: string): Document };
+  const captured = readFileSync(new URL(`./fixtures/${fixture}`, import.meta.url), "utf8").replace(">Think</span>", `>${label}</span>`);
+  const document = createDocument(`<form>${captured}</form>`);
+  const use = document.querySelector('button[type="button"][aria-pressed] > svg[viewBox="0 0 20 20"] > use');
+  const href = use?.getAttribute("href") ?? "";
+  expect(href).not.toBe("");
+  const spriteSuffixes = CHATGPT_THINK_BUTTON_SELECTOR.split(", ").flatMap(clause => {
+    const match = /^button\[type="button"\]\[aria-pressed\]:has\(> svg\[viewBox="0 0 20 20"\] > use\[href\$="([^"]+)"\]\)$/.exec(clause);
+    return match ? [match[1]] : [];
+  });
+  expect(spriteSuffixes.some(suffix => href.endsWith(suffix))).toBe(true);
 });
 
 test("effort activation binds the owned menu after the control opens", async () => {
@@ -182,15 +222,18 @@ test("effort activation fails closed when neither event exposes a structural sur
     .rejects.toThrow("did not expose its owned menu or structural slider");
 });
 
-test("a complete authenticated composer with no effort selector is Luna-only", async () => {
+test("an authenticated composer without recognized model controls cannot be classified as Luna-only", async () => {
   const effortButton = {
     filter() { return this; },
+    or() { return this; },
+    count: async () => 0,
     last() { return this; },
     isVisible: async () => false,
   };
   const composerForm = {
     count: async () => 1,
     locator: () => effortButton,
+    getByRole: () => effortButton,
   };
   const composer = {
     filter() { return this; },
@@ -207,13 +250,15 @@ test("a complete authenticated composer with no effort selector is Luna-only", a
   await expect(detectChatGptAccountCapabilities(page as never, {
     selectorTimeoutMs: 100,
     stableAbsenceMs: 0,
-  })).resolves.toEqual({ solAvailable: false, extraHighAvailable: false, proAvailable: false });
+  })).rejects.toThrow("Could not identify ChatGPT's model controls");
 });
 
-test("a transient effort control does not turn a Luna-only account into Sol", async () => {
+test("a transient effort control cannot establish either paid or Luna capabilities", async () => {
   let visibilityReads = 0;
   const effortButton = {
     filter() { return this; },
+    or() { return this; },
+    count: async () => 0,
     last() { return this; },
     isVisible: async () => {
       visibilityReads += 1;
@@ -223,6 +268,7 @@ test("a transient effort control does not turn a Luna-only account into Sol", as
   const composerForm = {
     count: async () => 1,
     locator: () => effortButton,
+    getByRole: () => effortButton,
   };
   const composers = {
     filter() { return this; },
@@ -238,7 +284,7 @@ test("a transient effort control does not turn a Luna-only account into Sol", as
   await expect(detectChatGptAccountCapabilities(page as never, {
     selectorTimeoutMs: 100,
     stableAbsenceMs: 0,
-  })).resolves.toEqual({ solAvailable: false, extraHighAvailable: false, proAvailable: false });
+  })).rejects.toThrow("Could not identify ChatGPT's model controls");
   expect(visibilityReads).toBe(2);
 });
 

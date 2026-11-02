@@ -64,10 +64,10 @@ import {
   CHATGPT_EFFORT_ITEM_SELECTOR,
   CHATGPT_EFFORT_SLIDER_CONTAINER_SELECTOR,
   CHATGPT_STOP_BUTTON_SELECTOR,
-  CHATGPT_THINK_BUTTON_SELECTOR,
   CHATGPT_SEND_BUTTON_SELECTOR,
   CHATGPT_USER_TURN_SELECTOR,
   activateChatGptEffortMenu,
+  chatGptThinkButtons,
   detectChatGptAccountCapabilities,
   readChatGptEffortCapabilities,
   readChatGptEffortSnapshot,
@@ -1575,15 +1575,6 @@ export function chatGptSubmissionEvidence(state: {
   return undefined;
 }
 
-export function chatGptThinkButtons(composer: Locator): Locator {
-  const form = composer.locator("xpath=ancestor::form[1]");
-  // Keep the semantic button used before 6.1.8 alongside the captured localized
-  // glyph. Both identify the same action; never substitute a composer command.
-  return form.locator(CHATGPT_THINK_BUTTON_SELECTOR)
-    .or(form.getByRole("button", { name: "Think", exact: true }))
-    .filter({ visible: true });
-}
-
 export async function setChatGptThinkMode(
   composer: Locator,
   enabled: boolean,
@@ -1593,14 +1584,19 @@ export async function setChatGptThinkMode(
   throwIfPromptAttachmentAborted(abortSignal);
   const controls = chatGptThinkButtons(composer);
   let count = await controls.count();
-  if (count === 0 && !enabled) {
-    await captureDiagnostic?.("luna-default-confirmed");
-    return;
-  }
   if (count === 0) {
     // The editor can mount before its controls. Wait for the actual button;
     // typing /think here can become a literal prompt or remove the plugin pill.
-    await controls.first().waitFor({ state: "visible", timeout: 5_000, signal: abortSignal });
+    try {
+      await controls.first().waitFor({ state: "visible", timeout: 5_000, signal: abortSignal });
+    } catch (error) {
+      throwIfPromptAttachmentAborted(abortSignal);
+      if (!(error instanceof Error) || error.name !== "TimeoutError") throw error;
+      throw new ChatGptWebAdapterError(
+        "ChatGPT's Luna/Think control could not be verified. Run setup again in the launcher, then restart Codex.",
+        { status: 409, errorType: "invalid_request_error", code: "chatgpt_model_controls_unavailable", retryable: false, cause: error },
+      );
+    }
     count = await controls.count();
   }
   if (count === 0) throw new Error("ChatGPT did not expose a visible Think button");
@@ -2716,8 +2712,9 @@ export class ChatGptBrowserWorker {
       await throwIfChatGptRateLimitDialog(page);
       const visibleControls = composerForm.locator(CHATGPT_EFFORT_CONTROL_SELECTOR).filter({ visible: true });
       if (await visibleControls.count() > 0) {
-        throw chatGptModelControlUnavailableError(
-          "ChatGPT Luna was selected from a Luna-only capability probe, but the account now exposes a model selector; rerun setup",
+        throw new ChatGptWebAdapterError(
+          "The ChatGPT account exposes a model picker, but the installed Web models only include Luna. Run setup again in the launcher, then restart Codex.",
+          { status: 409, errorType: "invalid_request_error", code: "chatgpt_capabilities_stale", retryable: false },
         );
       }
       // Enable Think during prompt attachment, before fresh connector selection. Ordinary Luna

@@ -268,13 +268,15 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)(`smoke handles a sliderless d
   } finally { await browser.close(); }
 }, 15_000);
 
-// Luna has no model/effort control; keep the real probe's full absence budget.
-test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("smoke uses Luna when the composer has no model or effort control", async () => {
+// Keep the real probe's full hydration budget; absence alone must never pass smoke.
+for (const recognizedThink of [true, false])
+test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)(`smoke requires positive Luna control evidence (Think=${recognizedThink})`, async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const page = await browser.newPage();
     await page.setContent(`<form data-chatgpt-composer>
       <div contenteditable="true" data-composer-markdown role="textbox">Draft</div>
+      ${recognizedThink ? '<button type="button" aria-pressed="false">Think</button>' : ''}
     </form>`);
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
     worker.ensurePage = async () => page;
@@ -290,7 +292,12 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("smoke uses Luna when the com
       });
       return "CODEX WEB GPT READY";
     };
-    expect(await worker.smokeTestExclusive()).toMatchObject({ response: "CODEX WEB GPT READY" });
-    expect(turns).toBe(1);
+    if (recognizedThink) {
+      expect(await worker.smokeTestExclusive()).toMatchObject({ response: "CODEX WEB GPT READY" });
+      expect(turns).toBe(1);
+    } else {
+      await expect(worker.smokeTestExclusive()).rejects.toThrow("Could not identify ChatGPT's model controls");
+      expect(turns).toBe(0);
+    }
   } finally { await browser.close(); }
 }, 40_000);

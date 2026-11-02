@@ -691,7 +691,7 @@ Release notes for [v6.1.14](https://github.com/miuuyy/codex-chatgpt-web/releases
 [v6.1.17](https://github.com/miuuyy/codex-chatgpt-web/releases/tag/v6.1.17) (the last three
 all 2026-10-29) were read alongside the code and test delta. Release dates do not prove Windows
 acceptance.
-All product ports below are deferred or rejected; the fork source stays 6.1.13, the public
+All product ports below are deferred or rejected, except the rows marked `ported` (`dc29540`, `2f0936b`, `9c3633c`; see the 2026-10-31 port section); the fork source stays 6.1.13, the public
 installer/updater stays 5.0.6, and Bun stays 1.4.2. Follow-up work belongs only in ROADMAP.md.
 Earlier decisions are superseded only where explicitly stated below.
 
@@ -718,7 +718,7 @@ about local adoption, even where upstream has already merged or released the cha
 | `467dea6b99d7` merge main into context branch | reject direct merge | Integration history; retain per-component decisions and both fork lockfiles. |
 | `cfeaf04bc7f5` release 6.1.14 | defer source/release adoption | Includes removed Temporary Chat, authority and MCP contract changes above. Never move the fork installer from release notes alone. |
 | `b48477ea8ada` Full Access worktrees | defer | Uses runtime_workspace_roots and permits authenticated Full Access cwd outside retained roots. Changes authorization boundaries in rollout, store and broker; retain namespace path normalization and prove restricted modes still reject out-of-root cwd. |
-| `dc29540a0f99` current Think sprite (#902) | defer | Observed icon addition is portable, but needs retained and current sprite fixtures against the fork's composer before porting; no signed-in Windows verification in this task. |
+| `dc29540a0f99` current Think sprite (#902) | ported (2026-11-02) | Upstream captured the renamed `#codex-icon-brain-regular-20` sprite in English and zh-TW; the fork's `CHATGPT_THINK_BUTTON_SELECTOR` now lists it beside the older `#brain-regular-20` fragment. It is the prerequisite of `9c3633c`: without it a Luna account with the new sprite would fail `chatgpt_model_controls_unavailable`. Fixture `tests/fixtures/chatgpt-composer-think-2026-10-28.html` and a red-then-green selector test were added; no signed-in Windows verification in this task. See the port section below. |
 | `7e6e1a0bfae4` Doctor compaction override (#919) | defer | Read-only global/default-profile TOML inspection is a bounded candidate. Port with malformed profile, context limit and no-mutation tests; it cannot observe running CLI/project overrides. |
 | `7c7c10edee41` restore Temporary Chat (#918) | defer | Renames useSavedChats to useTemporaryChats across CLI, IPC, settings and worker. Needs explicit-opt-out migration, connector-unavailable and Zero Risk tests plus opted-in account acceptance. |
 | `ad9a6114a598` default Temporary Chat on | defer | A product default and privacy migration decision; evaluate with the preceding migration instead of silently changing existing saved-chat behavior. |
@@ -732,11 +732,11 @@ about local adoption, even where upstream has already merged or released the cha
 | `b95b38a0f45b` merge main into worktree branch | reject direct merge | Integration history; authority and UI components require their own acceptance. |
 | `30e7ad9deb73` isolate ChatGPT UI contracts | defer | Moves shared selectors/parsers to chatgpt-ui and adds observed-variant diagnostics/fixtures. Review with the picker candidate to avoid a partial import breaking callers and losing the local #911 handling. |
 | `8a75f1ba3916` release 6.1.15 | defer source/release adoption | Includes exact picker, Temporary Chat default, native reminder and Full Access changes; preserve fork source/release separation. |
-| `2f0936b6360b` inline model control (#924/#927/#928) | defer | Narrow observed reasoning selector is a high-priority Windows candidate. Port to the fork with retained variants and unrelated-button negatives, then verify exact model/effort before Send. No fallback or guessed selector. |
+| `2f0936b6360b` inline model control (#924/#927/#928) | ported (2026-10-31) | Narrow observed reasoning selector added with retained variants and unrelated-button negatives; exact model/effort verification before Send is unchanged. No fallback or guessed selector. See the port section below. |
 | `f9325c967be3` multipart compaction ceiling (#930) | defer | Trims only compaction history while preserving checkpoint/final instruction, counts the omission notice and uses the actual exclusive transport ceiling. Needs exact-boundary, atomic-record, attachment and ordinary-request-no-trim regressions. |
 | `e1780b1c1b87` delivery/staging retry guards (#929) | defer | Retry only a bound explicit delivery alert with settled native tool state; malformed staging ACK retries before commit, never accepts a near-match. Requires outstanding/late/duplicate tool-result tests to prove no command replay. |
 | `1a0e8934e608` connector navigation diagnostics (#925) | defer | Records failed home navigation checkpoint; inspect sanitization and cancellation classification before porting. It does not establish a turn_id-conflict fix. |
-| `9c3633c6e260` positive Luna evidence (#932) | defer | Missing paid controls must not overwrite the catalog with Luna-only. Pair with inline picker support and tests for unknown UI, verified Think and unchanged prior config; model reinstall remains an account-bound step. |
+| `9c3633c6e260` positive Luna evidence (#932) | ported (2026-10-31, with `dc29540` prerequisite 2026-11-02) | Missing paid controls must not overwrite the catalog with Luna-only. Ported together with the inline picker selector and the #902 Think sprite; model reinstall remains an account-bound step. See the port section below. |
 | `b6182818bb14` release 6.1.16 | defer source/release adoption | Important Windows model-control fix, but source incorporation and account/package acceptance remain separate work. Do not raise package versions or the 5.0.6 installer pin in a review-only update. |
 | `760ab5a8ad87` preserve added Full Access workspaces after compaction (#933) | defer port | Keeps the rollout's declared roots and adds the current claim's extra roots (Codex's per-thread visualization/output folder), only when rollout and claim are both Full Access, cwd matches and every declared native root is already in the claim; cwd, permissions and task identity still come from the exact rollout. The patch sits on top of the 6.1.14 authority changes (`e6ed93a`, `b48477e`) that the fork has deferred, and the fork's `thread-environment.ts` is still the 6.1.13 shape, so it is not a standalone cherry-pick. Reconsider it together with those two commits: import its `tests/environment.test.ts` cases (declared session/turn roots plus an added output root) and add Windows drive-letter/namespace path-identity cases, a restricted-mode negative (an extra root must still be rejected) and dropped/replaced/foreign-root negatives. Whether the fork's 6.1.13 code shows the same `workspace_roots, writable_roots` conflict was not reproduced in this review; a fresh Windows report of that conflict on the fork moves this to high priority. |
 | `860fa576eb47` release 6.1.17 | defer source/release adoption | The commit changes only version strings (four READMEs, two package manifests, `scripts/install.sh`, `src/version.ts`); the comparison file list shows the only other changes are `760ab5a` and its test. The notes add one fix (#933) and restate Electron 42.11.16 and Bun 1.4.0, which the fork deliberately keeps at 44.9.1 and 1.4.2 (see `988f45a`). Do not raise package versions or the 5.0.6 installer pin in a review-only update. |
@@ -775,12 +775,12 @@ downloaded; issue bodies, public release notes and source/test patches were suff
 | #920 | API 404 | reject as actionable item | Absent or removed at review time; reconsider if retrievable. |
 | [#922](https://github.com/miuuyy/codex-chatgpt-web/issues/922) UI/quota question | closed | defer documentation assessment | No confirmed shared-quota bug. Upstream removed a blanket no-Work/Codex-quota promise; evaluate any matching fork wording in both README languages without claiming account billing evidence. |
 | [#923](https://github.com/miuuyy/codex-chatgpt-web/issues/923) Astra effort menu | closed, released; macOS | defer linked portable fix | Exact-picker candidate #921; strict selection already failed closed. Requires fork fixtures and Windows acceptance. |
-| [#924](https://github.com/miuuyy/codex-chatgpt-web/issues/924) inline picker | closed, released; macOS | defer linked portable fix | Independent Windows evidence exists in #927; inspect and test `2f0936b` against fork callers rather than guessing menu labels. |
+| [#924](https://github.com/miuuyy/codex-chatgpt-web/issues/924) inline picker | closed, released; macOS | ported via `2f0936b` (2026-10-31) | Independent Windows evidence exists in #927; inspect and test `2f0936b` against fork callers rather than guessing menu labels. |
 | [#925](https://github.com/miuuyy/codex-chatgpt-web/issues/925) connector navigation/turn identity | closed, partial release; macOS | defer | Navigation diagnostic and selector changes are distinct from the unresolved turn_id report; require fresh Windows evidence before relaxing identity checks. A comment added after the first pass (2026-10-29T15:33Z, v6.1.16, macOS) reports a turn accepted by ChatGPT whose assistant response the bridge did not detect in the DOM; it has no Windows evidence and stays a separate, unreproduced item. |
 | [#926](https://github.com/miuuyy/codex-chatgpt-web/issues/926) Luna-only Plus | closed, released; Linux | defer linked portable fix | Shared paid-capability detection has a confirmed Windows counterpart #932; no Linux packaging is imported. |
 | [#929](https://github.com/miuuyy/codex-chatgpt-web/issues/929) delivery/ACK/frozen page | open, partial release; macOS | defer bounded retry fix | Canonical alert and staging changes differ from reporter's broad retry/near-match proposal. Preserve exact ACK and no-replay guards; generic frozen/missing-final behavior still needs evidence. |
 | [#930](https://github.com/miuuyy/codex-chatgpt-web/issues/930) multipart compaction | closed, released; macOS | defer linked portable fix | Reproducible budget branch in shared prompt code; port `f9325c9` only with checkpoint, ceiling and no ordinary-history trimming regressions. |
-| [#932](https://github.com/miuuyy/codex-chatgpt-web/issues/932) Luna-only/crash | closed, released; Windows/cross-platform | defer high-priority fix | Confirms Windows relevance of inline picker/positive capability detection; requires coordinated model-catalog tests and separate opted-in reinstall validation. |
+| [#932](https://github.com/miuuyy/codex-chatgpt-web/issues/932) Luna-only/crash | closed, released; Windows/cross-platform | ported via `9c3633c` + `dc29540` (2026-11-02) | Confirms Windows relevance of inline picker/positive capability detection; requires coordinated model-catalog tests and separate opted-in reinstall validation. |
 | [#933](https://github.com/miuuyy/codex-chatgpt-web/issues/933) declared visualization roots | closed, completed 2026-10-29T15:38Z by v6.1.17 (open at the first pass); macOS report, Windows confirmation comment, 6.1.16 | defer port | Fixed upstream by `760ab5a` in v6.1.17, which supersedes the earlier note that 6.1.16 did not fix it. The fix keeps declared native roots and only adds claim roots when both sides are Full Access; restricted tasks keep their native grants. The local port waits with `e6ed93a`/`b48477e`, as in the commit row above. Reconsider when those authority commits are ported, or on a fresh Windows report of the `workspace_roots, writable_roots` conflict; require current/parent thread-only visualization roots, dropped/replaced/foreign-root negatives and Windows namespace regressions first. |
 
 ### Four-axis promotion evidence
@@ -802,3 +802,40 @@ The canonical gate rechecks these live values; unavailable or newly advanced axe
 Only read-only GitHub API queries and a local `git fetch` of upstream objects (to read the two new
 commits) were used. No merge, cherry-pick, Git staging/commit, upstream write, account operation
 or release was performed. The tracked fork-contract assertions advance with this reviewed ledger.
+
+## 2026-10-31 port: inline model control (#924/#927/#928) and positive Luna capability evidence (#932)
+
+Ported from the 6.1.14-6.1.17 reviewed delta (see the 2026-10-29 review above), each with a
+red-then-green test. Only #924 (`2f0936b`), #932 (`9c3633c`) and their prerequisite #902
+(`dc29540`, added 2026-11-02) are ported; everything else from that review stays deferred.
+
+1. **Inline model control (`2f0936b`, #924/#927/#928)**:
+   - Added `button[aria-haspopup="menu"][data-composer-navigation-target="reasoning"][data-selected-reasoning-effort]` to `CHATGPT_EFFORT_CONTROL_SELECTOR` in `src/chatgpt-session.ts`.
+   - Verified via a structural domino test in `tests/chatgpt-session.test.ts`.
+   - Preserves existing selectors, model/effort verification and Windows path isolation.
+
+2. **Positive Luna capability evidence (`9c3633c`, #932)**:
+   - Updated `setChatGptThinkMode` in `src/adapters/chatgpt-web/browser-worker.ts` and `waitForChatGptEffortControl` in `src/chatgpt-session.ts` to require positive proof of a verified Think control instead of treating picker absence as Luna.
+   - Throws `chatgpt_capabilities_stale` when a paid model control appears after Luna setup.
+   - Verified across `tests/browser-worker-contract.test.ts`, `tests/chatgpt-session.test.ts` and `tests/setup-lifecycle.test.ts`; troubleshooting guidance added to `TROUBLESHOOTING.md`.
+   - `chatGptThinkButtons` now lives only in `src/chatgpt-session.ts`; the browser worker imports it.
+
+3. **Current Think sprite (`dc29540`, #902), the prerequisite of item 2**:
+   - Positive Luna evidence requires recognizing the Think control. Upstream renamed the sprite fragment to `#codex-icon-brain-regular-20` (observed in English and zh-TW); the fork only accepted `#brain-regular-20`, so after item 2 a Luna account with the new sprite would have failed with `chatgpt_model_controls_unavailable`. The new fragment is added to `CHATGPT_THINK_BUTTON_SELECTOR` as a third, exact-match clause; the older fragments stay.
+   - The diff was compared with upstream `dc29540`: same selector line, same fixture `tests/fixtures/chatgpt-composer-think-2026-10-28.html`, and the same fixture added to the gated Electron Think test in `tests/browser-generation.test.ts`.
+   - Because domino cannot evaluate `:has()`, the red-then-green test in `tests/chatgpt-session.test.ts` pins the property instead (each captured sprite href, English and zh-TW labels, must end with a fragment the selector lists). It was also run against Microsoft Edge through `CHATGPT_DOM_TEST_BROWSER` together with the item below.
+
+4. **Upstream `tests/chatgpt-capabilities-browser.test.ts`**:
+   - Ported its second case (a unique recognized Think control proves Luna; unknown or ambiguous controls are rejected; the draft is never touched) as `tests/chatgpt-capabilities-browser.test.ts`, gated by `CHATGPT_DOM_TEST_BROWSER` like the other real-browser tests.
+   - Its first case is not ported: it reads `chatgpt-model-picker-power-2026-09-29.html`, a fixture of the deferred exact picker (`89f0ead`, #921) that this fork does not have. The paid inline-control behavior it checks is covered offline in `tests/chatgpt-session.test.ts`. Reconsider it with the #921 port.
+
+5. **Still deferred or rejected from the 2026-10-29 review**: the table above is the complete
+   list; nothing there changed except the three rows marked `ported`. The items still open, which
+   [ROADMAP.md](../ROADMAP.md) tracks as one follow-up, are: `d3cf95a` (#886), `e6ed93a` (#894), `3790e3f`,
+   `794e576`, `3b47927`, `53b6050` (#904), `7b7f2f8`, `ffe041f`, `a738f04` (#893/#895), `988f45a`
+   (dependency removal only), `b48477e`, `7e6e1a0` (#919), `7c7c10e` (#918), `ad9a611`, `d80bf0d`
+   (BOM port only), `d3734f1`, `0a8f233` (#905), `89f0ead` (#921), `b6043e0` (#914 diagnostics),
+   `0286265`, `8744974`, `30e7ad9`, `f9325c9` (#930), `e1780b1` (#929), `1a0e893` (#925), `760ab5a`
+   (#933), the three release-version commits (`cfeaf04`, `8a75f1b`, `b618281`) and `860fa57`;
+   plus the open PR #914 and #934 and the deferred issue decisions. Release version bumps stay
+   deferred: the installer pin remains v5.0.6 and the fork package remains 6.1.13.
