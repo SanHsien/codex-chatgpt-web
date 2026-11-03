@@ -360,6 +360,16 @@ Do not assume that a generic 502 means the Tunnel is broken. Since v4.0.7, a nat
 outlives its turn binding is reported explicitly as `codex_tool_timeout` and retired rather than
 being presented as an ambiguous proxy success.
 
+If Stop disappears before the final answer, the bridge allows up to ten minutes without new
+observable response activity. A visible error or a completed empty answer has its own check.
+An idle timeout does not establish why ChatGPT stopped responding. Keep the original ChatGPT tab
+when reporting this case, and mention whether its final answer appeared after the error.
+
+For repeated compaction, the safe log includes `context_token_breakdown`: character and token
+counts grouped by instruction/message role, without their contents. These counts distinguish a
+large fixed instruction load from growing conversation history. They cover individual submitted
+records; the full input estimate also includes transport framing, attachments and platform reserve.
+
 ## Saved task environment cannot be read
 
 If an interrupted shutdown damages `runtime/thread-environments.json`, start a fresh Codex task.

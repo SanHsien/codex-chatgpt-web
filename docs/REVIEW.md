@@ -258,3 +258,72 @@ Observed with Bun 1.4.2 on Windows; logs use the ignored `.maintenance-reports/r
   Only verification-result documentation was appended after the gates; final whitespace and scope
   checks were repeated. Final input hashes and base SHA are retained in ignored
   `.maintenance-reports/roadmap-worktree.json`.
+
+## 2026-11-03 delivery compaction and delayed finals
+
+Base HEAD: `e27d403c7886ec85901c9836a02c25b4b3ac37a8`. Scope: shared browser worker,
+adapter retry classification, prompt compaction/diagnostics, helper forwarding, their regressions,
+CHANGELOG, troubleshooting, DECISIONS and ROADMAP. All three reviewed upstream fixes apply to
+Windows. Model/effort rules, Windows path handling, both lockfiles, source version, Bun pin and
+public installer pin are unchanged. The remaining port row stays open for the other deferred groups;
+no unique revisit deadline is removed. ROADMAP's existing dependency-review plan covers freshness
+outside declared bounds, including a latest version below a numeric prefix.
+
+Observed on Windows with Bun 1.4.2 (command logs under ignored `.maintenance-reports/ports-`):
+
+- Initial bootstrap exited 1 because the default executable was Bun 1.4.4. The official Bun 1.4.2
+  Windows archive was extracted under the ignored report directory and prepended to the process
+  PATH only. `pwsh -NoProfile -File tools/bootstrap_dev.ps1` then exited 0, ending
+  `BOOTSTRAP PASSED: Bun 1.4.2, both frozen lockfiles, and Electron runtime.`
+- Before source changes, the following regression command exited 1 (289 pass / 4 skip / 21 fail):
+  `bun test tests/browser-live-progress.test.ts tests/browser-worker-contract.test.ts
+  tests/chatgpt-web-usage.test.ts tests/launcher-helper-client.test.ts
+  tests/multipart-compaction.test.ts tests/chatgpt-web-harness.test.ts`.
+  Failures include the 125-second delayed final, premature idle verdict, missing diagnostics/helper
+  forwarding, over-ceiling compaction and the pending-result retry guard.
+- Added the duplicate-result case before retry-source changes:
+  `bun test tests/chatgpt-web-harness.test.ts --test-name-pattern 'delivery timeout retries'`
+  exited 1 (2 pass / 2 fail), rejecting the old pending/duplicate-result retry behavior.
+- Initial source integration exposed an unported upstream serializer reference (309 pass / 4 skip /
+  2 fail). Diagnostic counting was adapted to this fork's actual serializer; the unrelated rendering
+  and compaction-continuation deferrals were not imported.
+- `bun test tests/multipart-compaction-boundary.test.ts` with only the compaction-ceiling patch
+  temporarily reversed exited 1 (0 pass / 2 fail); exact equality failed to trim. The original
+  working bytes were restored in a `finally` block. Then
+  `bun test tests/multipart-compaction-boundary.test.ts tests/multipart-compaction.test.ts
+  tests/chatgpt-web-usage.test.ts` exited 0 (29 pass / 0 fail, 219 assertions). Boundary probes isolate
+  tokenizer granularity; integration cases use actual serialized messages, attachments and token
+  estimates. No dependency version is pinned in a test assertion.
+- Offline Edge fixtures use `CHATGPT_DOM_TEST_BROWSER`: `bun test tests/delivery-timeout.test.ts`
+  first passed the visible bound-alert exclusions (1 pass) but failed the ACK case (1 fail) after
+  repeated `setContent` on one page yielded an absent snapshot. One diagnostic repeat reproduced it;
+  the underlying observer failure was not established. Each ACK variant now owns a fresh page,
+  and that isolated fixture passes; no product timeout
+  was increased. `bun test tests/delivery-timeout.test.ts --test-name-pattern 'damaged staging'`
+  against the original ACK error code/retryability exited 1, then the restored fix exited 0
+  (1 pass / 0 fail, 11 assertions). Exact, truncated and wrong-context ACKs are exercised.
+- `pwsh -NoProfile -File tools/dev_check.ps1`: exit 1 at strict upstream tracking, after focused
+  contracts passed. Main remains at the reviewed SHA; PR #959, issue #957, the latest PR head and
+  additional `fix/current-workspace-roots` branch exceed the ledger. Tail:
+  `Command failed (1): bun run scripts/check-upstream-baseline.ts --strict`.
+  No successful Full completion evidence is produced; the upstream ledger is unchanged.
+- `npm run check:dependencies`: exit 1, `Dependency freshness requires attention: attention.`
+  Registry latest chromium-bidi is `157.0.8103-39`, outside the declared `159` prefix. Root audit is
+  clean; launcher audit is explicitly deferred for three exact minimatch nodes through 2026-11-17.
+  This is neither zero vulnerabilities nor an automatic renewal of the dependency bound.
+
+- Independent `bun run verify`: exit 0. Core: 1,131 pass / 100 skip / 0 fail, 9,189 assertions
+  (1,231 tests across 93 files). Launcher: 419 pass / 1 skip / 0 fail (420 tests). Both typechecks,
+  renderer/runtime builds and notices generation passed. Tail: `RELOCATABLE_RUNTIME_SMOKE_OK`.
+  This final suite covers all updated non-DOM regression files, including pending/duplicate native
+  results, delayed finals and context diagnostics. Environment-gated browser tests are accounted
+  for separately above; skips are not claimed as runtime acceptance.
+- `git diff --check`: exit 0, no output. The accumulated diff was self-reviewed; original line
+  endings, both lockfiles and empty index are confirmed. Only verification-result documentation
+  was added after verify; final whitespace and scope were checked again. Final relative-path
+  input hashes, HEAD and command outcomes are retained in ignored
+  `.maintenance-reports/ports-worktree.json`.
+
+These tests do not establish signed-in ChatGPT, MCP service, live-model, or packaged-release
+acceptance. Those remain subject to the existing TEST_PLAN and release runbooks. MCP ABI,
+Temporary Chat defaults and the Full Access workspace group still require their original decisions.

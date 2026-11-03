@@ -5,6 +5,11 @@ This file records maintained-fork work and release identity. See this fork's
 
 ## 2026-11-03
 
+- Port delivery/staging retry guards (`e1780b1`), multipart compaction transport limits
+  (`f9325c9`) and delayed-final/context-cost diagnostics (`ffe041f`) to the Windows shared path.
+  Guard pending and duplicate native tool results against replay, preserve checkpoint/final
+  instructions, rebuild trimmed attachments and retain ordinary history. Keep source/release pins.
+
 - Read Electron navigation and redirect guard URLs from event details, preserving renderer
   destination restrictions and main-frame authentication interception without deprecated arguments.
 - Support explicit numeric `latestPrefix` dependency deferrals alongside unchanged exact `latest`

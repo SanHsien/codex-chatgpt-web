@@ -315,6 +315,7 @@ test("launcher helper protocol preserves multipart context, broker identity and 
       turnToken: "turn_0123456789abcdef0123456789abcdef",
       multipart: { parts: Array.from({ length: 6 }, (_, index) => JSON.stringify({ part: index + 1 })), commit: "commit" },
       trimmedCompactionMessages: 4,
+      contextTokenBreakdown: { developer: { records: 1, chars: 400, tokens: 100 } },
       release() {},
     }),
     onTextDelta() {},
@@ -333,6 +334,7 @@ test("launcher helper protocol preserves multipart context, broker identity and 
         turnToken: "turn_0123456789abcdef0123456789abcdef",
         multipart: { parts: Array.from({ length: 6 }, (_, index) => JSON.stringify({ part: index + 1 })), commit: "commit" },
         trimmedCompactionMessages: 4,
+        contextTokenBreakdown: { developer: { records: 1, chars: 400, tokens: 100 } },
     },
   });
 });

@@ -712,7 +712,7 @@ about local adoption, even where upstream has already merged or released the cha
 | `53b60503b432` 60 s command polls (#904) | defer | Fork already advertises 80 s for the dedicated tool. Upstream additionally bounds generic/native exec and rejects excessive durations without rewriting them. This changes tools/list and its ABI; requires focused transport tests and a coordinated connector refresh. The local cap is not claimed equivalent. |
 | `7b7f2f807d2e` merge #896 | defer | Same native-task restoration as `794e576`/`3b47927`; merge status satisfies the earlier re-review trigger, not local acceptance. |
 | `150787819816` merge main into context branch | reject direct merge | Integration history is not an independent port; component decisions above apply. |
-| `ffe041f880f0` delayed finals/token diagnostics | defer | Extends missing-final grace to ten minutes and adds context counts. Needs a deterministic delayed-final versus explicit-failure test; does not prove a generic #910 repair. |
+| `ffe041f880f0` delayed finals/token diagnostics | ported | Windows shared-path adoption on 2026-11-03: deterministic delayed-final, bounded inactivity, empty/lost DOM and explicit-failure regressions; numeric-only submitted-context diagnostics use the fork serializer. Not a generic #910 repair. |
 | `a738f0485c6a` MCP setup/catalog separation (#893/#895) | defer | Separates core installation readiness from catalog health. Reconsider with failed catalog, healthy proxy and incomplete-installation cases; a catalog error must remain visible. |
 | `988f45a15201` dependencies/Electron preparation | defer remaining dependency removal; reject pin replacement | Fork locks already contain body-parser 2.4.0, fast-uri 3.1.9, ip-address 10.7.4, qs 6.16.2, Zod 4.6.7 and Undici 7.30.1/6.29.1. Keep Electron 44.9.1 rather than upstream 42.11.16 and Bun 1.4.2 rather than 1.4.0. Bootstrap already prepares Electron; verify already avoids duplicate renderer typecheck. Removing chromium-bidi is a separate unused-dependency assessment, not a forced major upgrade. |
 | `467dea6b99d7` merge main into context branch | reject direct merge | Integration history; retain per-component decisions and both fork lockfiles. |
@@ -733,8 +733,8 @@ about local adoption, even where upstream has already merged or released the cha
 | `30e7ad9deb73` isolate ChatGPT UI contracts | defer | Moves shared selectors/parsers to chatgpt-ui and adds observed-variant diagnostics/fixtures. Review with the picker candidate to avoid a partial import breaking callers and losing the local #911 handling. |
 | `8a75f1ba3916` release 6.1.15 | defer source/release adoption | Includes exact picker, Temporary Chat default, native reminder and Full Access changes; preserve fork source/release separation. |
 | `2f0936b6360b` inline model control (#924/#927/#928) | ported (2026-10-31) | Narrow observed reasoning selector added with retained variants and unrelated-button negatives; exact model/effort verification before Send is unchanged. No fallback or guessed selector. See the port section below. |
-| `f9325c967be3` multipart compaction ceiling (#930) | defer | Trims only compaction history while preserving checkpoint/final instruction, counts the omission notice and uses the actual exclusive transport ceiling. Needs exact-boundary, atomic-record, attachment and ordinary-request-no-trim regressions. |
-| `e1780b1c1b87` delivery/staging retry guards (#929) | defer | Retry only a bound explicit delivery alert with settled native tool state; malformed staging ACK retries before commit, never accepts a near-match. Requires outstanding/late/duplicate tool-result tests to prove no command replay. |
+| `f9325c967be3` multipart compaction ceiling (#930) | ported | Windows shared-path adoption on 2026-11-03: exact exclusive boundary, account/family/effort/part-count limits, checkpoint/final instruction, atomic records, rebuilt attachments and ordinary-request-no-trim regressions. |
+| `e1780b1c1b87` delivery/staging retry guards (#929) | ported | Windows shared-path adoption on 2026-11-03: bound visible alert and exact staging ACK fixtures; pending/duplicate results block retry, completed/late canonical results permit continuation without replay, with the existing retry cap. |
 | `1a0e8934e608` connector navigation diagnostics (#925) | defer | Records failed home navigation checkpoint; inspect sanitization and cancellation classification before porting. It does not establish a turn_id-conflict fix. |
 | `9c3633c6e260` positive Luna evidence (#932) | ported (2026-10-31, with `dc29540` prerequisite 2026-11-02) | Missing paid controls must not overwrite the catalog with Luna-only. Ported together with the inline picker selector and the #902 Think sprite; model reinstall remains an account-bound step. See the port section below. |
 | `b6182818bb14` release 6.1.16 | defer source/release adoption | Important Windows model-control fix, but source incorporation and account/package acceptance remain separate work. Do not raise package versions or the 5.0.6 installer pin in a review-only update. |
@@ -778,8 +778,8 @@ downloaded; issue bodies, public release notes and source/test patches were suff
 | [#924](https://github.com/miuuyy/codex-chatgpt-web/issues/924) inline picker | closed, released; macOS | ported via `2f0936b` (2026-10-31) | Independent Windows evidence exists in #927; inspect and test `2f0936b` against fork callers rather than guessing menu labels. |
 | [#925](https://github.com/miuuyy/codex-chatgpt-web/issues/925) connector navigation/turn identity | closed, partial release; macOS | defer | Navigation diagnostic and selector changes are distinct from the unresolved turn_id report; require fresh Windows evidence before relaxing identity checks. A comment added after the first pass (2026-10-29T15:33Z, v6.1.16, macOS) reports a turn accepted by ChatGPT whose assistant response the bridge did not detect in the DOM; it has no Windows evidence and stays a separate, unreproduced item. |
 | [#926](https://github.com/miuuyy/codex-chatgpt-web/issues/926) Luna-only Plus | closed, released; Linux | defer linked portable fix | Shared paid-capability detection has a confirmed Windows counterpart #932; no Linux packaging is imported. |
-| [#929](https://github.com/miuuyy/codex-chatgpt-web/issues/929) delivery/ACK/frozen page | open, partial release; macOS | defer bounded retry fix | Canonical alert and staging changes differ from reporter's broad retry/near-match proposal. Preserve exact ACK and no-replay guards; generic frozen/missing-final behavior still needs evidence. |
-| [#930](https://github.com/miuuyy/codex-chatgpt-web/issues/930) multipart compaction | closed, released; macOS | defer linked portable fix | Reproducible budget branch in shared prompt code; port `f9325c9` only with checkpoint, ceiling and no ordinary-history trimming regressions. |
+| [#929](https://github.com/miuuyy/codex-chatgpt-web/issues/929) delivery/ACK/frozen page | open, partial release; macOS | ported bounded retry fix (2026-11-03) | Canonical alert and staging changes differ from reporter's broad retry/near-match proposal. Preserve exact ACK and no-replay guards; generic frozen/missing-final behavior still needs evidence. |
+| [#930](https://github.com/miuuyy/codex-chatgpt-web/issues/930) multipart compaction | closed, released; macOS | ported linked portable fix | Shared prompt fix `f9325c9` adopted on 2026-11-03 with checkpoint, ceiling and no ordinary-history trimming regressions; the original issue report remains macOS evidence. |
 | [#932](https://github.com/miuuyy/codex-chatgpt-web/issues/932) Luna-only/crash | closed, released; Windows/cross-platform | ported via `9c3633c` + `dc29540` (2026-11-02) | Confirms Windows relevance of inline picker/positive capability detection; requires coordinated model-catalog tests and separate opted-in reinstall validation. |
 | [#933](https://github.com/miuuyy/codex-chatgpt-web/issues/933) declared visualization roots | closed, completed 2026-10-29T15:38Z by v6.1.17 (open at the first pass); macOS report, Windows confirmation comment, 6.1.16 | defer port | Fixed upstream by `760ab5a` in v6.1.17, which supersedes the earlier note that 6.1.16 did not fix it. The fix keeps declared native roots and only adds claim roots when both sides are Full Access; restricted tasks keep their native grants. The local port waits with `e6ed93a`/`b48477e`, as in the commit row above. Reconsider when those authority commits are ported, or on a fresh Windows report of the `workspace_roots, writable_roots` conflict; require current/parent thread-only visualization roots, dropped/replaced/foreign-root negatives and Windows namespace regressions first. |
 
@@ -830,12 +830,12 @@ red-then-green test. Only #924 (`2f0936b`), #932 (`9c3633c`) and their prerequis
    - Its first case is not ported: it reads `chatgpt-model-picker-power-2026-09-29.html`, a fixture belonging to the still-deferred UI-contract extraction (`30e7ad9`), not the now-ported exact picker (`89f0ead`, #921). The paid inline-control behavior it checks is covered offline in `tests/chatgpt-session.test.ts`. Reconsider the fixture with `30e7ad9`.
 
 5. **Still deferred or rejected from the 2026-10-29 review**: the table above is the complete
-   list; nothing there changed except the seven rows marked `ported` (`dc29540`, `2f0936b`, `9c3633c`,
-   `7e6e1a0`, `0a8f233`, `89f0ead`, `b6043e0`). The items still open, which [ROADMAP.md](../ROADMAP.md) tracks
+   list; the ten rows marked `ported` are `dc29540`, `2f0936b`, `9c3633c`,
+   `7e6e1a0`, `0a8f233`, `89f0ead`, `b6043e0`, `ffe041f`, `f9325c9` and `e1780b1`. The items still open, which [ROADMAP.md](../ROADMAP.md) tracks
    as one follow-up, are: `d3cf95a` (#886), `e6ed93a` (#894), `3790e3f`, `794e576`, `3b47927`, `53b6050`
-   (#904), `7b7f2f8`, `ffe041f`, `a738f04` (#893/#895), `988f45a` (dependency removal only), `b48477e`,
+   (#904), `7b7f2f8`, `a738f04` (#893/#895), `988f45a` (dependency removal only), `b48477e`,
    `7c7c10e` (#918), `ad9a611`, `d80bf0d` (BOM port only), `d3734f1`, `0286265`, `8744974`, `30e7ad9`,
-   `f9325c9` (#930), `e1780b1` (#929), `1a0e893` (#925), `760ab5a` (#933), the three release-version commits
+   `1a0e893` (#925), `760ab5a` (#933), the three release-version commits
    (`cfeaf04`, `8a75f1b`, `b618281`) and `860fa57`; plus the open PR #914 and #934 and the deferred issue
    decisions. Release version bumps stay deferred: the installer pin remains v5.0.6 and the fork package
    remains 6.1.13.
@@ -911,10 +911,10 @@ evidence is recorded in [REVIEW.md](REVIEW.md).
    - Deliberately omitted the experimental vanished-response reload and expansion recovery from draft #914.
    - Verified by `tests/stream-diagnostics.test.ts` (7 unit tests) and `tests/browser-turn-binding.test.ts` (DOM boundary turnToken extraction).
 
-5. **Items skipped and remaining deferred**:
-   - `ffe041f` (delayed finals / token diagnostics): Missing-final 10-minute timeout relaxation lacks deterministic reproduction tests and does not prove a generic fix for #910.
-   - `f9325c9` (multipart compaction ceiling #930): Strongly coupled with `ffe041f` token breakdown logic; skipped to maintain independent stability.
-   - `e1780b1` (delivery / staging retry guards #929): Involves staging ACK retries and native tool state machines; requires outstanding tool result replay tests before adoption.
+5. **Original deferrals and subsequent dispositions**:
+   - `ffe041f` (delayed finals / token diagnostics): The original deferral is superseded by the deterministic tests and port recorded under [2026-11-03 delivery, compaction and delayed finals](#2026-11-03-delivery-compaction-and-delayed-finals); no generic #910 fix is claimed.
+   - `f9325c9` (multipart compaction ceiling #930): The original coupled-port deferral is superseded by the joint adoption with `ffe041f` on 2026-11-03.
+   - `e1780b1` (delivery / staging retry guards #929): The original deferral is superseded by the pending, completed, late and duplicate tool-result replay regressions and adoption on 2026-11-03.
    - MCP ABI changes (`53b6050`, `a738f04`), Temporary Chat defaults (`7c7c10e`, `ad9a611`), and Full Access worktree restructuring (`760ab5a`, `e6ed93a`, `b48477e`): Kept deferred awaiting maintainer decisions or grouped adoption.
 
 ## 2026-11-03 dependency rereview
@@ -950,3 +950,31 @@ changes only the Electron node and workspace pin.
 Re-review is machine-triggered by a latest version exceeding its exact
 `.github/dependency-deferrals.json` bound; there is no separate untracked revisit date.
 See [REVIEW.md](REVIEW.md#2026-11-03-dependency-rereview) for local acceptance and its limits.
+
+## 2026-11-03 delivery compaction and delayed finals
+
+Base: `e27d403c7886ec85901c9836a02c25b4b3ac37a8`. Adopt the three reviewed shared TypeScript
+fixes on Windows; they do not depend on platform-specific launchers or change model/effort routing.
+
+- `e1780b1` (#929): recognize only an exact visible service delivery alert in the bound turn,
+  outside user/assistant content and with no Stop control. Retry staging only for an exact ACK
+  mismatch before final commit. Pending native calls and duplicate canonical results prevent
+  retry; completed or late canonical results continue with saved evidence without replaying a command.
+  The existing three-retry budget remains in force.
+- `f9325c9` (#930): use the browser transport's exclusive total-token ceiling for multipart
+  compaction, including framing, acknowledgements, attachment costs and platform reserve. Trim
+  only oldest expendable compaction history; preserve required system context, newest cumulative
+  checkpoint and final instruction. Count the omission notice, rebuild attachments, retain atomic
+  records and reject unfit required context. Ordinary requests retain their complete history.
+- `ffe041f`: allow ten minutes of inactivity when final completion is uncertain, including the
+  reported 125-second delayed final. Explicit failures, empty completed answers and missing DOM
+  keep their own checks. Record numeric context costs by role and forward them through the helper.
+  The diagnostic serializer uses this fork's existing `withoutRetiredTurnHandles(JSON.stringify(...))`;
+  upstream's `serializeMultipartContext` belongs to the separately deferred rendering fix and is
+  not introduced implicitly. Counts exclude contents and identifiers and are not additive usage.
+
+Reconsider if Windows fixtures or native result reconciliation regress, if the observed UI service
+alert/ACK contract changes, or if upstream changes its transport budget. MCP ABI, Temporary Chat
+and the Full Access workspace group remain deferred. Source and installer versions remain unchanged.
+Tests, gate results and account/package acceptance limits are recorded in
+[REVIEW.md](REVIEW.md#2026-11-03-delivery-compaction-and-delayed-finals).
