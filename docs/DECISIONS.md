@@ -951,6 +951,21 @@ Re-review is machine-triggered by a latest version exceeding its exact
 `.github/dependency-deferrals.json` bound; there is no separate untracked revisit date.
 See [REVIEW.md](REVIEW.md#2026-11-03-dependency-rereview) for local acceptance and its limits.
 
+### Latest-tag rollback recheck (2026-11-03)
+
+At base `ece4d7c38c901d19da3bd737a290e4a63a7e30a9`, `npm view chromium-bidi time --json`
+and `versions --json` show latest `157.0.8103-39` published at `2026-11-03T01:40:48.039Z`,
+after `159.0.8139-2` at `2026-11-02T17:46:55.391Z`. The 159 releases are still listed;
+exact metadata for both checked versions has no `deprecated` field, and the time response has
+no `unpublished` record. This establishes the observed tag/publication state, not why the tag moved.
+`npm pack chromium-bidi@157.0.8103-39 --dry-run --json` lists 310 files, including
+`out/Default/gen/src/bidiMapper/BidiMapper.js`, but neither `lib/cjs/bidiMapper` nor `lib/cjs/cdp`.
+That cannot satisfy the installed Playwright imports tested by
+`tests/chromium-bidi-compatibility.test.ts:8`. Keep the installed 12.1.0 and both lockfiles;
+replace the former 159-line exception with exact latest `157.0.8103-39`. Any different latest
+must resurface, including a return to 159. Reconsider also on Playwright layout support or a
+reviewed shim. No runtime upgrade or browser compatibility acceptance is claimed.
+
 ## 2026-11-03 delivery compaction and delayed finals
 
 Base: `e27d403c7886ec85901c9836a02c25b4b3ac37a8`. Adopt the three reviewed shared TypeScript
@@ -978,3 +993,47 @@ alert/ACK contract changes, or if upstream changes its transport budget. MCP ABI
 and the Full Access workspace group remain deferred. Source and installer versions remain unchanged.
 Tests, gate results and account/package acceptance limits are recorded in
 [REVIEW.md](REVIEW.md#2026-11-03-delivery-compaction-and-delayed-finals).
+
+## 2026-11-03 upstream review: #935–#959 and current workspace roots
+
+Base: `ece4d7c38c901d19da3bd737a290e4a63a7e30a9`. Read-only GitHub issue bodies, #957's
+follow-up comment, each PR's source/test patch and exact heads were inspected. Main is unchanged
+at `860fa576eb47d9e20d7d8289235bfea94392d2fd`. The table records reviewed history, not a merge.
+Local evidence is relative to this source snapshot. Closed PRs are not assumed merged.
+
+| Item / exact source | Decision and fork evidence | Reconsideration condition |
+| --- | --- | --- |
+| #935 `2dc3d2c` | defer. It recovers a previous turn's source when the current turn has none. This fork already stores the source (`src/adapters/chatgpt-web/compaction-continuation.ts:9`, `:54`), but `acceptedCheckpoint` is exact-turn scoped (`:80`) and source lookup currently stays at the expected turn (`src/adapters/chatgpt-web/environment.ts:339`). The proposal intentionally broadens that replay boundary, so it requires its own cross-turn authority acceptance. | Prove previous-turn-only compaction recovery on Windows with same-thread/model/effort scope, ambiguity, stale/rewritten summary, explicit foreign owner and normal-turn rejection tests. |
+| #936 | defer. Windows missing-cwd report is relevant; native recovery still requires recognized current claims (`src/adapters/chatgpt-web/thread-environment.ts:215`). Persisted cache alone cannot authorize the failed request. | Adopt the grouped current-native world-state recovery with positive and forged/stale Windows fixtures. |
+| #937 / #943 / #946 | not applicable: each exact issue API returns 404; no source patch exists. | The number becomes available. |
+| #938 | defer diagnosis. Windows Plus manual Zero Risk report supplies no capability diagnostics; route effort checks require positively observed account capabilities (`src/chatgpt-web-models.ts:616`). Enabling paid effort from billing assertions alone would bypass that check. | A privacy-safe account capability snapshot identifies a selector/probe defect, with a regression. |
+| #939 | defer with workspace group. Windows `world_state full=false` visualization-only roots conflict with the fork's exact roots comparison (`src/adapters/chatgpt-web/thread-environment.ts:258`); no native-world-state comparison exists here. | Adopt reviewed world-state handling with #933/#936, preserving cwd, restricted policies and current native turn proof. |
+| #940 `282df611` | defer; closed alternative. Its strict last-full-snapshot plus visualization delta implementation changes native authority reconciliation (`src/adapters/chatgpt-web/codex-rollout-environment.ts:201`, `src/adapters/chatgpt-web/thread-environment.ts:258`). The newer workspace branch handles later calendar/tool merge patches and supersedes this narrow alternative. | Review the grouped branch rather than stacking both competing reconciliation implementations. |
+| #941 | defer feature. Downloading authenticated sandbox artifacts adds network/file delivery authority; current conversion returns Markdown (`src/adapters/chatgpt-web/markdown.ts:223`), not an authenticated download pipeline. | Define Windows destination, traversal/size/type limits and current-turn message ownership; test before account-bound download acceptance. |
+| #942 | defer. macOS memory measurements do not establish a Windows leak; restarting retained documents could discard active ownership tracked by `src/adapters/chatgpt-web/browser-worker.ts:3103`. | A bounded Windows idle/active memory reproduction and safe tab-recycling acceptance exist. |
+| #944 | defer diagnosis. macOS native-result/compaction race is unconfirmed; the fork rejects active environment changes (`src/adapters/chatgpt-web/turn-broker.ts:429`), which could explain a blocked receipt but does not prove causation. | Reproduce a matched native-result/compaction race on Windows and retain exact-once tool completion tests. |
+| #945 | defer with #939. Reported macOS roots conflicts overlap shared code at `src/adapters/chatgpt-web/thread-environment.ts:258`; cache fallback is not a safe fix. | Grouped world-state tests cover Windows continuation and stale/mismatched roots. |
+| #947 `9e089e75` | defer. Closed fresh-compaction receipt proposal changes prompt authority, transaction owner cancellation and completion arbitration together; this fork begins retained receipts at `src/adapters/chatgpt-web/compaction-handoff.ts:310` and broker transactions at `src/adapters/chatgpt-web/turn-broker.ts:409`. | Define fresh summary-only MCP receipt acceptance and test suspension, cancellation, missing receipt and zero work-tool authority as one change. |
+| #948 `dc6d781c` | defer. Document-global historical identity memory affects submission acknowledgement (`src/adapters/chatgpt-web/browser-worker.ts:3103`, `:3289`), next to the newly ported retry guards. An unbounded Set survives helper processes until navigation. | Bound retained-document history and verify remount, genuinely competing turns, navigation reset and staging ACK ownership together. |
+| #949 | defer diagnosis. Windows renderer idle-document failure is relevant, but no root-cause patch is supplied; the current bootstrap fails on renderer termination and deadline (`launcher/electron/browser-host.cjs:294`, `:302`). Extending 10 seconds is not a proven repair. | Controlled Windows reproduction identifies renderer/process cleanup failure and verifies recovery without reboot. |
+| #950 `74830815` | defer. Passive startup-restriction observation and visible label extraction are coupled to the upstream extracted picker; this fork still reads exact control `innerText` (`src/adapters/chatgpt-web/browser-worker.ts:2869`, `:2901`). | Adapt to this fork's picker, test hidden placeholders and future matching fallback restrictions, preserve pre-Send-only rejection and no model substitution. |
+| #951 `1591305f` | defer. Closed patch imports `activateChatGptEffortMenu` from the deferred `chatgpt-ui` module; this fork owns activation and slider readers in `src/chatgpt-session.ts:213`, `:389`, `:415`. Its new test also requires the deferred September power-picker fixture. | Adapt activation against this fork's fixture/API and prove no submit, no draft mutation and locked capability rejection. |
+| #952 `c481e0e630c6b850d9cb6469b0e0c0a03697e8e1` | adopt independent fix. `src/adapters/chatgpt-web/markdown.ts:182` accepts only whole JSON in narrow plain layout before escaping/wiki links; `tests/chatgpt-web-markdown.test.ts:4` covers lexical spelling, hostile attributes, malformed JSON and stream rewrite rejection. | JSON layout contract changes or strict-consumer regression fails. |
+| #953 `c1c595f06525a3ffde92b8da866e41bb8df5445c` | adopt independent fix. Busy status metadata is marked UI at `src/adapters/chatgpt-web/browser-worker.ts:5067`; `tests/browser-response-dom.test.ts:174` exercises the actual production callback and retains real reasoning/commentary. | Busy semantics or channel separation regresses. |
+| #954 `511792d1` | defer with workspace group. Adds cwd-less visualization widening on top of #933, while this fork only substitutes roots when the native record omits them and cwd agrees (`src/adapters/chatgpt-web/thread-environment.ts:240`). | Port #933 prerequisites and choose one reconciliation design with forged/foreign-thread/restricted negative tests. |
+| #955 `1d129671` | defer. Expands automatic approval to Russian; existing exact English connector/one-time allow rules are security-sensitive (`src/adapters/chatgpt-web/browser-worker.ts:1064`, `:1079`, `:1093`). Source tests use semantic, not captured Russian DOM. | Capture/validate owned Russian surface and test exact connector escaping, denial, cancellation, duplicate and unowned cards before enabling clicks. |
+| #956 | defer diagnosis. Linux retained chats report a verified slider but failed model-header readback; this fork also checks exact header labels (`src/adapters/chatgpt-web/browser-worker.ts:2869`, `:2901`). The report infers the failing header text but does not capture it. | Capture the failing Windows header and adapt #950 with retained/new-chat tests; do not silently substitute a model or retry a sent turn. |
+| #957 and follow-up comment | defer. `src/adapters/chatgpt-web/environment.ts:262–271` rejects a selected revision with a different native turn ID; the comment additionally identifies roots removal rejected by `src/adapters/chatgpt-web/turn-broker.ts:429–434`. Skipping internal messages alone cannot fix both. Evidence is one modified macOS run, not Windows acceptance. | A focused fix tests goal-clear internal-item selection plus same-cwd Full Access root changes, while rejecting changed cwd, privilege loss, workspace-write changes and foreign turn IDs. |
+| #958 `810a3100` | defer feature. Adds persistent 100 MiB/thread images without expiry and broker-bound `codex.image_context` operations; this fork's prompt uses per-message refs (`src/adapters/chatgpt-web/prompt.ts:239`) and MCP selects registered tools (`src/adapters/chatgpt-web/mcp-server.ts:932`). This changes retention and tool authority, not just deduplication. | Maintainer accepts retention/cleanup policy and MCP operation contract; verify Windows storage, revocation, restart/compaction, overflow and cross-thread isolation together. |
+| #959 `e1b3c7e8cd3a40d4063f196a4e42568649d42e6e` | defer integrated composer fix. Closed PR has no reviews/comments. Fork transport limits use `proAvailable` (`src/chatgpt-web-models.ts:229`); PR introduces session-proven billing `proPlan` across config/setup/helper, plus restored-draft cleanup. Its new non-Pro Max 500k bound is explicitly unmeasured. Fork insertion is at `src/adapters/chatgpt-web/browser-worker.ts:4348`; connector identity is not rechecked by the PR's empty-editor guard. | Agree conservative unknown/Team/Max limits; adapt billing migration and old-helper fallback, then test restored drafts, disabled Send, Korean alert, cancellation and exact connector preservation together. No isolated draft guard is claimed safe for the connector-pill path without those tests. |
+| `fix/current-workspace-roots@adabeb16abad149f64546b45e8ef88aa4c917f56`: `8203fb7` | defer. Read actual patch: it scans latest filesystem-bearing `world_state` merge patches, compares exact filesystem XML and retains start projects. Fork native reader (`src/adapters/chatgpt-web/codex-rollout-environment.ts:201`, `:729`) and claim model do not carry rolloutPath/filesystemXml; reconciliation (`src/adapters/chatgpt-web/thread-environment.ts:240`) also lacks deferred #933 widening. This is the grouped trust-boundary change, not an independent line fix. | Adapt alongside #933/#936/#939 with Windows full/partial/reset world-state, foreign turn, cwd, permission downgrade and continuation tests; choose it over competing #940/#954 alternatives. |
+| Same branch: `adabeb16` | already adopted; no additional patch. The actual change is only Vite 6.4.4 to 6.4.5 and its integrity; fork `launcher/bun.lock:703` already resolves 6.4.5 with the same integrity. | A new Vite advisory or lock node change. |
+
+Attribution for the two independent ports (also retain in the eventual commit message):
+
+Co-authored-by: r83bksga8fc3 <r83bksga8fc3@proton.me>
+
+The four-axis reviewed ledger may advance to PR #959/head `e1b3c7e8`, issue #957 and both exact
+branch heads after this register. Deferred items remain tracked in ROADMAP; installer/source
+versions, models, effort parameters and both lockfiles are unchanged. Verification is recorded
+in [REVIEW.md](REVIEW.md#2026-11-03-external-gate-changes).

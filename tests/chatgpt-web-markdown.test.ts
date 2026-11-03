@@ -1,6 +1,106 @@
 import { expect, test } from "bun:test";
 import { ChatGptMarkdownBuffer, chatGptHtmlToMarkdown } from "../src/adapters/chatgpt-web/markdown";
 
+test("plain checker JSON reaches strict consumers without Markdown escapes", () => {
+  const json = '{"overrides":[],"artifacts":[]}';
+  const markdown = chatGptHtmlToMarkdown(`<p>${json}</p>`);
+  expect(markdown).toBe(json);
+  expect(JSON.parse(markdown)).toEqual({ overrides: [], artifacts: [] });
+});
+
+test("observed paragraph presentation preserves fragmented checker JSON for strict consumers", () => {
+  const json = '{"overrides":[{"field":"humanFinal","language":"en","excerpt":"이번 최종 답변은 영어로 작성하라.","persistent":false}],"artifacts":[]}';
+  const html = '<p class="Paragraph-kKnbIo" dir="auto"><span>{"overrides"</span>'
+    + ':[{"field":"humanFinal","language":"en","excerpt":"이번 최종 답변은 영어로 작성하라.","persistent":false}]'
+    + '<span>,"artifacts"</span>:[]<span>}</span></p>';
+  const markdown = chatGptHtmlToMarkdown(html);
+  expect(markdown).toBe(json);
+  expect(JSON.parse(markdown)).toEqual({
+    overrides: [{ field: "humanFinal", language: "en", excerpt: "이번 최종 답변은 영어로 작성하라.", persistent: false }],
+    artifacts: [],
+  });
+});
+
+test("plain JSON admits only narrow paragraph classes and direction values", () => {
+  const json = '{"items":[]}';
+  for (const dir of ["auto", "ltr", "rtl"]) {
+    expect(chatGptHtmlToMarkdown(`<p class="Paragraph-aZ09_-" dir="${dir}">${json}</p>`)).toBe(json);
+  }
+  expect(chatGptHtmlToMarkdown(`<div dir="ltr"><span dir="rtl">${json}</span></div>`)).toBe(json);
+  for (const attributes of [
+    'class="Paragraph-kKnbIo sr-only"', 'class="Paragraph-"', 'class="Paragraph-a.b"',
+    'class="plain"', 'dir="invalid"', 'class="Paragraph-kKnbIo" style="display:none"',
+    'class="Paragraph-kKnbIo" hidden', 'class="Paragraph-kKnbIo" role="status"',
+  ]) {
+    expect(chatGptHtmlToMarkdown(`<p ${attributes}>${json}</p>`)).toBe('{"items":\\[\\]}');
+  }
+  expect(chatGptHtmlToMarkdown(`<span class="Paragraph-kKnbIo">${json}</span>`)).toBe('{"items":\\[\\]}');
+});
+
+test("plain JSON preserves nested data and original lexical spelling", () => {
+  const json = String.raw`[{"nested":{"items":["*_text_*","[[Notes/item|label]]","a & b < c","quote: \" slash: \\ newline: \n unicode: \u0041"]},"n":1.2300e+02,"zero":-0,"same":1,"same":2}]`;
+  const html = json.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+  const markdown = chatGptHtmlToMarkdown(`<div><span>${html}</span></div>`);
+  expect(markdown).toBe(json);
+  expect(JSON.parse(markdown)[0].nested.items[1]).toBe("[[Notes/item|label]]");
+});
+
+test("plain JSON retains line breaks from layout and source-offset wrappers", () => {
+  const html = '<div data-start="0" data-end="80"><p>{</p>'
+    + '<div data-start="2" data-end="70"><span data-is-last-node="true">  "items": [</span><br>'
+    + '<span>    1,</span><br><span>    2</span><br><span>  ]</span></div>'
+    + '<!-- source boundary --><p>}</p></div>';
+  const markdown = chatGptHtmlToMarkdown(html);
+  expect(JSON.parse(markdown)).toEqual({ items: [1, 2] });
+  for (const separator of ["<br>", "</div><div>"]) {
+    const splitNumber = `<div>{"items":[1${separator}2]}</div>`;
+    expect(() => JSON.parse(chatGptHtmlToMarkdown(splitNumber))).toThrow();
+  }
+});
+
+test("prose, malformed JSON, and Markdown structures retain normal conversion", () => {
+  expect(chatGptHtmlToMarkdown('<p>Result {"items":[]} [[Notes/result]]</p>'))
+    .toBe('Result {"items":\\[\\]} [Notes/result](<Notes/result.md>)');
+  for (const text of ['{"items":[]', '{"items":[],}', '[1] trailing', '{} {}']) {
+    expect(() => JSON.parse(chatGptHtmlToMarkdown(`<p>${text}</p>`))).toThrow();
+  }
+  expect(chatGptHtmlToMarkdown('<pre><code>{"items":[]}</code></pre>'))
+    .toBe('```\n{"items":[]}\n```');
+  expect(chatGptHtmlToMarkdown('<p><code>{"items":[]}</code></p>'))
+    .toBe('`{"items":[]}`');
+  expect(chatGptHtmlToMarkdown('<p><a href="https://example.com">{"items":[]}</a></p>'))
+    .toBe('[{"items":\\[\\]}](https://example.com)');
+  expect(chatGptHtmlToMarkdown(`<p>${katex('{"items":[]}')}</p>`))
+    .toBe('\\({"items":[]}\\)');
+});
+
+test("semantic tags and non-source attributes cannot admit JSON as plain layout", () => {
+  const json = '{"items":[]}';
+  for (const tag of ["strong", "em", "section", "article", "aside", "button", "script", "style"]) {
+    expect(() => JSON.parse(chatGptHtmlToMarkdown(`<${tag}>${json}</${tag}>`))).toThrow();
+  }
+  for (const attribute of [
+    'class="plain"', 'style="display:none"', 'role="status"', "hidden", "inert",
+    'contenteditable="false"', 'data-code-block-preview-pane="json"', 'data-state="closed"',
+  ]) {
+    expect(chatGptHtmlToMarkdown(`<span ${attribute}>${json}</span>`)).toBe('{"items":\\[\\]}');
+  }
+});
+
+test("buffer commits plain JSON once and still rejects a committed JSON rewrite", () => {
+  const json = '{"overrides":[],"artifacts":[]}';
+  const segment = (text: string) => ({
+    key: "checker", tag: "p", html: `<p data-start="0" data-end="80">${text}</p>`,
+    text, sourceStart: 0, sourceEnd: 80, streamable: true,
+  });
+  const buffer = new ChatGptMarkdownBuffer(undefined, 0);
+  expect(buffer.observe([segment(json)], 0)).toBe(json);
+  expect(buffer.observe([segment(json)], 1)).toBe("");
+  expect(buffer.finish()).toEqual({ markdown: json, delta: "" });
+  buffer.observe([segment('{"overrides":["changed"],"artifacts":[]}')], 2);
+  expect(() => buffer.finish()).toThrow("changed a completed text block");
+});
+
 test("atomic summaries accept a revised draft while ordinary streamed answers still reject changes", () => {
   const first = { key: "a", tag: "p", html: "<p>Earlier summary.</p>", text: "Earlier summary.", streamable: true };
   const second = { key: "b", tag: "p", html: "<p>Final detail.</p>", text: "Final detail.", streamable: true };

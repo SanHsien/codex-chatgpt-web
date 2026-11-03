@@ -327,3 +327,86 @@ Observed on Windows with Bun 1.4.2 (command logs under ignored `.maintenance-rep
 These tests do not establish signed-in ChatGPT, MCP service, live-model, or packaged-release
 acceptance. Those remain subject to the existing TEST_PLAN and release runbooks. MCP ABI,
 Temporary Chat defaults and the Full Access workspace group still require their original decisions.
+
+## 2026-11-03 external gate changes
+
+Base HEAD: `ece4d7c38c901d19da3bd737a290e4a63a7e30a9`. Scope: the exact chromium-bidi
+latest deferral, four-axis upstream ledger, independent #952 JSON and #953 busy-status ports,
+their regression tests and maintenance documentation. The [dependency decision](DECISIONS.md#2026-11-03-dependency-rereview)
+and [per-item upstream register](DECISIONS.md#2026-11-03-upstream-review-935959-and-current-workspace-roots)
+record package evidence, exact upstream heads, fork file/line evidence and reconsideration conditions.
+Co-authored-by: r83bksga8fc3 <r83bksga8fc3@proton.me>
+
+Read-only registry revalidation confirmed latest `157.0.8103-39`, published after the checked
+159 release. `npm view chromium-bidi time --json` and `versions --json` still list 159;
+exact metadata for both checked releases has no deprecated field, and time has no unpublished
+record. `npm pack chromium-bidi@157.0.8103-39 --dry-run --json` lists 310 files and the
+`out/Default/gen/src/bidiMapper/BidiMapper.js` mapper, with zero required `lib/cjs/bidiMapper`
+or `lib/cjs/cdp` paths. This supports the exact deferral, not a claim about why the tag moved.
+Read-only GitHub revalidation inspected #957's follow-up, #959's patch and both workspace-branch
+commits. Workspace authority and the coupled account-tier/composer changes remain deferred;
+the branch's Vite 6.4.5 lock node is already present. No upstream writes were made.
+
+Observed Windows verification (logs under ignored `.maintenance-reports/resume-`):
+
+- System Bun 1.4.4: `pwsh -NoProfile -File tools/bootstrap_dev.ps1` and
+  `pwsh -NoProfile -File tools/dev_check.ps1` each exit 1,
+  `Bun 1.4.2 is required; found '1.4.4'.` `bun run verify` exits 1 at check-version,
+  `Expected Bun 1.4.2, received 1.4.4`; subsequent verify steps are not executed by that command.
+  `npm run check:dependencies` exits 1 with `Status: **check-failure**`: both workspaces report
+  `bun outdated has no --json flag`. This is a runtime/checker incompatibility, not evidence
+  that a dependency is outdated or vulnerable. The packageManager/engines pins remain unchanged.
+- The existing repo-local official Bun 1.4.2 executable was selected only through the verification
+  process PATH; the system installation was unchanged. With that executable,
+  `pwsh -NoProfile -File tools/bootstrap_dev.ps1` exits 0,
+  `BOOTSTRAP PASSED: Bun 1.4.2, both frozen lockfiles, and Electron runtime.`
+- Red: with only `src/adapters/chatgpt-web/markdown.ts` and `browser-worker.ts` temporarily
+  replaced by HEAD bytes, `bun test tests/chatgpt-web-markdown.test.ts tests/browser-response-dom.test.ts`
+  exits 1, 46 pass / 7 fail. Failures cover strict JSON parsing, observed paragraph layout,
+  lexical spelling, line breaks, streaming rewrite protection and busy accessibility announcements.
+  The working source bytes were restored in a `finally` block and checked byte-for-byte.
+- Green: `bun test tests/chatgpt-web-markdown.test.ts tests/browser-response-dom.test.ts
+  tests/chromium-bidi-compatibility.test.ts` exits 0, 54 pass / 0 fail, 744 assertions.
+  The busy-status case executes the production page callback using an offline DOM fixture;
+  it requires no browser/account and retains real reasoning, commentary and final text.
+  Compatibility assertions test installed import/layout properties, not a dependency version.
+
+Source and installer versions, Windows packaging, model/effort rules, both lockfiles and the empty
+index are preserved. These checks do not establish signed-in ChatGPT, MCP, live-model or packaged
+release acceptance. The original roadmap port row and conditional re-review plans remain because
+their separate acceptance conditions still apply; these external gate changes were not roadmap rows.
+
+With Bun 1.4.2, `pwsh -NoProfile -File tools/dev_check.ps1` exits 0. The gate executes
+the following checks sequentially and aborts on any nonzero child exit; each listed step exited 0:
+
+| Command / gate step | Result / ending output |
+| --- | --- |
+| `bun test tests/fork-contract.test.ts tests/upstream-baseline.test.ts tests/dependency-freshness.test.ts` | 20 pass / 0 fail |
+| `bun run scripts/check-upstream-baseline.ts --strict` | `Status: **current**`, all four axes current |
+| `bun run scripts/check-dependency-freshness.ts --strict` | `Status: **current**`; exact chromium-bidi latest deferred; root audit clean, launcher security exceptions explicitly deferred |
+| `bun run check-version` | Pinned Bun/source/release version contract passed |
+| `bun run audit` | Root audit clean |
+| `bun run launcher:audit` | Three exact minimatch nodes deferred under the existing exception, `revisit` 2026-11-17; not zero vulnerabilities |
+| `bun run typecheck` | `tsc --noEmit`, no errors |
+| `bun run test` | 1,140 pass / 100 skip / 0 fail; 1,240 tests across 93 files |
+| `bun run launcher:typecheck` | `tsc --noEmit`, no errors |
+| `bun run launcher:test` | 419 pass / 1 skip / 0 fail; 420 tests |
+| `bun run --cwd launcher build:renderer` | Vite production build passed, 442 modules transformed |
+| `bun run scripts/build-runtime-bundle.ts <scratch-runtime>` | Relocatable runtime built |
+| `bun run scripts/generate-third-party-notices.ts <scratch-notices> --include-launcher` | Notices generated for 111 runtime packages |
+| `bun run scripts/smoke-release.ts <scratch-runtime>` | `RELOCATABLE_RUNTIME_SMOKE_OK` |
+| `git diff --check`, `git diff --cached --check`, `git show --check --format= HEAD` | No whitespace errors |
+
+The enclosed `bun run verify` therefore exited 0 after all eleven verification steps.
+Canonical tail: `DEV CHECK PASSED: Bun 1.4.2, fork contract, strict upstream/dependency checks,
+verify, and whitespace.` The Full summary is local maintenance evidence; account/release
+acceptance remains separate. No model quota was used.
+
+No repository Markdown-link checker is configured in scripts or workflows. The local
+`python .maintenance-reports/resume-check-links.py` checks every newly added Markdown local
+target and heading fragment plus chromium-bidi's decision link: exit 0,
+`NEW_LOCAL_LINKS: 8 checked, 0 broken`. In particular, both references to this section and
+both DECISIONS heading fragments resolve. Verification-result text was added after the Full gate;
+final link/whitespace checks and the complete diff review cover those documentation additions.
+Relative input hashes and command outcomes are retained in ignored
+`.maintenance-reports/resume-worktree.json`.

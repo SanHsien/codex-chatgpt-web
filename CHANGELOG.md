@@ -5,6 +5,13 @@ This file records maintained-fork work and release identity. See this fork's
 
 ## 2026-11-03
 
+- Recheck the chromium-bidi latest-tag rollback and defer the exact incompatible 157 package;
+  preserve Playwright's installed import contract and both lockfiles.
+- Review upstream #935–#959 and both workspace-branch commits; port #952 plain JSON preservation
+  and #953 busy-status channel filtering with regression tests. Record bounded deferrals and
+  advance only the reviewed-history ledger.
+  Co-authored-by: r83bksga8fc3 <r83bksga8fc3@proton.me>
+
 - Port delivery/staging retry guards (`e1780b1`), multipart compaction transport limits
   (`f9325c9`) and delayed-final/context-cost diagnostics (`ffe041f`) to the Windows shared path.
   Guard pending and duplicate native tool results against replay, preserve checkpoint/final

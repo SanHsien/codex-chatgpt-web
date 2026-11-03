@@ -34,7 +34,7 @@ exact string equality; `latestPrefix` accepts one, two or three numeric componen
 `159`, `159.0`, `159.0.8139`). Prefix matching compares whole major/minor/patch components,
 including prerelease and build variants within that line; `159` never matches `1590`.
 Malformed or ambiguous bounds fail closed. Releases outside the declared bound require review.
-The chromium-bidi 159 line is deferred for the Playwright import-layout incompatibility; re-review
+The exact reviewed chromium-bidi latest is deferred for the Playwright import-layout incompatibility; re-review
 also applies when Playwright adopts that layout or a compatible shim is reviewed.
 
 Launcher `audit` still runs live `bun audit --json`; `scripts/audit-launcher.ts` applies the

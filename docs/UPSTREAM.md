@@ -491,3 +491,15 @@ and explicit deferral/rejection reasons with reconsideration conditions. The can
 passed the strict four-axis check before tracked promotion. Reviewed does not mean adopted:
 fork source remains 6.1.13; public Windows installer/updater remains 5.0.6. Neither release
 notes nor source checks establish signed-in UI, MCP or packaged Windows acceptance.
+
+## 2026-11-03: #935–#959 and workspace branch
+
+Main remains `860fa576eb47d9e20d7d8289235bfea94392d2fd`. Read-only review covers every number
+#935–#959 (including API 404 gaps #937/#943/#946), all twelve PR source/test patches, #957's
+follow-up, and both commits in `fix/current-workspace-roots@adabeb16abad149f64546b45e8ef88aa4c917f56`.
+The [per-item decisions](DECISIONS.md#2026-11-03-upstream-review-935959-and-current-workspace-roots)
+record exact heads, local file/line evidence and concrete reconsideration conditions. #952 and
+#953 are independently ported with red/green tests; the branch's Vite fix is already in the fork.
+Workspace authority, image retention/MCP, account-tier limits and other coupled changes remain deferred.
+Latest PR #959/head `e1b3c7e8cd3a40d4063f196a4e42568649d42e6e`, latest issue #957 and both
+branch heads are reviewed history, not adoption of their code. No upstream writes occurred.

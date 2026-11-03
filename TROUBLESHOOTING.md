@@ -28,6 +28,14 @@ Active captures are never removed by cleanup. A burst of failures can exhaust th
 so copy any specifically requested checkpoint files before continuing a long investigation.
 The safe-log export is separate and does not include these browser checkpoint files.
 
+### Strict JSON and browser progress text
+
+Complete JSON objects/arrays in plain ChatGPT layout now retain their original spelling rather
+than Markdown escapes. Semantic markup, hidden/unknown attributes and malformed JSON still use
+normal conversion. Busy `role="status" aria-busy="true"` announcements stay browser UI metadata;
+real reasoning, commentary and answers retain their channels. Update and restart the runtime/app
+through its normal path to load these fixes; a source checkout does not replace a running bridge.
+
 ## Models do not appear, or setup remains on step 3
 
 **Install models** updates the Codex route, but a running Codex process keeps its old model catalog.

@@ -7,16 +7,20 @@
   },
   "reviewed": {
     "mainCommit": "860fa576eb47d9e20d7d8289235bfea94392d2fd",
-    "latestPullRequest": 934,
-    "latestPullRequestHead": "891e7b752f7e78401fdc2d1b0c3334644a44008f",
-    "latestNonPullRequestIssue": 933,
+    "latestPullRequest": 959,
+    "latestPullRequestHead": "e1b3c7e8cd3a40d4063f196a4e42568649d42e6e",
+    "latestNonPullRequestIssue": 957,
     "branches": [
+      {
+        "name": "fix/current-workspace-roots",
+        "commit": "adabeb16abad149f64546b45e8ef88aa4c917f56"
+      },
       {
         "name": "main",
         "commit": "860fa576eb47d9e20d7d8289235bfea94392d2fd"
       }
     ]
   },
-  "reviewedAt": "2026-10-29",
+  "reviewedAt": "2026-11-03",
   "status": "reviewed-not-merged"
 }
