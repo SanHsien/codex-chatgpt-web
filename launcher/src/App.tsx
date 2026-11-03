@@ -350,9 +350,7 @@ function LauncherShell({
   snapshot: LauncherSnapshot;
   updateState: (state: LauncherState) => void;
 }) {
-  const interactionSetupComplete = snapshot.state.coreSetupComplete === true
-    && (snapshot.state.browserInteractionMode === "manual"
-      || snapshot.state.codexCatalogVerified === true);
+  const interactionSetupComplete = snapshot.state.coreSetupComplete === true;
   const firstRunZeroRiskSetup = snapshot.state.browserInteractionMode === "manual"
     && snapshot.state.coreSetupComplete !== true;
   const [surface, setSurface] = useState<Surface>(
@@ -381,7 +379,7 @@ function LauncherShell({
     && browser?.authenticated !== true;
   const needsSetup = !needsBrowser && !interactionSetupComplete;
   const mcpOptional = snapshot.state.browserInteractionMode === "automatic"
-    && snapshot.state.codexCatalogVerified === true
+    && snapshot.state.coreSetupComplete === true
     && snapshot.state.mcpSetupComplete !== true;
   const updateVisible = ["available", "downloading", "installing"].includes(snapshot.update.status);
   const updateBusy = snapshot.update.status === "downloading" || snapshot.update.status === "installing";
@@ -1258,7 +1256,7 @@ function SetupSurface({
           action={snapshot.state.coreSetupComplete
             ? devProfile ? copy.devReinstall : copy.reinstall
             : devProfile ? copy.devInstall : copy.install}
-          complete={snapshot.state.codexCatalogVerified === true}
+          complete={snapshot.state.coreSetupComplete === true}
           description={devProfile ? copy.devStepInstallBody : copy.stepInstallBody}
           disabled={busy || (!snapshot.smokePassed && snapshot.state.coreSetupComplete !== true)}
           index={manualInteraction ? 1 : 3}
@@ -1285,7 +1283,7 @@ function SetupSurface({
       <SectionHeading label="MCP" meta={manualInteraction ? copy.required : copy.optional} spaced />
       <button
         className="next-surface-row"
-        disabled={!manualInteraction && !snapshot.state.codexCatalogVerified}
+        disabled={!manualInteraction && !snapshot.state.coreSetupComplete}
         onClick={showMcp}
         type="button"
       >
@@ -1414,8 +1412,8 @@ function McpSurface({
       subtitle={devProfile ? copy.devMcpSubtitle : copy.mcpSubtitle}
       title={devProfile ? copy.devMcpTitle : "MCP"}
     >
-      {!manualInteraction && !configuringInactiveMode && !snapshot.state.codexCatalogVerified ? (
-        <NoticeRow icon="setup" tone="warning">{copy.mcpCatalogRequired}</NoticeRow>
+      {!manualInteraction && !configuringInactiveMode && !snapshot.state.coreSetupComplete ? (
+        <NoticeRow icon="setup" tone="warning">{copy.mcpSetupRequired}</NoticeRow>
       ) : null}
 
       <div className="wizard-stepper" aria-label={`${step + 1} / 3`}>
@@ -1529,9 +1527,9 @@ function McpSurface({
             ) : null}
             {step === 1 ? (
               <p className="mcp-step-two-hint">
-                {manualInteraction || configuringInactiveMode || snapshot.state.codexCatalogVerified
+                {manualInteraction || configuringInactiveMode || snapshot.state.coreSetupComplete
                   ? copy.mcpStepTwoHint
-                  : copy.mcpCatalogRequired}
+                  : copy.mcpSetupRequired}
               </p>
             ) : null}
             {step === 2 ? (
@@ -1576,7 +1574,7 @@ function McpSurface({
           <PrimaryButton
             disabled={
               busy
-              || (!manualInteraction && !configuringInactiveMode && !snapshot.state.codexCatalogVerified)
+              || (!manualInteraction && !configuringInactiveMode && !snapshot.state.coreSetupComplete)
               || ((!credentialsConfigured || replacingCredentials) && (!tunnelId || !runtimeKey))
             }
             onClick={() => void install()}
@@ -1823,11 +1821,11 @@ function SettingsSurface({
       setBusy(false);
     }
   };
-  const setUseSavedChats = async (enabled: boolean) => {
+  const setTemporaryChats = async (enabled: boolean) => {
     setBusy(true);
     setError(null);
     try {
-      updateState(await api!.setUseSavedChats(enabled));
+      updateState(await api!.setTemporaryChats(enabled));
     } catch (cause) {
       setError(messageOf(cause));
     } finally {
@@ -1969,11 +1967,11 @@ function SettingsSurface({
             onChange={(checked) => void setAutoApproveToolCalls(checked)}
           />
         </SettingRow>
-        <SettingRow body={copy.savedChatsBody} label={copy.savedChats}>
+        <SettingRow body={copy.temporaryChatsBody} label={copy.temporaryChats}>
           <Switch
-            checked={snapshot.state.useSavedChats}
+            checked={snapshot.state.useTemporaryChats}
             disabled={busy || snapshot.state.coreSetupComplete !== true}
-            onChange={(checked) => void setUseSavedChats(checked)}
+            onChange={(checked) => void setTemporaryChats(checked)}
           />
         </SettingRow>
         <SettingRow body={copy.chooseLanguageHint} label={copy.language}>
@@ -2434,9 +2432,7 @@ function DoctorSummary({ copy, language, report }: { copy: Copy; language: Langu
         {visibleChecks.map((check) => (
           <p key={check.id}>
             <StateDot state={check.status === "ok" ? "ready" : check.status === "warning" ? "busy" : "error"} />
-            <span>{check.status === "ok"
-              ? localizeRuntimeMessage(copy, check.message, check.id, language)
-              : check.message}</span>
+            <span>{localizeRuntimeMessage(copy, check.message, check.id, language)}</span>
           </p>
         ))}
       </div>

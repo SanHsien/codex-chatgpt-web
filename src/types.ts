@@ -311,7 +311,7 @@ export interface CodexProviderConfig {
     experimentalSkillAttachments?: boolean;
     /** Explicitly rebuild each automatic turn in a fresh browser conversation. */
     experimentalFreshConversationPerTurn?: boolean;
-    /** Use ordinary ChatGPT history for task conversations. Default: Temporary Chat. */
-    useSavedChats?: boolean;
+    /** Use Temporary Chat for task conversations. Default: ordinary saved history. */
+    useTemporaryChats?: boolean;
   };
 }

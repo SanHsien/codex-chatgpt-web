@@ -121,7 +121,7 @@ export interface AppConfig {
   composerPredictionsEnabled: boolean;
   experimentalSkillAttachments: boolean;
   experimentalFreshConversationPerTurn: boolean;
-  useSavedChats: boolean;
+  useTemporaryChats: boolean;
   /** Explicitly install the additional Pro-sized model row while Zero Risk is active. */
   zeroRiskProEnabled: boolean;
   /** Optional adapter-silence budget for the Responses watchdog. */
@@ -255,7 +255,7 @@ export function defaultConfig(mode: RuntimeMode = "browser-only"): AppConfig {
     composerPredictionsEnabled: true,
     experimentalSkillAttachments: false,
     experimentalFreshConversationPerTurn: false,
-    useSavedChats: true,
+    useTemporaryChats: false,
     zeroRiskProEnabled: false,
     autoApproveToolCalls: false,
     controlToken: randomBytes(32).toString("base64url"),
@@ -410,7 +410,7 @@ export function loadConfigForSetup(): AppConfig {
 
 function parseConfig(value: unknown, path: string): AppConfig {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`Invalid configuration object in ${path}`);
-  const parsed = value as Partial<AppConfig>;
+  const parsed = value as Partial<AppConfig> & { useSavedChats?: boolean };
   if (parsed.version !== 3) throw new Error(`Unsupported configuration version in ${path}; rerun setup to migrate it`);
   if (parsed.purpose !== undefined && parsed.purpose !== "dev-harness") {
     throw new Error(`Invalid configuration purpose in ${path}`);
@@ -559,10 +559,18 @@ function parseConfig(value: unknown, path: string): AppConfig {
     throw new Error(`Invalid experimentalFreshConversationPerTurn in ${path}`);
   }
   const experimentalFreshConversationPerTurn = parsed.experimentalFreshConversationPerTurn === true;
+  if (parsed.useTemporaryChats !== undefined && typeof parsed.useTemporaryChats !== "boolean") {
+    throw new Error(`Invalid useTemporaryChats in ${path}`);
+  }
   if (parsed.useSavedChats !== undefined && typeof parsed.useSavedChats !== "boolean") {
     throw new Error(`Invalid useSavedChats in ${path}`);
   }
-  const useSavedChats = parsed.useSavedChats !== false;
+  // The last public release always opened Temporary Chat and wrote neither key, while every later writer
+  // persists one. A stored configuration with neither key therefore keeps Temporary Chat; only a brand-new
+  // install, which has no file yet, starts from defaultConfig() and saves chats.
+  const useTemporaryChats = parsed.useTemporaryChats
+    ?? (parsed.useSavedChats === undefined ? true : parsed.useSavedChats === false);
+  delete parsed.useSavedChats;
   if (browserInteractionMode === "manual" && experimentalSkillAttachments) {
     throw new Error(`Zero Risk does not support Skills as files in ${path}`);
   }
@@ -590,7 +598,7 @@ function parseConfig(value: unknown, path: string): AppConfig {
     composerPredictionsEnabled,
     experimentalSkillAttachments,
     experimentalFreshConversationPerTurn,
-    useSavedChats,
+    useTemporaryChats,
     zeroRiskProEnabled,
   } as AppConfig;
 }
@@ -648,7 +656,7 @@ export function providerConfig(config: AppConfig): CodexProviderConfig {
       experimentalBiggerContext: manual ? false : config.experimentalBiggerContext,
       experimentalSkillAttachments: manual ? false : config.experimentalSkillAttachments,
       experimentalFreshConversationPerTurn: !manual && config.experimentalFreshConversationPerTurn === true,
-      useSavedChats: config.useSavedChats === true,
+      useTemporaryChats: config.useTemporaryChats === true,
       ...(config.stallTimeoutSec !== undefined ? { stallTimeoutSec: config.stallTimeoutSec } : {}),
       autoApproveToolCalls: manual ? false : config.autoApproveToolCalls,
     },

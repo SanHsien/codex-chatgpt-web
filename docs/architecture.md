@@ -143,13 +143,18 @@ Top-level `model_context_window` raises only the proxied native rows' advertised
 Codex to apply its own configured context override without clamping. Routed ChatGPT Web models
 retain their measured adapter-owned limits.
 
-**Save chats in ChatGPT** (`setup --saved-chats`, enabled by default; `--temporary-chats` opts out)
-uses ordinary saved conversations for task turns in Automatic and Zero Risk modes. This is
+**Temporary Chat** (`setup --temporary-chats`, disabled by default; `--ordinary-chats` opts out,
+with `--saved-chats` retained as an alias) selects the new-chat privacy mode for task turns in
+Automatic and Zero Risk modes. This is
 independent of conversation reuse. Changing it releases idle retained tabs, and its provider
 configuration participates in conversation identity. Saved history does not authorize reopening
 an arbitrary ChatGPT conversation. Compaction still starts the next context epoch in a new chat;
 connector verification uses the same saved/temporary mode as task turns, while account inspection
-continues to use an empty Temporary Chat. Existing explicit choices are preserved on upgrade.
+continues to use an empty Temporary Chat. Existing explicit choices are preserved on upgrade by
+inverting legacy `useSavedChats` into
+`useTemporaryChats`; an explicit new value takes precedence, including `false`. A stored
+configuration or launcher state with neither key is a v5.0.6 file (that release always opened
+Temporary Chat) and stays Temporary Chat; only a new install, with no file, starts with saved chats.
 ChatGPT memory and custom instructions
 may apply to saved conversations.
 

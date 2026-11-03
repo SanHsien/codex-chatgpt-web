@@ -29,8 +29,8 @@ const en = {
   skillAttachments: "Skills as files (experimental)",
   skillAttachmentsBody: "Upload explicitly selected Codex skills as named text files instead of inline instructions. Other skills still load through tools. Off by default; uses the same attachment limit as images.",
   manualSkillAttachmentsUnavailable: "Skill uploads require automatic browser interaction.",
-  savedChats: "Save chats in ChatGPT",
-  savedChatsBody: "Keep task conversations in ChatGPT history. ChatGPT memory and custom instructions may apply. On by default.",
+  temporaryChats: "Temporary Chat",
+  temporaryChatsBody: "Use Temporary Chat for new tasks so they stay out of ChatGPT history. If your connector is unavailable there, turn this off. Existing chats are unchanged.",
   freshConversation: "New browser chat for each turn",
   freshConversationBody: "Rebuild context from the same Codex task in a new browser chat for each turn. This may help when ChatGPT loses access to tools, but can send more context and be slower. Off by default.",
   manualFreshConversationUnavailable: "Available only with Automation. Your preference is saved while Zero Risk is active.",
@@ -139,7 +139,7 @@ const en = {
   mcpStepTwo: "Connect the local harness",
   mcpStepTwoBody: "Paste the Tunnel ID and API key. The tunnel must belong to the same OpenAI account that will use the ChatGPT plugin. The key stays in private local storage and is never written to launcher logs.",
   mcpStepTwoHint: "You can add the MCP connector in ChatGPT only after this step succeeds and the tunnel is running.",
-  mcpCatalogRequired: "Connect harness is unavailable until the Codex models are installed and verified. Return to Setup, click Install models, restart Codex once, and wait for the model catalog check to complete.",
+  mcpSetupRequired: "Install the Codex integration in Setup before connecting the harness. You can connect MCP while Codex refreshes its model list.",
   tunnelId: "Tunnel ID",
   runtimeKey: "API key (not Admin key)",
   connect: "Connect harness",
@@ -225,6 +225,9 @@ const en = {
   doctorRuntimeOwned: "Launcher owns the background runtime",
   checkingChatGptConnector: "Checking ChatGPT connector",
   doctorProxyHealthy: "Responses proxy is healthy on {endpoint}",
+  doctorCatalogPending: "This runtime has not observed a completed Codex model-list request yet",
+  doctorCatalogReady: "Codex's latest model-list request succeeded",
+  doctorCatalogFailed: "Codex's latest model-list request failed; the local runtime is reachable",
   doctorTunnelBinaryInstalled: "Pinned openai/tunnel-client binary is installed",
   doctorTunnelKeyStored: "Tunnel runtime key is stored privately",
   doctorTunnelRuntimeOwned: "Launcher owns the tunnel runtime",
@@ -265,8 +268,8 @@ const zh: Record<keyof typeof en, string> = {
   skillAttachments: "技能作为文件（实验性）",
   skillAttachmentsBody: "将明确选择的 Codex 技能作为命名文本文件上传，而不是内联指令。其他技能仍通过工具读取。默认关闭；与图片共用附件数量限制。",
   manualSkillAttachmentsUnavailable: "上传技能需要自动浏览器交互模式。",
-  savedChats: "在 ChatGPT 中保存聊天",
-  savedChatsBody: "将任务对话保留在 ChatGPT 历史记录中。可能应用 ChatGPT 记忆和自定义指令。默认开启。",
+  temporaryChats: "临时聊天",
+  temporaryChatsBody: "为新任务使用临时聊天，不将其加入 ChatGPT 历史记录。如果连接器不可用，请关闭此选项。现有聊天保持不变。",
   freshConversation: "每轮使用新的浏览器聊天",
   freshConversationBody: "每轮在新的浏览器聊天中重建同一个 Codex 任务的上下文。这可能有助于解决 ChatGPT 丢失工具访问的问题，但可能发送更多上下文，速度也可能更慢。默认关闭。",
   manualFreshConversationUnavailable: "仅在自动化模式下可用。启用零风险模式时会保留此偏好设置。",
@@ -375,7 +378,7 @@ const zh: Record<keyof typeof en, string> = {
   mcpStepTwo: "连接本地 Harness",
   mcpStepTwoBody: "粘贴 Tunnel ID 和 API key。Tunnel 必须属于将使用该 ChatGPT 插件的同一 OpenAI 账户。密钥只保存在本机私有存储中，绝不会写入启动器日志。",
   mcpStepTwoHint: "只有此步骤成功且 Tunnel 正在运行后，才能在 ChatGPT 中添加 MCP 连接器。",
-  mcpCatalogRequired: "在 Codex 模型安装并验证完成前，无法连接 Harness。请返回“设置”，点击“安装模型”，重启一次 Codex，并等待模型列表验证完成。",
+  mcpSetupRequired: "请先在“设置”中安装 Codex 集成，再连接 Harness。Codex 刷新模型列表期间也可以连接 MCP。",
   tunnelId: "Tunnel ID",
   runtimeKey: "API key（不是 Admin key）",
   connect: "连接 Harness",
@@ -461,6 +464,9 @@ const zh: Record<keyof typeof en, string> = {
   doctorRuntimeOwned: "启动器正在管理后台运行时",
   checkingChatGptConnector: "正在检查 ChatGPT 连接器",
   doctorProxyHealthy: "Responses 代理在 {endpoint} 上运行正常",
+  doctorCatalogPending: "当前运行环境尚未收到已完成的 Codex 模型列表请求",
+  doctorCatalogReady: "Codex 最近一次模型列表请求成功",
+  doctorCatalogFailed: "Codex 最近一次模型列表请求失败；本地运行环境可以连接",
   doctorTunnelBinaryInstalled: "已安装固定版本的 openai/tunnel-client 二进制文件",
   doctorTunnelKeyStored: "隧道运行时密钥已安全存储",
   doctorTunnelRuntimeOwned: "启动器正在管理隧道运行时",
@@ -501,8 +507,8 @@ const ja: Record<keyof typeof en, string> = {
   skillAttachments: "スキルをファイルで送信（試験的）",
   skillAttachmentsBody: "明示的に選択した Codex スキルを、インラインの指示ではなく名前付きテキストファイルとしてアップロードします。他のスキルは引き続きツールで読み込みます。初期設定はオフ。画像と添付数の上限を共有します。",
   manualSkillAttachmentsUnavailable: "スキルのアップロードには自動ブラウザ操作が必要です。",
-  savedChats: "ChatGPT にチャットを保存",
-  savedChatsBody: "タスクの会話を ChatGPT の履歴に残します。ChatGPT のメモリとカスタム指示が適用される場合があります。初期設定はオンです。",
+  temporaryChats: "一時チャット",
+  temporaryChatsBody: "新しいタスクを一時チャットで開き、ChatGPT の履歴に残さないようにします。コネクタが使えない場合はオフにしてください。既存のチャットは変更されません。",
   freshConversation: "ターンごとに新しいブラウザチャットを使用",
   freshConversationBody: "ターンごとに新しいブラウザチャットで、同じ Codex タスクのコンテキストを再構築します。ChatGPT がツールにアクセスできなくなった場合に役立つことがありますが、送信するコンテキストが増え、遅くなる可能性があります。初期設定はオフです。",
   manualFreshConversationUnavailable: "自動操作モードでのみ利用できます。ゼロリスクモード中も設定は保存されます。",
@@ -611,7 +617,7 @@ const ja: Record<keyof typeof en, string> = {
   mcpStepTwo: "ローカルハーネスを接続",
   mcpStepTwoBody: "Tunnel ID と API キーを貼り付けます。トンネルは、ChatGPT プラグインを使用する OpenAI アカウントと同じアカウントに属している必要があります。キーは非公開のローカルストレージに保存され、ランチャーログには記録されません。",
   mcpStepTwoHint: "この手順が成功し、トンネルが実行中になってから ChatGPT に MCP コネクタを追加できます。",
-  mcpCatalogRequired: "Codex モデルのインストールと検証が完了するまでハーネスを接続できません。セットアップに戻り、［モデルをインストール］を押して Codex を一度再起動し、モデルカタログの確認が完了するまで待ってください。",
+  mcpSetupRequired: "ハーネスを接続する前に、セットアップで Codex 連携をインストールしてください。Codex がモデル一覧を更新している間も MCP を接続できます。",
   tunnelId: "Tunnel ID",
   runtimeKey: "API キー（Admin キーではありません）",
   connect: "ハーネスを接続",
@@ -697,6 +703,9 @@ const ja: Record<keyof typeof en, string> = {
   doctorRuntimeOwned: "ランチャーがバックグラウンドランタイムを管理しています",
   checkingChatGptConnector: "ChatGPT コネクタを確認中",
   doctorProxyHealthy: "Responses プロキシは {endpoint} で正常に動作しています",
+  doctorCatalogPending: "このランタイムでは、Codex のモデル一覧リクエストの完了がまだ確認されていません",
+  doctorCatalogReady: "Codex の最新のモデル一覧リクエストは成功しました",
+  doctorCatalogFailed: "Codex の最新のモデル一覧リクエストは失敗しました。ローカルランタイムには接続できます",
   doctorTunnelBinaryInstalled: "固定バージョンの openai/tunnel-client バイナリがインストールされています",
   doctorTunnelKeyStored: "トンネルのランタイムキーは安全に保存されています",
   doctorTunnelRuntimeOwned: "ランチャーがトンネルランタイムを管理しています",
@@ -758,6 +767,11 @@ export function localizeRuntimeMessage(
   if (checkId === "proxy") {
     const match = /^Responses proxy is healthy on (127\.0\.0\.1:\d+)$/.exec(message);
     if (match) return copy.doctorProxyHealthy.replace("{endpoint}", () => match[1]);
+  }
+  if (checkId === "model-catalog") {
+    if (message === "This runtime has not observed a completed Codex model-list request yet") return copy.doctorCatalogPending;
+    if (message === "Codex's latest model-list request succeeded") return copy.doctorCatalogReady;
+    if (message === "Codex's latest model-list request failed; the local runtime is reachable") return copy.doctorCatalogFailed;
   }
   if (checkId === "tunnel-binary" && message === "Pinned openai/tunnel-client binary is installed") {
     return copy.doctorTunnelBinaryInstalled;

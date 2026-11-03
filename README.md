@@ -29,7 +29,7 @@
 
 Free 和 Go 賬戶會在 Codex 原生模型選擇器中看到 **ChatGPT Web — Luna**。具有推理選擇器的
 賬戶仍會按訂閱許可權看到 **Instant**、**Medium**、**High**、**Extra High** 和 **Pro**。
-橋接程式會把當前編譯後的 Codex 任務上下文傳送到一個全新的 ChatGPT 臨時聊天，附加圖片，
+橋接程式會把當前編譯後的 Codex 任務上下文傳送到一個全新的 ChatGPT 聊天（依 Temporary Chat 設定），附加圖片，
 並將可見的推理過程、工具活動和 Markdown 流式傳回同一個 Codex 任務。
 
 <p align="center">
@@ -43,7 +43,7 @@ Codex task ──Responses + SSE──▶ codex-chatgpt-web ──embedded brows
 ```
 
 Codex 會保留原生任務、上下文生命週期、介面和工具 harness。本地 Responses 橋接程式只會將
-所選模型的任務轉發到與該任務繫結的 ChatGPT 臨時聊天；在完整模式下，MCP 會把 ChatGPT 連線回
+所選模型的任務轉發到與該任務繫結的 ChatGPT 聊天；在完整模式下，MCP 會把 ChatGPT 連線回
 同一個 Codex 任務的工具，直到下一次上下文壓縮邊界。
 
 ## 亮點
@@ -52,7 +52,7 @@ Codex 會保留原生任務、上下文生命週期、介面和工具 harness。
   上下文生命週期、流式輸出、追蹤和工具展示。
 - **透過 MCP 使用完整 Codex harness。** 完整模式支援登入賬戶公開的全部 effort（包括 Pro），
   並可訪問當前任務的檔案系統、shell、圖片、審批以及已配置的工具和應用。
-- **連續任務會話與原生上下文壓縮。** 連續訊息會複用同一個與任務繫結的臨時聊天。到達上下文
+- **連續任務會話與原生上下文壓縮。** 連續訊息會複用同一個與任務繫結的聊天。到達上下文
   邊界時，保留的 agent 會先寫出檢查點，再由 Codex 從乾淨聊天繼續；若該私有聊天已被關閉，
   則使用 Codex 的規範任務歷史作為回退來源。
 - **Windows 啟動器。** Windows 應用統一管理登入、模型設定、MCP 指南、
@@ -160,10 +160,16 @@ Zero Risk 會保留本機 Responses 橋接程式和完整 Codex harness，但絕
 取消保留的瀏覽器任務，或在解除安裝前移除 Codex 整合。僅在需要為每個瀏覽器檢查點儲存截圖時設定
 `CODEX_CHATGPT_WEB_BROWSER_DIAGNOSTICS=1`。
 
-**Save chats in ChatGPT** 會把任務對話保留在 ChatGPT 歷史中；新設定預設開啟，且與
-**New browser chat for each turn** 互相獨立，更新時會保留既有的明確選擇。關閉後改用臨時聊天，
-此時 ChatGPT 可能不會顯示你的聯結器。啟動器的通道（tunnel）使用系統代理；明確設定的代理環境變數
+**Temporary Chat** 為明確選用的設定，Automatic 與 Zero Risk 都適用；新安裝預設關閉，
+任務對話仍保留在 ChatGPT 歷史中。更新會把舊 `useSavedChats` 反向遷移至 `useTemporaryChats`，
+保留既有明確選擇；從 v5.0.6 升級、設定檔中沒有任何聊天模式鍵的既有安裝（v5.0.6 一律開啟 Temporary Chat）
+維持 Temporary Chat，並與 **New browser chat for each turn** 互相獨立。若臨時聊天中沒有聯結器，
+關閉 **設定 → Temporary Chat** 再重試。CLI 使用 `--temporary-chats`／`--ordinary-chats`；
+舊 `--saved-chats` 保留為後者的別名。啟動器的通道（tunnel）使用系統代理；明確設定的代理環境變數
 優先，本機連線不經代理。
+
+Codex 整合安裝完成即可設定 MCP，不必等待模型 catalog 驗證；Doctor 會獨立顯示最新 catalog
+請求的成功、失敗或尚無結果，健康的本機 proxy 不會隱藏 catalog 錯誤。
 
 新安裝預設使用 **Compatibility V1** 以支援跨後端 subagent。**Native** 會保留 Codex 自身的
 功能設定，並啟用明文 Web-to-Web V2 委派。切換協議後，請重啟 Codex 並建立新任務：
@@ -206,7 +212,7 @@ bun run app:package
 Codex。可選的完整模式只會啟動並監管隔離的 DEV MCP tunnel，並使用獨立聯結器名稱
 `Codex Native2 DEV`。
 
-`dev:chat` 是一個具名、持久的合成外層 Codex harness。它透過隔離的啟動器瀏覽器、臨時聊天、
+`dev:chat` 是一個具名、持久的合成外層 Codex harness。它透過隔離的啟動器瀏覽器、所選聊天模式、
 prompt compiler、Responses parser 和壓縮處理器執行當前工作樹。可選的完整模式也會測試 MCP
 聯結器和 broker；工具效果會顯示為明確的模擬回執。僅瀏覽器聊天不會暴露外層工具。該命令不會
 開啟 Responses listener、修改 `openai_base_url`、停止正式 daemon，也不會佔用 17841 埠。

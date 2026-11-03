@@ -80,7 +80,8 @@ Setup options:
   --bigger-context             Enable experimental adaptive 1/2/6-message context
   --fresh-conversation         Start each automatic turn in a fresh browser chat
   --retained-conversation      Reuse the browser chat between turns (default)
-  --saved-chats                Keep task conversations in ChatGPT history (default)
+  --ordinary-chats             Keep task conversations in ChatGPT history (default)
+  --saved-chats                Alias for --ordinary-chats
   --temporary-chats            Use Temporary Chat for task conversations
   --composer-predictions       Enable next-message suggestions using GPT-6 Sol Medium (default)
   --no-composer-predictions    Disable next-message suggestions for Web models
@@ -317,10 +318,11 @@ async function setupCommand(args: string[]): Promise<void> {
   const skillAttachments = takeFlag(args, "--skill-attachments");
   const inlineSkills = takeFlag(args, "--inline-skills");
   if (skillAttachments && inlineSkills) throw new Error("Choose --skill-attachments or --inline-skills");
-  const savedChats = takeFlag(args, "--saved-chats");
+  const ordinaryChats = takeFlag(args, "--ordinary-chats");
+  const savedChats = takeFlag(args, "--saved-chats") || ordinaryChats;
   const temporaryChats = takeFlag(args, "--temporary-chats");
   if (savedChats && temporaryChats) throw new Error("Choose --saved-chats or --temporary-chats");
-  if (savedChats || temporaryChats) options.useSavedChats = savedChats;
+  if (savedChats || temporaryChats) options.useTemporaryChats = temporaryChats;
   const freshConversation = takeFlag(args, "--fresh-conversation");
   const retainedConversation = takeFlag(args, "--retained-conversation");
   if (freshConversation && retainedConversation) {

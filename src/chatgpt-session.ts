@@ -4,8 +4,8 @@ import type { ChatGptWebAccountCapabilities } from "./chatgpt-web-models";
 export const CHATGPT_TEMPORARY_CHAT_URL = "https://chatgpt.com/?temporary-chat=true";
 export const CHATGPT_SAVED_CHAT_URL = "https://chatgpt.com/";
 
-export function chatGptNewChatUrl(useSavedChats = false): string {
-  return useSavedChats ? CHATGPT_SAVED_CHAT_URL : CHATGPT_TEMPORARY_CHAT_URL;
+export function chatGptNewChatUrl(useTemporaryChats = false): string {
+  return useTemporaryChats ? CHATGPT_TEMPORARY_CHAT_URL : CHATGPT_SAVED_CHAT_URL;
 }
 export const CHATGPT_COMPOSER_SELECTOR = [
   '[data-testid="prompt-textarea"]',
@@ -312,15 +312,15 @@ export async function assertAuthenticatedChatGptPage(page: Page): Promise<void> 
 }
 
 export async function assertTemporaryChatPage(page: Page): Promise<void> {
-  await assertNewChatPage(page);
+  await assertNewChatPage(page, true);
 }
 
-export async function assertNewChatPage(page: Page, useSavedChats = false): Promise<void> {
+export async function assertNewChatPage(page: Page, useTemporaryChats = false): Promise<void> {
   const url = new URL(page.url());
-  const expected = new URL(chatGptNewChatUrl(useSavedChats));
+  const expected = new URL(chatGptNewChatUrl(useTemporaryChats));
   if (url.origin !== expected.origin || url.pathname !== expected.pathname
-    || (url.searchParams.get("temporary-chat") === "true") === useSavedChats) {
-    throw new Error(`ChatGPT left the requested new ${useSavedChats ? "saved" : "Temporary"} Chat surface (${page.url()})`);
+    || (url.searchParams.get("temporary-chat") === "true") !== useTemporaryChats) {
+    throw new Error(`ChatGPT left the requested new ${useTemporaryChats ? "Temporary" : "saved"} Chat surface (${page.url()})`);
   }
 }
 

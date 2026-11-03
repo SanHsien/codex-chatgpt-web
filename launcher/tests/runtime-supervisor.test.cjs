@@ -62,6 +62,7 @@ function launcherConfig(descriptorPath, overrides = {}) {
     headed: true,
     extraHighAvailable: true, proAvailable: true,
     autoApproveToolCalls: false,
+    useTemporaryChats: false,
     controlToken: "runtime-supervisor-control-token-0123456789abcdef",
     runtimeCommand: [process.execPath],
     ...overrides,

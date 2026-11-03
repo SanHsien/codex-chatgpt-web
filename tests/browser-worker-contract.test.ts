@@ -594,7 +594,7 @@ test("chat preparation preserves page-read and composer errors instead of report
     prepareChatSurface(page: unknown): Promise<unknown>;
   }).prepareChatSurface;
   for (const error of [new ChatGptBrowserObservationTimeoutError(5_000), new Error("ChatGPT composer is unavailable")]) {
-    const page = { url: () => "https://chatgpt.com/?temporary-chat=true" };
+    const page = { url: () => "https://chatgpt.com/" };
     await expect(prepare.call({ activeComposer: async () => { throw error; } }, page)).rejects.toBe(error);
   }
 });
@@ -610,7 +610,7 @@ test("cancelled chat preparation stops navigation and composer polling", async (
       async count() { polls += 1; controller.abort(); return 0; },
     };
     const page = {
-      url: () => stage === "composer" ? "https://chatgpt.com/?temporary-chat=true" : "about:blank",
+      url: () => stage === "composer" ? "https://chatgpt.com/" : "about:blank",
       goto: () => { navigations += 1; controller.abort(); return new Promise(() => {}); },
       locator: () => composers,
     };
@@ -867,7 +867,7 @@ test("two-part saved chats re-prove unchanged effort after the first message cre
   }, capabilities, undefined, { experimentalMultipartParts: 2 }), release() {} };
   const worker: any = ChatGptBrowserWorker.forProvider({
     adapter: "chatgpt-web", baseUrl: `browser://${root}`,
-    chatgptWeb: { useSavedChats: true, browserDiagnosticsPath: root },
+    chatgptWeb: { useTemporaryChats: false, browserDiagnosticsPath: root },
   });
   let url = "https://chatgpt.com/";
   const savedUrl = "https://chatgpt.com/c/00000000-0000-4000-8000-000000000001";
@@ -883,7 +883,7 @@ test("two-part saved chats re-prove unchanged effort after the first message cre
   let sends = 0;
   const finished = new Error("final send reached with a current effort proof");
   Object.assign(worker, {
-    prepareChatSurface: async (_page: unknown, _capture: unknown, saved: boolean) => { expect(saved).toBeTrue(); },
+    prepareChatSurface: async (_page: unknown, _capture: unknown, temporary: boolean) => { expect(temporary).toBeFalse(); },
     activeComposer: async () => composer,
     selectModelAndEffort: async () => {
       selections.push(url);
@@ -1869,7 +1869,7 @@ for (const captureScreenshots of [false, true]) test(`connector failure persists
   }
 });
 
-for (const useSavedChats of [false, true]) test(`connector verification prepares the selected chat mode (${useSavedChats}) and clears its selection`, async () => {
+for (const useTemporaryChats of [false, true]) test(`connector verification prepares the selected chat mode (${useTemporaryChats}) and clears its selection`, async () => {
   const diagnosticsRoot = mkdtempSync(join(tmpdir(), "cgw-connector-verification-success-"));
   const calls: string[] = [];
   const page = {
@@ -1885,10 +1885,10 @@ for (const useSavedChats of [false, true]) test(`connector verification prepares
 
   try {
     const result = await verifyConnectorExclusive.call({
-      config: { appName: "Codex Native2 DEV", browserDiagnosticsPath: diagnosticsRoot, useSavedChats },
+      config: { appName: "Codex Native2 DEV", browserDiagnosticsPath: diagnosticsRoot, useTemporaryChats },
       ensurePage: async () => page,
       prepareChatSurface: async (_page: unknown, capture: (checkpoint: string) => Promise<void>, saved: boolean) => {
-        expect(saved).toBe(useSavedChats);
+        expect(saved).toBe(useTemporaryChats);
         calls.push("prepare");
         await capture("composer-ready");
       },
@@ -4852,3 +4852,16 @@ test("a stage that spans a system sleep is not charged for the slept time", asyn
   await stage;
   expect(outcome).toEqual(["ChatGPT browser stage timed out: probe"]);
 }, 10_000);
+
+test("missing connectors in Temporary Chat explain how to return to ordinary chats", async () => {
+  const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
+  for (const useTemporaryChats of [false, true]) {
+    worker.config = { useTemporaryChats, appName: "Codex Native2 DEV" };
+    for (const titles of [[], ["Another connector"]]) {
+      worker.connectorMentionRowTitles = async () => titles;
+      const message = await worker.connectorMentionFailure({}, 1);
+      expect(message.includes("turn off Settings → Temporary Chat")).toBe(useTemporaryChats);
+      expect(message).toContain(titles.length ? "no row named" : "menu did not open");
+    }
+  }
+});

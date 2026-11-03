@@ -1167,7 +1167,7 @@ test("failed terminal migration verifies the unchanged previous runtime instead 
   ]);
 });
 
-test("failed fresh-conversation setting restores every mutable setup file before restarting the previous runtime", async () => {
+for (const setting of ["setFreshConversationPerTurn", "setTemporaryChats"]) test(`failed ${setting} restores every mutable setup file before restarting the previous runtime`, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-web-gpt-setup-checkpoint-"));
   const coreHome = path.join(root, "core");
   const codexHome = path.join(root, "codex");
@@ -1257,7 +1257,7 @@ test("failed fresh-conversation setting restores every mutable setup file before
 
   try {
     await assert.rejects(
-      host.setFreshConversationPerTurn(true),
+      host[setting](true),
       /synthetic updated runtime startup failure$/,
     );
     assert.equal(startAttempts, 2);
@@ -1521,12 +1521,12 @@ test("fresh-conversation preference uses production and DEV setup without forcin
     for (const interaction of ["automatic", "manual"]) {
       const saved = makeHost({ mode: "full", browserInteractionMode: interaction }, interaction);
       for (const enabled of [true, false]) {
-        await saved.host.setUseSavedChats(enabled);
-        assert.equal(saved.invocation().args.includes(enabled ? "--saved-chats" : "--temporary-chats"), true);
+        await saved.host.setTemporaryChats(enabled);
+        assert.equal(saved.invocation().args.includes(enabled ? "--temporary-chats" : "--ordinary-chats"), true);
         assert.equal(saved.invocation().args.includes("--full"), true);
         assert.equal(saved.invocation().args.includes("--fresh-conversation"), false);
       }
-      await assert.rejects(() => saved.host.setUseSavedChats("true"), /boolean/);
+      await assert.rejects(() => saved.host.setTemporaryChats("true"), /boolean/);
     }
     const fixture = makeHost({ mode: "browser-only", browserInteractionMode: "automatic" });
     await assert.rejects(() => fixture.host.setFreshConversationPerTurn("true"), /boolean/);
@@ -1590,4 +1590,19 @@ test("explicit removal cancels pending recovery even when the route is already i
   const result = await fixture.host.connectBridgeRoute({ recoveryOnly: true });
   assert.equal(result.active, false);
   assert.equal(fixture.calls.at(-1), "route status");
+});
+
+test("runtime snapshots migrate legacy chat privacy, treating an unkeyed configuration as Temporary Chat, before launcher synchronization", () => {
+  for (const makeHost of [hostFor, devHostFor]) {
+    for (const legacy of [undefined, true, false]) for (const current of [undefined, true, false]) {
+      const fixture = makeHost({ mode: "browser-only", useSavedChats: legacy, useTemporaryChats: current });
+      const snapshot = fixture.host.runtimeConfigSnapshot();
+      assert.equal(snapshot.config.useTemporaryChats, current ?? (legacy === undefined ? true : legacy === false));
+      assert.equal(Object.hasOwn(snapshot.config, "useSavedChats"), false);
+    }
+    for (const field of ["useSavedChats", "useTemporaryChats"]) {
+      const fixture = makeHost({ mode: "browser-only", [field]: "false" });
+      assert.throws(() => fixture.host.runtimeConfigSnapshot(), new RegExp(field));
+    }
+  }
 });

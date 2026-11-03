@@ -21,16 +21,25 @@ test("prediction setting starts on and remains off after reopening the state sto
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test("saved chats default on for new or missing settings and preserve an explicit opt-out", () => {
+test("Temporary Chat is off for a new install, on for a state file written before the key existed, and follows explicit choices", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-saved-chat-state-"));
   const file = path.join(root, "state.json");
   try {
-    assert.equal(createStateStore(file).read().useSavedChats, true);
-    fs.writeFileSync(file, JSON.stringify({ version: 1 }));
+    assert.equal(createStateStore(file).read().useTemporaryChats, false);
+    // Shaped like the last public release: version 1 with no chat-mode key of either generation.
+    fs.writeFileSync(file, JSON.stringify({ version: 1, language: "en", onboardingComplete: true }));
     const store = createStateStore(file);
-    assert.equal(store.read().useSavedChats, true);
-    store.update({ useSavedChats: false });
-    assert.equal(createStateStore(file).read().useSavedChats, false);
+    assert.equal(store.read().useTemporaryChats, true);
+    store.update({ sidebarOpen: false });
+    assert.equal(JSON.parse(fs.readFileSync(file)).useTemporaryChats, true);
+    assert.equal(createStateStore(file).read().useTemporaryChats, true);
+    store.update({ useTemporaryChats: false });
+    assert.equal(createStateStore(file).read().useTemporaryChats, false);
+    // An unreadable or unversioned file is not evidence of an earlier release.
+    fs.writeFileSync(file, "{ not json");
+    assert.equal(createStateStore(file).read().useTemporaryChats, false);
+    fs.writeFileSync(file, JSON.stringify({ language: "en" }));
+    assert.equal(createStateStore(file).read().useTemporaryChats, false);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -54,7 +63,7 @@ test("launcher state persists onboarding, language, and autostart atomically", (
       composerPredictionsEnabled: true,
       experimentalSkillAttachments: false,
       experimentalFreshConversationPerTurn: false,
-      useSavedChats: true,
+      useTemporaryChats: false,
       zeroRiskProEnabled: false,
       browserSmokePassed: false,
       browserSmokeVersion: null,
@@ -85,7 +94,7 @@ test("launcher state persists onboarding, language, and autostart atomically", (
       composerPredictionsEnabled: true,
       experimentalSkillAttachments: false,
       experimentalFreshConversationPerTurn: false,
-      useSavedChats: true,
+      useTemporaryChats: false,
       zeroRiskProEnabled: false,
       browserSmokePassed: true,
       browserSmokeVersion: "0.2.0",
@@ -143,6 +152,7 @@ test("persisted sidebar corruption is repaired without changing the rest of laun
       onboardingComplete: "yes",
       autoStart: "yes",
       experimentalFreshConversationPerTurn: "true",
+      useTemporaryChats: false,
       bridgeEnabled: false,
       browserSmokePassed: "yes",
       browserSmokeVersion: { invalid: true },
@@ -167,7 +177,7 @@ test("persisted sidebar corruption is repaired without changing the rest of laun
       composerPredictionsEnabled: true,
       experimentalSkillAttachments: false,
       experimentalFreshConversationPerTurn: false,
-      useSavedChats: true,
+      useTemporaryChats: false,
       zeroRiskProEnabled: false,
       browserSmokePassed: false,
       browserSmokeVersion: null,
@@ -220,4 +230,22 @@ test("session refresh reminders are deferred by exactly 48 hours", () => {
   assert.equal(SESSION_REFRESH_REMINDER_INTERVAL_MS, 48 * 60 * 60 * 1000);
   assert.equal(nextSessionRefreshReminderAt(now), "2026-08-07T12:00:00.000Z");
   assert.throws(() => nextSessionRefreshReminderAt(Number.NaN), /must be finite/);
+});
+
+test("Temporary Chat state migration keeps unkeyed state private, preserves explicit choices and never revives the legacy key", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-temporary-state-"));
+  const file = path.join(root, "state.json");
+  try {
+    assert.equal(createStateStore(file).read().useTemporaryChats, false);
+    for (const legacy of [undefined, true, false]) for (const current of [undefined, true, false]) {
+      fs.writeFileSync(file, JSON.stringify({ version: 1, useSavedChats: legacy, useTemporaryChats: current }));
+      const store = createStateStore(file);
+      const expected = current ?? (legacy === undefined ? true : legacy === false);
+      assert.equal(store.read().useTemporaryChats, expected);
+      assert.equal(Object.hasOwn(store.read(), "useSavedChats"), false);
+      store.update({ sidebarOpen: false });
+      assert.equal(createStateStore(file).read().useTemporaryChats, expected);
+      assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(file)), "useSavedChats"), false);
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

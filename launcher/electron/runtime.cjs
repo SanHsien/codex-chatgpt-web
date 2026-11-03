@@ -1,3 +1,4 @@
+const { migrateChatPreferences } = require("./chat-preferences.cjs");
 const path = require("node:path");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -456,7 +457,7 @@ class RuntimeHost {
       };
     }
     const launcherOwned = setupConfig.browserHost === "launcher";
-    const config = launcherOwned ? this.supervisor.readConfig() : setupConfig;
+    const config = migrateChatPreferences(launcherOwned ? this.supervisor.readConfig() : setupConfig);
     return {
       configured: true,
       owner: launcherOwned ? "launcher" : "external",
@@ -1275,10 +1276,10 @@ class RuntimeHost {
     return { ...result, enabled };
   }
 
-  async setUseSavedChats(enabled) {
-    if (typeof enabled !== "boolean") throw new Error("Saved chat preference must be a boolean");
+  async setTemporaryChats(enabled) {
+    if (typeof enabled !== "boolean") throw new Error("Temporary Chat preference must be a boolean");
     const current = this.runtimeConfigSnapshot();
-    if (!current.configured) throw new Error("Initialize the runtime before changing saved chats");
+    if (!current.configured) throw new Error("Initialize the runtime before changing Temporary Chat");
     const development = this.launcherProfile === "development";
     const args = [
       ...(development ? ["dev", "setup"] : ["setup"]),
@@ -1287,17 +1288,17 @@ class RuntimeHost {
       ...this.browserInteractionArgs(),
       "--acknowledge-unofficial",
       ...(development ? [] : ["--replace-codex-route", "--restart-service"]),
-      enabled ? "--saved-chats" : "--temporary-chats",
+      enabled ? "--temporary-chats" : "--ordinary-chats",
     ];
     if (current.config?.autoApproveToolCalls === true) args.push("--auto-approve-tool-calls");
     const options = {
-      message: enabled ? "Enabling saved ChatGPT conversations" : "Restoring Temporary Chat",
-      successMessage: enabled ? "Saved ChatGPT conversations enabled" : "Temporary Chat restored",
+      message: enabled ? "Enabling Temporary Chat" : "Restoring ordinary chats",
+      successMessage: enabled ? "Temporary Chat enabled" : "Ordinary chats restored",
       timeoutMs: CORE_SETUP_TIMEOUT_MS,
     };
     const result = development
-      ? await this.runDevSetup("use-saved-chats", args, options)
-      : await this.runSetup("use-saved-chats", args, options);
+      ? await this.runDevSetup("temporary-chats", args, options)
+      : await this.runSetup("temporary-chats", args, options);
     return { ...result, enabled };
   }
 

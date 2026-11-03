@@ -1,3 +1,4 @@
+const { migrateChatPreferences } = require("./chat-preferences.cjs");
 const fs = require("node:fs");
 const net = require("node:net");
 const os = require("node:os");
@@ -379,12 +380,12 @@ class RuntimeSupervisor {
 
   readConfig() {
     if (!fs.existsSync(this.configPath)) return null;
-    const config = validateConfig(
+    const config = migrateChatPreferences(validateConfig(
       readJson(this.configPath),
       this.browserDescriptorPath,
       this.platform,
       this.launcherProfile,
-    );
+    ));
     this.onConfigRead?.(config);
     return config;
   }
@@ -406,7 +407,7 @@ class RuntimeSupervisor {
     if (mode !== "browser-only" && mode !== "full") {
       throw new Error("Runtime configuration has an invalid setup mode");
     }
-    return { ...config, mode };
+    return migrateChatPreferences({ ...config, mode });
   }
 
   readState() {

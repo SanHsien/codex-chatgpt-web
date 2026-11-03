@@ -2123,7 +2123,7 @@ test("browser helper operations fail closed when the configured connector name i
   assert.equal(helperCalls, 0);
 });
 
-for (const useSavedChats of [false, true]) test(`hidden connector verification uses the selected chat mode (${useSavedChats}) without selecting effort`, async () => {
+for (const useTemporaryChats of [false, true]) test(`hidden connector verification uses the selected chat mode (${useTemporaryChats}) without selecting effort`, async () => {
   const calls = [];
   const fixture = {
     helper: { executable: "/runtime/electron", script: "/runtime/browser-helper.cjs" },
@@ -2131,7 +2131,7 @@ for (const useSavedChats of [false, true]) test(`hidden connector verification u
     logger: { info: (event, detail) => calls.push(["log", event, detail]) },
     setState: (patch) => calls.push(["state", patch]),
     show: () => calls.push(["show"]),
-    getUseSavedChats: () => useSavedChats,
+    getUseTemporaryChats: () => useTemporaryChats,
     refreshChatGptHomeDocument: async (saved) => calls.push(["refresh", saved]),
     selectHighEffort: async () => {
       throw new Error("connector verification must not select an effort");
@@ -2149,22 +2149,22 @@ for (const useSavedChats of [false, true]) test(`hidden connector verification u
   assert.deepEqual(
     calls.filter(([type]) => ["refresh", "helper"].includes(type)),
     [
-      ["refresh", useSavedChats],
+      ["refresh", useTemporaryChats],
       ["helper", {
         helper: fixture.helper,
         descriptorPath: fixture.descriptorPath,
         appName: "Codex Native2",
-        useSavedChats,
+        useTemporaryChats,
         logger: fixture.logger,
       }],
     ],
   );
 });
 
-for (const useSavedChats of [false, true]) test(`verification refresh and authentication preserve the selected chat mode (${useSavedChats})`, async () => {
-  const target = useSavedChats ? "https://chatgpt.com/" : "https://chatgpt.com/?temporary-chat=true";
+for (const useTemporaryChats of [false, true]) test(`verification refresh and authentication preserve the selected chat mode (${useTemporaryChats})`, async () => {
+  const target = useTemporaryChats ? "https://chatgpt.com/?temporary-chat=true" : "https://chatgpt.com/";
   for (const initial of [target, "https://chatgpt.com/c/existing", "about:blank",
-    useSavedChats ? "https://chatgpt.com/?temporary-chat=true" : "https://chatgpt.com/"]) {
+    useTemporaryChats ? "https://chatgpt.com/" : "https://chatgpt.com/?temporary-chat=true"]) {
     const calls = [];
     let currentUrl = initial;
     const fixture = Object.assign(Object.create(BrowserHost.prototype), {
@@ -2177,13 +2177,13 @@ for (const useSavedChats of [false, true]) test(`verification refresh and authen
         loadURL: async (url) => { currentUrl = url; calls.push(["navigate", url]); },
         executeJavaScript: async () => {
           calls.push(["authenticate"]);
-          return { sessionAuthenticated: true, composer: true, temporary: !useSavedChats,
+          return { sessionAuthenticated: true, composer: true, temporary: useTemporaryChats,
             url: currentUrl, readyState: "complete" };
         },
       } },
       hardRefreshHome: async () => calls.push(["refresh"]),
     });
-    await fixture.refreshChatGptHomeDocument(useSavedChats);
+    await fixture.refreshChatGptHomeDocument(useTemporaryChats);
     assert.deepEqual(calls, [initial === target ? ["refresh"] : ["navigate", target], ["authenticate"]]);
     assert.equal(fixture.state.authenticated, true);
     assert.equal(currentUrl, target);
@@ -2204,7 +2204,7 @@ test("connector verification records the helper failure in launcher diagnostics"
     },
     setState: (patch) => calls.push(["state", patch]),
     refreshChatGptHomeDocument: async () => calls.push(["refresh"]),
-    getUseSavedChats: () => true,
+    getUseTemporaryChats: () => true,
     verifyConnectorWithBrowserHelper: async () => { throw failure; },
   };
 
@@ -4212,16 +4212,16 @@ test("off-on-off fresh conversation changes retire completed history before it c
   const { releaseRetainedConversation } = require("../electron/retained-turn-release.cjs");
   const main = fs.readFileSync(resolve(__dirname, "../electron/main.cjs"), "utf8");
   for (const savedChats of [false, true]) {
-    const property = savedChats ? "useSavedChats" : "experimentalFreshConversationPerTurn";
-    const method = savedChats ? "setUseSavedChats" : "setFreshConversationPerTurn";
-    const channel = savedChats ? "launcher:use-saved-chats" : "launcher:fresh-conversation-per-turn";
-    const nextChannel = savedChats ? "launcher:auto-approve-tool-calls" : "launcher:use-saved-chats";
+    const property = savedChats ? "useTemporaryChats" : "experimentalFreshConversationPerTurn";
+    const method = savedChats ? "setTemporaryChats" : "setFreshConversationPerTurn";
+    const channel = savedChats ? "launcher:temporary-chats" : "launcher:fresh-conversation-per-turn";
+    const nextChannel = savedChats ? "launcher:auto-approve-tool-calls" : "launcher:temporary-chats";
     const key = "a".repeat(64);
     const stale = { id: "old-chat", traceId: "old-turn", status: "ready", interactionMode: "automatic",
       conversationKey: key, connectorIdentity: "Codex Native2", connectorBound: true };
     const manual = { id: "manual-chat", status: "ready", interactionMode: "manual", conversationKey: "b".repeat(64) };
-    const state = { experimentalFreshConversationPerTurn: false, useSavedChats: false };
-    const config = { experimentalFreshConversationPerTurn: false, useSavedChats: false };
+    const state = { experimentalFreshConversationPerTurn: false, useTemporaryChats: false };
+    const config = { experimentalFreshConversationPerTurn: false, useTemporaryChats: false };
     let handler, failSetup = true, commit;
     const removed = [];
     const fixture = Object.assign(Object.create(BrowserHost.prototype), {
@@ -4270,5 +4270,34 @@ test("off-on-off fresh conversation changes retire completed history before it c
     assert.equal(lease.tabId, "new-chat");
     assert.equal(state[property], false);
     assert.equal(fixture.turnTabs.get(manual.id), savedChats ? undefined : manual);
+  }
+});
+
+test("Zero Risk new tabs follow Temporary Chat preference without DOM inspection", () => {
+  const vm = require("node:vm");
+  const create = vm.runInNewContext(`(function ${BrowserHost.prototype.createManualTurnTab.toString()})`, {
+    MAX_BROWSER_TABS: 5,
+    TEMPORARY_CHAT_URL: "https://chatgpt.com/?temporary-chat=true",
+    randomBytes: require("node:crypto").randomBytes,
+    manualPromptDigest: value => createHash("sha256").update(value).digest("hex"),
+    WebContentsView: class {
+      constructor() { this.webContents = {
+        setZoomFactor() {},
+        executeJavaScript() { throw new Error("Zero Risk must not inspect DOM"); },
+      }; }
+    },
+  });
+  for (const temporary of [false, true]) {
+    const fixture = {
+      getUseTemporaryChats: () => temporary,
+      turnTabs: new Map(), state: { zoomFactor: 1 },
+      window: { contentView: { addChildView() {} } },
+      presentTurnView() {}, bindShellZoomShortcuts() {}, bindManualTurnContents() {},
+      initializeManualTurnTab() {},
+    };
+    const tab = create.call(fixture, "privacy-test", process.pid, "conversation", "prompt", 60_000);
+    assert.equal(tab.url, temporary ? "https://chatgpt.com/?temporary-chat=true" : "https://chatgpt.com/");
+    assert.equal(tab.interactionMode, "manual");
+    assert.equal(tab.connectorBound, false);
   }
 });

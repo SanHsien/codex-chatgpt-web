@@ -640,7 +640,7 @@ test("the absolute personalization deadline always returns the connector deadlin
       .rejects.toMatchObject({
         status: 424,
         code: "connector_not_found",
-        message: expect.stringContaining("enable Launcher → Settings → Save chats in ChatGPT"),
+        message: expect.stringContaining("turn off Launcher → Settings → Temporary Chat"),
       });
   } finally {
     Date.now = originalNow;

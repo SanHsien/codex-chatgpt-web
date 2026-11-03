@@ -410,3 +410,136 @@ both DECISIONS heading fragments resolve. Verification-result text was added aft
 final link/whitespace checks and the complete diff review cover those documentation additions.
 Relative input hashes and command outcomes are retained in ignored
 `.maintenance-reports/resume-worktree.json`.
+
+## 2026-11-03 opt-in Temporary Chat and MCP readiness
+
+Base HEAD: `1be63e57449268b51dec32fd7bf598bceaeb9ea5`. Port `7c7c10e` (#918) with inverse
+legacy preference migration, and `a738f04` (#893/#895) with installation/catalog separation.
+Original author for both ports: vechen <147659719+miuuyy@users.noreply.github.com>.
+The maintainer's dispatch resolves the former decision boundary: reject `ad9a611` default-on;
+coordinate `53b6050` with the next installer version and one connector refresh; keep the Full Access
+group deferred. See [DECISIONS](DECISIONS.md#2026-11-03-opt-in-temporary-chat-and-mcp-readiness).
+
+Scope includes CLI/setup/provider/worker, both helper IPC paths, launcher runtime reads and state,
+settings and Doctor, regressions, CHANGELOG and the English/Traditional Chinese documentation.
+Legacy saved-chat false/true becomes Temporary Chat true/false. A stored file with neither key
+becomes Temporary Chat: v5.0.6 (`git show v5.0.6:src/chatgpt-session.ts`, the `temporary-chat`
+check) always opened Temporary Chat and wrote no chat-mode key, and no 6.x config or launcher-state
+writer omits one (`saveConfig` only serializes `defaultConfig` or a parsed config; the state store
+writes its full defaults), so absence in an existing file identifies v5.0.6. Only a brand-new
+install with no file takes the saved-chat default. Regression tests pin a v5.0.6-shaped config and
+state, explicit legacy and current values, and the new-install default in core and launcher.
+An explicit new false takes precedence over legacy false. Reads normalize before UI synchronization;
+subsequent persistence drops the legacy key. Existing CLI `--saved-chats` remains an alias for
+`--ordinary-chats`. Retained Automatic and Zero Risk tabs retire on a privacy-preference change;
+Zero Risk does not gain DOM access. Login, account inspection and smoke remain explicitly temporary.
+
+Windows verification used the existing repo-local Bun 1.4.2 through process PATH only. Logs are
+under ignored `.maintenance-reports/temporary-`; system Bun was not selected or modified.
+
+- `pwsh -NoProfile -File tools/bootstrap_dev.ps1`: exit 0;
+  `BOOTSTRAP PASSED: Bun 1.4.2, both frozen lockfiles, and Electron runtime.`
+- Red before production edits: `bun test tests/runtime-layout.test.ts tests/cli.test.ts
+  tests/browser-worker-contract.test.ts`: exit 1, 195 pass / 3 fail. Failures are inverse migration,
+  missing connector guidance and Doctor catalog result separate from a healthy proxy.
+- Red before production edits: `bun test launcher/tests/state.test.cjs
+  launcher/tests/renderer-wiring.test.cjs`: exit 1, 40 pass / 2 fail. Legacy state migration is absent;
+  installed integration remains blocked by unverified catalog. The behavioral renderer test also
+  checks that incomplete installations stay blocked and connecting does not fabricate verification.
+- `bun test launcher/tests/runtime-host.test.cjs --test-name-pattern 'runtime snapshots migrate'`:
+  exit 1 before launcher snapshot normalization (0 pass / 1 fail).
+- `bun test launcher/tests/browser-host.test.cjs --test-name-pattern 'Zero Risk new tabs'`:
+  exit 1 against HEAD browser-host bytes; a `finally` block restored and byte-compared working bytes.
+  The first runner attempt did not resolve its executable and is not counted as red evidence;
+  the corrected absolute executable runner produced the failing test.
+- `bun test tests/chatgpt-session.test.ts --test-name-pattern
+  'login verification still|account inspection and smoke'`: exit 1 (0 pass / 2 fail) before making
+  maintenance chat mode explicit; together with the Zero Risk case, the corrected production code
+  passes `bun test tests/chatgpt-session.test.ts launcher/tests/browser-host.test.cjs
+  --test-name-pattern 'login verification still|account inspection and smoke|Zero Risk new tabs'`:
+  exit 0, 3 pass / 0 fail. No signed-in browser or live model was used.
+- Focused green command: `bun test tests/runtime-layout.test.ts tests/cli.test.ts
+  tests/browser-worker-contract.test.ts tests/chatgpt-session.test.ts tests/launcher-helper-client.test.ts
+  tests/server-predictions.test.ts launcher/tests/state.test.cjs launcher/tests/renderer-wiring.test.cjs
+  launcher/tests/localization.test.cjs launcher/tests/runtime-host.test.cjs launcher/tests/browser-host.test.cjs`:
+  exit 0, 484 pass / 0 fail. It includes real helper subprocess IPC and transactional runtime rollback.
+  The subsequent maintenance regression above adds two cases covered by the independent verify run.
+- `pwsh -NoProfile -File tools/dev_check.ps1`: exit 0, `DEV CHECK PASSED: Bun 1.4.2, fork contract,
+  strict upstream/dependency checks, verify, and whitespace.` Focused contracts: 22 pass / 0 fail;
+  strict upstream tracking: all four axes current; dependency freshness current with chromium-bidi
+  `159.0.8140-0` deferred by the version-line list below; core 1,148 pass / 100 skip / 0 fail;
+  launcher 423 pass / 1 skip / 0 fail; runtime smoke `RELOCATABLE_RUNTIME_SMOKE_OK`.
+  Root audit is clean; launcher retains the three exact minimatch security exceptions through
+  2026-11-17.
+
+ROADMAP keeps the remaining conditional ports and independently tracks account acceptance, the
+next release's ABI work, dependency re-review and the existing machine-enforced security revisit.
+No deadline-tracking row is removed. Source version, public installer pin, Bun pin, both lockfiles,
+Windows packaging and model/effort constraints are preserved. These checks do not establish
+signed-in ChatGPT, live MCP connector or packaged-release acceptance.
+
+Independent `bun run verify`: exit 0, ending `RELOCATABLE_RUNTIME_SMOKE_OK`.
+Core: 1,145 pass / 100 skip / 0 fail (1,245 tests, 9,434 assertions).
+Launcher: 423 pass / 1 skip / 0 fail (424 tests). Both typechecks, renderer build (442 modules),
+relocatable runtime build and notices for 111 runtime packages passed. Audit retains the existing
+explicit minimatch deferral; skips are not live acceptance.
+
+After that suite's source/test inputs were consumed, final review updated the remaining personalization
+failure guidance to the new Settings label and strengthened preference fixtures. The isolated old-label
+regression (`bun test tests/personalization-connector-preflight.test.ts --test-name-pattern
+'absolute personalization deadline always'`) first exits 1 (0 pass / 1 fail).
+The final affected-files command (`bun test tests/browser-worker-contract.test.ts
+tests/personalization-connector-preflight.test.ts tests/server-predictions.test.ts
+tests/chatgpt-session.test.ts tests/cli.test.ts tests/launcher-helper-client.test.ts
+launcher/tests/browser-host.test.cjs launcher/tests/runtime-host.test.cjs`) reports 436 pass / 1 fail:
+the saved multipart fixture still asserted the old polarity after its input was corrected to saved mode.
+Correcting that fixture's assertion preserves the original saved-chat coverage, including unchanged
+effort re-proof after a conversation URL appears. Only that failed case is rerun:
+`bun test tests/browser-worker-contract.test.ts --test-name-pattern 'two-part saved chats'`
+exits 0 (1 pass / 0 fail). `bun test tests/personalization-connector-preflight.test.ts` exits 0
+(19 pass / 0 fail, 178 assertions), proving the final wording against production code.
+The other 436 affected cases passed against those final production inputs. `bun run typecheck`
+also exits 0 after the final fixture changes. The independent verify result above binds its earlier
+inputs; these focused results cover the later wording and test refinements without repeating the
+unchanged full suite or runtime smoke.
+
+Final whitespace, original tracked-file line endings, local Markdown targets/fragments, empty index,
+unchanged HEAD and both lockfiles were checked. Complete relative input hashes and command outcomes
+are retained in ignored `.maintenance-reports/temporary-worktree.json`.
+
+### Upgrade privacy: configurations with no chat-mode key
+
+The only public release, v5.0.6, always opens `?temporary-chat=true`
+(`git show v5.0.6:src/chatgpt-session.ts:169`) and its version 3 configuration has no chat-mode
+key. Reading a missing key as saved chats would silently move an upgrading v5.0.6 user to ChatGPT
+history. Writer audit: `saveConfig` is the only configuration writer; it serializes either
+`defaultConfig()` or a `parseConfig()` result, and both always contain the key (tags `v6.0.0` through
+`v6.1.13`, the adopted lineage, carry `useSavedChats` in both; upstream `v6.1.14` onward removed Temporary
+Chat and writes neither key, which this fork has deferred and which would also map to the private
+direction). The launcher state store writes its full defaults on every `update()`, which include the
+key. So a stored file without either key is a v5.0.6 file, and the version field (3 for config, 1 for
+state in both generations) cannot distinguish the generations.
+`parseConfig`, `migrateChatPreferences` and the launcher state reader therefore map "stored, neither
+key" to Temporary Chat, while `defaultConfig()` and a missing state file stay on saved chats.
+
+Red before the change: `bun test tests/runtime-layout.test.ts`: 3 fail / 21 pass (the v5.0.6-shaped
+config, the legacy/current matrix and the preference-survives-reload case read `false`);
+`node --test tests/state.test.cjs tests/runtime-host.test.cjs`: 3 fail / 67 pass (the v5.0.6-shaped
+launcher state, the state matrix and the runtime snapshot matrix). Green after: runtime-layout 24 pass /
+0 fail; state and runtime-host 70 pass / 0 fail. Two existing fixtures that described a 6.x file without
+the key now carry it explicitly (`persisted sidebar corruption ...` and the `launcherConfig` helper).
+Tests pin: v5.0.6-shaped config and state become Temporary Chat in core and launcher, in Automatic and
+Zero Risk provider configs and after re-saving; explicit legacy and current values are unchanged; a new
+install (no file, or an unreadable or unversioned state file) stays on saved chats.
+
+### chromium-bidi: both version lines deferred
+
+npm latest alternated between the 157 and 159 lines (`159.0.8139-2`, then `157.0.8103-39`, then
+`159.0.8140-0` at `2026-11-03T06:19:13.518Z`). `npm pack chromium-bidi@159.0.8140-0 --dry-run` lists
+319 files with no `lib/cjs` entry, the same layout as `157.0.8103-39`, while installed Playwright
+1.64.1 imports `chromium-bidi/lib/cjs/bidiMapper/BidiMapper` and `chromium-bidi/lib/cjs/cdp/CdpConnection`.
+The deferral is now `latestPrefix: ["157", "159"]`; the checker accepts a prefix or a non-empty list of
+unique prefixes (fail-closed on empty, duplicate, malformed or mixed-with-`latest` bounds). Red:
+the new "several version lines" test failed (1 fail / 10 pass) before the checker change; green after:
+`bun test tests/dependency-freshness.test.ts` 11 pass / 0 fail. `npm run check:dependencies` exits 0
+with no attention rows. The assertions use synthetic fixture versions only.

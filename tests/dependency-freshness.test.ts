@@ -26,6 +26,24 @@ test("deferral bounds reject missing, ambiguous and malformed prefixes", () => {
   }
 });
 
+test("a deferral naming several version lines matches any of them and still fails on every other line", () => {
+  const policy = validateDeferrals({ schemaVersion: 1, deferrals: [{ workspace: "root", package: "pkg", latestPrefix: ["3", "5.2"], reviewed: "2026-11-03", reason: "Both lines are incompatible." }] });
+  const status = (latest: string, workspace: "root" | "launcher" = "root", name = "pkg") => evaluateFreshness(workspace, [{ package: name, current: "1.0.0", update: "1.0.0", latest }], policy)[0].status;
+  for (const latest of ["3.0.0", "3.9.1-2", "5.2.0", "5.2.7-rc.1"]) expect(status(latest)).toBe("deferred");
+  for (const latest of ["4.0.0", "5.1.9", "5.3.0", "52.0.0", "garbage", "3.8", "5.2"]) expect(status(latest)).toBe("attention");
+  expect(status("3.0.0", "launcher")).toBe("attention");
+  expect(status("3.0.0", "root", "other")).toBe("attention");
+});
+
+test("a list of version lines must be non-empty, unique, well formed and not combined with an exact latest", () => {
+  const base = { workspace: "root", package: "pkg", reviewed: "2026-11-03", reason: "Reviewed." };
+  expect(() => validateDeferrals({ schemaVersion: 1, deferrals: [{ ...base, latestPrefix: ["3", "4.1", "5.2.3"] }] })).not.toThrow();
+  for (const latestPrefix of [[], ["3", "3"], ["3", ""], ["3", "03"], ["3", 4], ["3", null], [["3"]]]) {
+    expect(() => validateDeferrals({ schemaVersion: 1, deferrals: [{ ...base, latestPrefix }] })).toThrow("invalid or incomplete");
+  }
+  expect(() => validateDeferrals({ schemaVersion: 1, deferrals: [{ ...base, latest: "3.0.0", latestPrefix: ["3"] }] })).toThrow("invalid or incomplete");
+});
+
 test("parses Bun 1.4 text tables and applies exact-version deferrals", () => {
   expect(parseBunOutdated(table)).toEqual([{ package: "pkg", current: "1.0.0", update: "1.1.0", latest: "2.0.0" }]);
   expect(evaluateFreshness("root", parseBunOutdated(table), validateDeferrals(deferrals))[0].status).toBe("deferred");

@@ -9,15 +9,16 @@ import {
   CHATGPT_THINK_BUTTON_SELECTOR,
   activateChatGptEffortMenu,
   assertNewChatPage,
+  assertTemporaryChatPage,
   chatGptNewChatUrl,
   detectChatGptAccountCapabilities,
 } from "../src/chatgpt-session";
 
-test("saved chats start empty and cannot reuse an arbitrary conversation or a Temporary Chat", async () => {
-  expect(chatGptNewChatUrl()).toBe("https://chatgpt.com/?temporary-chat=true");
-  expect(chatGptNewChatUrl(true)).toBe("https://chatgpt.com/");
+test("selected new chats reject an arbitrary conversation or the opposite privacy mode", async () => {
+  expect(chatGptNewChatUrl()).toBe("https://chatgpt.com/");
+  expect(chatGptNewChatUrl(true)).toBe("https://chatgpt.com/?temporary-chat=true");
   const prepare = (ChatGptBrowserWorker.prototype as any).prepareChatSurface;
-  for (const saved of [false, true]) {
+  for (const temporary of [false, true]) {
     let url = "https://chatgpt.com/c/previous-task";
     const navigations: string[] = [];
     const absent: any = { filter: () => absent, last: () => absent, isVisible: async () => false };
@@ -27,11 +28,11 @@ test("saved chats start empty and cannot reuse an arbitrary conversation or a Te
       goto: async (next: string) => { url = next; navigations.push(next); },
       locator: (selector: string) => selector === CHATGPT_COMPOSER_SELECTOR ? composer : absent,
     };
-    expect(await prepare.call({ activeComposer: async () => composer }, page, undefined, saved)).toBe(composer);
-    expect(navigations).toEqual([chatGptNewChatUrl(saved)]);
-    await expect(assertNewChatPage(page, !saved)).rejects.toThrow("requested new");
+    expect(await prepare.call({ activeComposer: async () => composer }, page, undefined, temporary)).toBe(composer);
+    expect(navigations).toEqual([chatGptNewChatUrl(temporary)]);
+    await expect(assertNewChatPage(page, !temporary)).rejects.toThrow("requested new");
     url = "https://chatgpt.com/c/previous-task";
-    await expect(assertNewChatPage(page, saved)).rejects.toThrow("requested new");
+    await expect(assertNewChatPage(page, temporary)).rejects.toThrow("requested new");
   }
 });
 
@@ -495,4 +496,23 @@ test("Pro selection verifies the persisted hidden slider through its visible own
     expect(fixture.keys).toEqual(["ArrowRight", "ArrowRight", "ArrowRight", "ArrowRight"]);
     expect(fixture.value()).toBe(loseSelectionOnClose ? 0 : 4);
   }
+});
+
+test("login verification still requires Temporary Chat despite ordinary task defaults", async () => {
+  await expect(assertTemporaryChatPage({ url: () => "https://chatgpt.com/?temporary-chat=true" } as any)).resolves.toBeUndefined();
+  await expect(assertTemporaryChatPage({ url: () => "https://chatgpt.com/" } as any)).rejects.toThrow("requested new");
+});
+
+test("account inspection and smoke keep temporary maintenance chats", async () => {
+  const prototype = ChatGptBrowserWorker.prototype as any;
+  const page = { url: () => "https://chatgpt.com/?temporary-chat=true" };
+  const modes: unknown[] = [];
+  const fixture = { ensurePage: async () => page,
+    prepareChatSurface: async (_page: unknown, _capture: unknown, temporary: boolean) => { modes.push(temporary); } };
+  await prototype.inspectSessionExclusive.call(fixture, false);
+  expect(modes).toEqual([true]);
+  const sentinel = new Error("stop before model selection");
+  fixture.prepareChatSurface = async (_page, _capture, temporary) => { modes.push(temporary); throw sentinel; };
+  await expect(prototype.smokeTestExclusive.call(fixture)).rejects.toBe(sentinel);
+  expect(modes).toEqual([true, true]);
 });

@@ -31,11 +31,13 @@ installing or editing manifests. Bun 1.4.2 emits a text table even with `--json`
 that pinned format defensively. Deferrals in `.github/dependency-deferrals.json` require reviewed
 upstream or packaged desktop verification. Each entry declares exactly one bound: `latest` retains
 exact string equality; `latestPrefix` accepts one, two or three numeric components (for example
-`159`, `159.0`, `159.0.8139`). Prefix matching compares whole major/minor/patch components,
-including prerelease and build variants within that line; `159` never matches `1590`.
-Malformed or ambiguous bounds fail closed. Releases outside the declared bound require review.
-The exact reviewed chromium-bidi latest is deferred for the Playwright import-layout incompatibility; re-review
-also applies when Playwright adopts that layout or a compatible shim is reviewed.
+`159`, `159.0`, `159.0.8139`), or a non-empty list of unique prefixes when the registry's latest
+alternates between version lines (a latest on any listed line is deferred). Prefix matching compares
+whole major/minor/patch components, including prerelease and build variants within that line;
+`159` never matches `1590`. Malformed, empty, duplicated or ambiguous bounds fail closed. Releases
+outside the declared bound require review. The chromium-bidi 157 and 159 version lines are deferred
+for the Playwright import-layout incompatibility; re-review also applies when Playwright adopts that
+layout or a compatible shim is reviewed.
 
 Launcher `audit` still runs live `bun audit --json`; `scripts/audit-launcher.ts` applies the
 separate security exceptions in `.github/audit-deferrals.json`. Freshness invokes that same

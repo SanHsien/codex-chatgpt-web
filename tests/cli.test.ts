@@ -636,3 +636,41 @@ test("authorized launcher uninstall does not re-probe an already stopped full ru
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("doctor distinguishes a healthy local proxy from failed, pending and recovered model loading", async () => {
+  const root = mkdtempSync(join(tmpdir(), "codex-doctor-catalog-"));
+  const appHome = join(root, "app");
+  const config = { ...defaultConfig("browser-only"), browserHost: "managed-chrome" as const };
+  let result: Record<string, unknown> | null = {
+    request: 2, at: "2026-10-22T07:53:53.739Z", status: 502,
+    failure: { stage: "transport", code: "ConnectionRefused", message: "PRIVATE_PROXY_URL" },
+  };
+  const paths: string[] = [];
+  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch(req) {
+    paths.push(new URL(req.url).pathname);
+    return Response.json({
+      status: "ok", service: "codex-chatgpt-web", version: config.releaseVersion,
+      mode: config.mode, accepting_turns: true, pid: process.pid,
+      successful_model_catalog_requests: result ? 1 : 0,
+      last_model_catalog_result: result,
+    });
+  } });
+  config.port = server.port!;
+  mkdirSync(appHome, { recursive: true });
+  writeFileSync(join(appHome, "config.json"), JSON.stringify(config));
+  const env = { ...process.env, CODEX_CHATGPT_WEB_HOME: appHome, CODEX_HOME: join(root, "codex") };
+  try {
+    const check = async () => {
+      const report = JSON.parse((await runCli(["doctor", "--json"], env)).stdout);
+      expect(report.checks.find((c: any) => c.id === "proxy").status).toBe("ok");
+      expect(JSON.stringify(report)).not.toContain("PRIVATE_PROXY_URL");
+      return report.checks.find((c: any) => c.id === "model-catalog");
+    };
+    expect(await check()).toMatchObject({ status: "error", detail: "HTTP 502; transport; ConnectionRefused" });
+    result = null;
+    expect(await check()).toMatchObject({ status: "warning" });
+    result = { request: 3, at: "2026-10-22T07:54:00Z", status: 200 };
+    expect(await check()).toMatchObject({ status: "ok" });
+    expect(paths).toEqual(["/healthz", "/healthz", "/healthz"]);
+  } finally { server.stop(true); rmSync(root, { recursive: true, force: true }); }
+});

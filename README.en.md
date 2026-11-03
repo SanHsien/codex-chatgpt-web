@@ -31,7 +31,7 @@
 Free and Go accounts get **ChatGPT Web — Luna** in Codex's native model picker. Accounts that
 expose the reasoning selector keep **Instant**, **Medium**, **High**, **Extra High**, and **Pro** as
 their subscription allows. The bridge sends the current compiled Codex task context to a fresh
-ChatGPT Temporary Chat, attaches images, and streams visible reasoning, tool activity, and Markdown
+ChatGPT chat in the selected privacy mode, attaches images, and streams visible reasoning, tool activity, and Markdown
 back into the same Codex task.
 
 <p align="center">
@@ -45,7 +45,7 @@ Codex task ──Responses + SSE──▶ codex-chatgpt-web ──embedded brows
 ```
 
 Codex keeps the native task, context lifecycle, UI, and tool harness. The local Responses bridge
-routes only the selected model task through a task-bound ChatGPT Temporary Chat; in full mode, MCP
+routes only the selected model task through a task-bound ChatGPT chat; in full mode, MCP
 connects ChatGPT back to the tools of that same Codex task until its next compaction boundary.
 
 ## Highlights
@@ -55,7 +55,7 @@ connects ChatGPT back to the tools of that same Codex task until its next compac
 - **The full Codex harness over MCP.** Full mode gives every effort exposed by the signed-in account,
   including Pro, the active task's filesystem, shell, images, approvals, and configured tools/apps.
 - **Continuous task sessions and native compaction.** Sequential messages reuse one task-bound
-  Temporary Chat. At the context boundary, the retained agent writes the checkpoint before Codex
+  chat in the selected privacy mode. At the context boundary, the retained agent writes the checkpoint before Codex
   starts a clean chat; if that chat was closed, canonical Codex history supplies the fallback.
 - **Windows launcher.** The Windows app owns sign-in, model setup, MCP
   guidance, health checks, safe diagnostics, and up to five visible task-bound browser tabs.
@@ -167,6 +167,20 @@ Use **Activity** for safe local diagnostics and **Settings → Run doctor** for 
 Settings can also cancel a retained browser turn or remove the Codex integration before uninstall.
 Set `CODEX_CHATGPT_WEB_BROWSER_DIAGNOSTICS=1` only when every browser checkpoint needs a screenshot.
 
+**Temporary Chat** is an explicit opt-in in Automatic and Zero Risk modes. It defaults off for
+new installs, keeping task conversations in ChatGPT history. Updates invert the legacy
+`useSavedChats` value into `useTemporaryChats`, preserving explicit choices; an existing install
+upgraded from v5.0.6, whose files carry neither key because v5.0.6 always opened Temporary Chat,
+stays on Temporary Chat. The preference is independent of
+**New browser chat for each turn**. If a connector is unavailable there, turn off
+**Settings → Temporary Chat** and retry. CLI: `--temporary-chats` / `--ordinary-chats`;
+`--saved-chats` remains an alias for the latter. The tunnel uses the system proxy unless explicit
+proxy environment variables override it; local connections bypass the proxy.
+
+MCP setup becomes available when the Codex integration is installed, independently of model catalog
+verification. Doctor reports the latest catalog request as successful, failed or pending; a healthy
+local proxy does not hide catalog errors.
+
 New installs use **Compatibility V1** for cross-backend subagents. **Native** preserves Codex's own
 feature settings and enables plaintext Web-to-Web V2 delegation. Restart Codex and start a new task
 after changing the protocol:
@@ -212,7 +226,7 @@ Responses daemon or changes Codex. Optional Full setup starts and supervises onl
 tunnel, using the distinct ChatGPT connector name `Codex Native2 DEV`.
 
 `dev:chat` is a named, persistent synthetic outer-Codex harness. It executes the current working
-tree through that isolated launcher browser, Temporary Chat, prompt compiler, Responses parser, and
+tree through that isolated launcher browser, selected chat mode, prompt compiler, Responses parser, and
 compaction handlers. Optional Full setup also exercises the MCP connector and broker; tool effects
 are explicit simulation receipts. Browser-only chats expose no outer tools. It does
 not open a Responses listener, change `openai_base_url`, stop the live daemon, or claim port 17841.

@@ -9,7 +9,7 @@
   launches a browser, configures MCP/Codex, or uses model quota.
 - `tools/upstream_baseline.json` is reviewed history, never a merge target. All four axes must be
   available and current before its strict check passes. Dependency deferrals declare either an exact
-  `latest` or a numeric `latestPrefix` version-line bound; releases outside that bound must resurface
+  `latest` or a numeric `latestPrefix` version-line bound (one prefix or a list of them); releases outside that bound must resurface
   for review.
 - Keep generated maintenance reports, credentials, cookies, profiles, diagnostics, and absolute local
   paths out of Git. Detailed procedures: [development](docs/DEVELOPMENT.md),

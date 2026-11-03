@@ -335,7 +335,7 @@ class BrowserHost {
     showWindow = () => {},
     clipboardApi = clipboard,
     getBrowserInteractionMode = () => "automatic",
-    getUseSavedChats = () => true,
+    getUseTemporaryChats = () => false,
   }) {
     if (typeof getConnectorName !== "function") {
       throw new Error("Browser host connector-name resolver is unavailable");
@@ -365,7 +365,7 @@ class BrowserHost {
     this.showWindow = showWindow;
     this.clipboard = clipboardApi;
     this.getBrowserInteractionMode = getBrowserInteractionMode;
-    this.getUseSavedChats = getUseSavedChats;
+    this.getUseTemporaryChats = getUseTemporaryChats;
     this.runBrowserHelperOperation = runBrowserHelperOperation;
     this.verifyConnectorWithBrowserHelper = verifyConnectorWithBrowserHelper;
     this.surfaceId = randomBytes(24).toString("base64url");
@@ -695,7 +695,7 @@ class BrowserHost {
       ordinal,
       label: `ChatGPT ${ordinal}`,
       pageTitle: "ChatGPT",
-      url: this.getUseSavedChats() ? "https://chatgpt.com/" : TEMPORARY_CHAT_URL,
+      url: this.getUseTemporaryChats() ? TEMPORARY_CHAT_URL : "https://chatgpt.com/",
       loading: true,
       message: "Paste the copied prompt, add any images yourself because Zero Risk cannot transfer them, choose a model and effort, then press Sent",
       interactionMode: "manual",
@@ -1319,10 +1319,10 @@ class BrowserHost {
     });
   }
 
-  async refreshChatGptHomeDocument(useSavedChats = false) {
+  async refreshChatGptHomeDocument(useTemporaryChats = false) {
     // A navigation from the idle host already creates a fresh ChatGPT document. Reload only an
     // existing new-chat document in the selected mode so the helper sees one fresh catalog.
-    const targetUrl = useSavedChats ? `${CHATGPT_ORIGIN}/` : TEMPORARY_CHAT_URL;
+    const targetUrl = useTemporaryChats ? TEMPORARY_CHAT_URL : `${CHATGPT_ORIGIN}/`;
     if (this.view.webContents.getURL() === targetUrl) {
       await this.hardRefreshHome();
     } else {
@@ -3142,14 +3142,14 @@ class BrowserHost {
     requireAutomaticBrowserInspection(this, "ChatGPT connector verification");
     const connectorName = validateConnectorName(appName);
     this.setState({ status: "testing", message: "Checking ChatGPT connector" });
-    const useSavedChats = this.getUseSavedChats();
-    await this.refreshChatGptHomeDocument(useSavedChats);
+    const useTemporaryChats = this.getUseTemporaryChats();
+    await this.refreshChatGptHomeDocument(useTemporaryChats);
     try {
       const result = await this.verifyConnectorWithBrowserHelper({
         helper: this.helper,
         descriptorPath: this.descriptorPath,
         appName: connectorName,
-        useSavedChats,
+        useTemporaryChats,
         logger: this.logger,
       });
       this.logger.info("connector.verified", { appName: connectorName });

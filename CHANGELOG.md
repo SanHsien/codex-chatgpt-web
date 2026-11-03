@@ -5,8 +5,21 @@ This file records maintained-fork work and release identity. See this fork's
 
 ## 2026-11-03
 
-- Recheck the chromium-bidi latest-tag rollback and defer the exact incompatible 157 package;
-  preserve Playwright's installed import contract and both lockfiles.
+- Port verified opt-in Temporary Chat (`7c7c10e`, #918) across CLI, settings, IPC and worker.
+  Preserve legacy saved-chat choices by inverse migration and keep saved history as the default
+  for new installs. An existing configuration or launcher state with neither chat-mode key (every
+  v5.0.6 file, which always opened Temporary Chat) stays on Temporary Chat after upgrading.
+  Retain `--saved-chats` as an alias for `--ordinary-chats`. Include connector-unavailable guidance
+  and Automatic / Zero Risk regressions. Do not adopt `ad9a611`'s default-on change.
+- Separate MCP setup readiness from catalog verification (`a738f04`, #893/#895); installation
+  permits MCP setup while Doctor keeps catalog failure visible beside a healthy proxy.
+  Original author of both ports: vechen <147659719+miuuyy@users.noreply.github.com>.
+- Coordinate the deferred `53b6050` tools/list ABI change with the next Windows installer release
+  so the connector needs only one refresh. Keep the Full Access workspace group deferred together.
+
+- Recheck the chromium-bidi latest-tag rollback and defer the incompatible 157 and 159 version
+  lines together (`latestPrefix` accepts a list of version lines); preserve Playwright's installed
+  import contract and both lockfiles.
 - Review upstream #935–#959 and both workspace-branch commits; port #952 plain JSON preservation
   and #953 busy-status channel filtering with regression tests. Record bounded deferrals and
   advance only the reviewed-history ledger.

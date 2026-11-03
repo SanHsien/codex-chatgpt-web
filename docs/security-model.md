@@ -116,8 +116,10 @@ one-shot MCP control capability in the exact retained source chat. If that chat 
 fresh tool-free chat receives the canonical Codex history; the bridge never parses ordinary
 assistant prose as a structured handoff.
 
-Task conversations are saved in ChatGPT history by default. **Save chats in ChatGPT** can be turned
-off to use Temporary Chat; an existing off setting is preserved when updating. Saved chats may use
+Task conversations are saved in ChatGPT history by default. **Temporary Chat** is an explicit
+opt-in; updating inverts the old saved-chat preference and preserves existing choices, including
+an explicit Temporary Chat opt-out, and an install upgraded from v5.0.6 (which always used
+Temporary Chat and stored no preference) stays on Temporary Chat. New installs keep saved history. Saved chats may use
 ChatGPT memory and custom instructions. Connector verification follows the same selected chat mode.
 
 ## Network exposure

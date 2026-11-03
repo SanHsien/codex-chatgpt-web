@@ -1,7 +1,7 @@
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-export type DeferredDependency = { workspace: "root" | "launcher"; package: string; reviewed: string; reason: string } & ({ latest: string; latestPrefix?: never } | { latest?: never; latestPrefix: string });
+export type DeferredDependency = { workspace: "root" | "launcher"; package: string; reviewed: string; reason: string } & ({ latest: string; latestPrefix?: never } | { latest?: never; latestPrefix: string | string[] });
 export interface Deferrals { schemaVersion: 1; deferrals: DeferredDependency[] }
 export interface CommandResult { exitCode: number; stdout: string; stderr: string }
 export type CommandRunner = (command: string, args: string[], cwd: string) => CommandResult;
@@ -11,6 +11,11 @@ export interface FreshnessResult { rows: FreshnessRow[]; outdatedChecks: Array<{
 
 const isText = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 const isVersionPrefix = (value: unknown): value is string => typeof value === "string" && /^(0|[1-9]\d*)(\.(0|[1-9]\d*)){0,2}$/.test(value);
+const prefixList = (value: unknown): unknown[] => Array.isArray(value) ? value : [value];
+const isVersionPrefixBound = (value: unknown): boolean => {
+  const prefixes = prefixList(value);
+  return prefixes.length > 0 && prefixes.every(isVersionPrefix) && new Set(prefixes).size === prefixes.length;
+};
 const versionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const isDate = (value: unknown): value is string => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value;
 const detail = (value: string) => value.replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240) || "checker failed";
@@ -22,7 +27,7 @@ export function validateDeferrals(value: unknown): Deferrals {
     const entry = item as Record<string, unknown> | null;
     return !!entry && typeof entry === "object" && !Array.isArray(entry)
       && (entry.workspace === "root" || entry.workspace === "launcher") && isText(entry.package)
-      && ((isText(entry.latest) && !("latestPrefix" in entry)) || (isVersionPrefix(entry.latestPrefix) && !("latest" in entry)))
+      && ((isText(entry.latest) && !("latestPrefix" in entry)) || (isVersionPrefixBound(entry.latestPrefix) && !("latest" in entry)))
       && isDate(entry.reviewed) && isText(entry.reason);
   })) throw new Error("Dependency deferrals are invalid or incomplete; refusing to continue.");
   const keys = new Set<string>();
@@ -53,7 +58,7 @@ export function evaluateFreshness(workspace: "root" | "launcher", outdated: Outd
       if (entry.workspace !== workspace || entry.package !== item.package) return false;
       if (entry.latest !== undefined) return entry.latest === item.latest;
       const version = versionPattern.exec(item.latest);
-      return !!version && entry.latestPrefix.split(".").every((part, index) => part === version[index + 1]);
+      return !!version && (Array.isArray(entry.latestPrefix) ? entry.latestPrefix : [entry.latestPrefix]).some((prefix) => prefix.split(".").every((part, index) => part === version[index + 1]));
     });
     return { workspace, ...item, status: deferred ? "deferred" : "attention" };
   });

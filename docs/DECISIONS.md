@@ -703,25 +703,25 @@ about local adoption, even where upstream has already merged or released the cha
 | Commit | Decision | Reason and reconsideration condition |
 | --- | --- | --- |
 | `d3cf95a70387` rich JSON rendering (#886) | defer | Escapes string lexemes and changes multipart size accounting. Port with round-trip and partition-budget regressions before any browser acceptance. |
-| `afa35a7bd76c` remove Temporary Chat | reject this intermediate design | Superseded upstream by `7c7c10e`/`ad9a611`; do not remove and then restore a user preference. Review the final migration separately. |
+| `afa35a7bd76c` remove Temporary Chat | reject this intermediate design | Superseded upstream by `7c7c10e`/`ad9a611`; do not remove and then restore a user preference. The final opt-in migration is adopted by the 2026-11-03 decision below. |
 | `e6ed93a4006b` cwd-less updates (#894) | defer | Replaces first-root cwd inference with current native rollout authority across environment/store types. Reconsider with reordered-root, missing-rollout and restricted-mode negative regressions. Supersedes the earlier monitor trigger: a fix now exists. |
 | `3790e3f46c51` native steering test synchronization | defer | Accompanies native-task restoration; import with that implementation, not as an unrelated test-only change. |
 | `794e5769e5e3` accepted native task after compaction | defer | Restores authenticated task messages and attribution in the prompt; needs repeated-compaction, new-steering and forged-source negative tests against this fork. |
 | `3b47927089e4` native goal source | defer | Extends checkpoint provenance to synthetic goals; review with `794e576` so older human messages cannot replace the current task. |
 | `6140f0b0a6ee` observed Chinese effort labels (#911) | reject duplicate replacement | The fork already accepts exactly the same observed labels (即时/中/高) and rejects unknown labels. Keep the local regression; reconsider parser consolidation with the picker port, without guessing new translations. |
-| `53b60503b432` 60 s command polls (#904) | defer | Fork already advertises 80 s for the dedicated tool. Upstream additionally bounds generic/native exec and rejects excessive durations without rewriting them. This changes tools/list and its ABI; requires focused transport tests and a coordinated connector refresh. The local cap is not claimed equivalent. |
+| `53b60503b432` 60 s command polls (#904) | adopt with next installer release | Fork already advertises 80 s for the dedicated tool. Upstream additionally bounds generic/native exec and rejects excessive durations without rewriting them. This changes tools/list and its ABI; adopt with the next installer version after focused transport tests, coordinating one connector refresh with release. The local cap is not claimed equivalent. |
 | `7b7f2f807d2e` merge #896 | defer | Same native-task restoration as `794e576`/`3b47927`; merge status satisfies the earlier re-review trigger, not local acceptance. |
 | `150787819816` merge main into context branch | reject direct merge | Integration history is not an independent port; component decisions above apply. |
 | `ffe041f880f0` delayed finals/token diagnostics | ported | Windows shared-path adoption on 2026-11-03: deterministic delayed-final, bounded inactivity, empty/lost DOM and explicit-failure regressions; numeric-only submitted-context diagnostics use the fork serializer. Not a generic #910 repair. |
-| `a738f0485c6a` MCP setup/catalog separation (#893/#895) | defer | Separates core installation readiness from catalog health. Reconsider with failed catalog, healthy proxy and incomplete-installation cases; a catalog error must remain visible. |
+| `a738f0485c6a` MCP setup/catalog separation (#893/#895) | ported (2026-11-03); see decision below | Separates core installation readiness from catalog health. Adopt with failed catalog, healthy proxy and incomplete-installation regressions; a catalog error remains visible. |
 | `988f45a15201` dependencies/Electron preparation | defer remaining dependency removal; reject pin replacement | Fork locks already contain body-parser 2.4.0, fast-uri 3.1.9, ip-address 10.7.4, qs 6.16.2, Zod 4.6.7 and Undici 7.30.1/6.29.1. Keep Electron 44.9.1 rather than upstream 42.11.16 and Bun 1.4.2 rather than 1.4.0. Bootstrap already prepares Electron; verify already avoids duplicate renderer typecheck. Removing chromium-bidi is a separate unused-dependency assessment, not a forced major upgrade. |
 | `467dea6b99d7` merge main into context branch | reject direct merge | Integration history; retain per-component decisions and both fork lockfiles. |
 | `cfeaf04bc7f5` release 6.1.14 | defer source/release adoption | Includes removed Temporary Chat, authority and MCP contract changes above. Never move the fork installer from release notes alone. |
 | `b48477ea8ada` Full Access worktrees | defer | Uses runtime_workspace_roots and permits authenticated Full Access cwd outside retained roots. Changes authorization boundaries in rollout, store and broker; retain namespace path normalization and prove restricted modes still reject out-of-root cwd. |
 | `dc29540a0f99` current Think sprite (#902) | ported (2026-11-02) | Upstream captured the renamed `#codex-icon-brain-regular-20` sprite in English and zh-TW; the fork's `CHATGPT_THINK_BUTTON_SELECTOR` now lists it beside the older `#brain-regular-20` fragment. It is the prerequisite of `9c3633c`: without it a Luna account with the new sprite would fail `chatgpt_model_controls_unavailable`. Fixture `tests/fixtures/chatgpt-composer-think-2026-10-28.html` and a red-then-green selector test were added; no signed-in Windows verification in this task. See the port section below. |
 | `7e6e1a0bfae4` Doctor compaction override (#919) | ported (2026-11-02) | Read-only global/default-profile TOML inspection ported to `src/doctor-compaction.ts` and `src/doctor.ts` with no-override, safe override, window-ceiling warning, default profile, BOM/syntax handling, and no-mutation regressions in `tests/doctor-compaction.test.ts`. See the 2026-11-02 port section below. |
-| `7c7c10edee41` restore Temporary Chat (#918) | defer | Renames useSavedChats to useTemporaryChats across CLI, IPC, settings and worker. Needs explicit-opt-out migration, connector-unavailable and Zero Risk tests plus opted-in account acceptance. |
-| `ad9a6114a598` default Temporary Chat on | defer | A product default and privacy migration decision; evaluate with the preceding migration instead of silently changing existing saved-chat behavior. |
+| `7c7c10edee41` restore Temporary Chat (#918) | ported with inverse legacy migration (2026-11-03); see decision below | Renames useSavedChats to useTemporaryChats across CLI, IPC, settings and worker. Preserve old preferences by inverse migration with explicit-opt-out, connector-unavailable and Zero Risk regressions; account acceptance remains separately opt-in. |
+| `ad9a6114a598` default Temporary Chat on | reject default-on | Keep the saved-chat default for new installs and preserve existing behavior, including the implicit Temporary Chat of v5.0.6 configurations; do not silently change a privacy-related default. |
 | `d80bf0d49cef` BOM settings/verification | defer BOM port; reject duplicate verification change | BOM-tolerant JSON reads need Windows state/window preservation tests. Fork verify already uses build:renderer; keep the canonical repair-free gate. |
 | `d3734f1f378c` cancellation measurement | defer | Changes live smoke timing to start at provider terminal. Not needed for this read-only maintenance task; reassess when explicitly running cancellation acceptance. |
 | `0a8f233f88d3` owned runtime persistence failure (#905) | ported (2026-11-02) | Ported bounded recovery tasks, safe child termination and unsafe start guards to `launcher/electron/runtime-supervisor.cjs`, covered in `launcher/tests/runtime-supervisor.test.cjs` by three parameterized unsafe-cleanup cases (active-turn, unverified-pid, shutdown-error), one cleanup-wait case, and a real-child integration case that forces a filesystem write failure, confirms child exit and blocks starts until persistence recovers. See the 2026-11-02 port section below. |
@@ -830,11 +830,11 @@ red-then-green test. Only #924 (`2f0936b`), #932 (`9c3633c`) and their prerequis
    - Its first case is not ported: it reads `chatgpt-model-picker-power-2026-09-29.html`, a fixture belonging to the still-deferred UI-contract extraction (`30e7ad9`), not the now-ported exact picker (`89f0ead`, #921). The paid inline-control behavior it checks is covered offline in `tests/chatgpt-session.test.ts`. Reconsider the fixture with `30e7ad9`.
 
 5. **Still deferred or rejected from the 2026-10-29 review**: the table above is the complete
-   list; the ten rows marked `ported` are `dc29540`, `2f0936b`, `9c3633c`,
-   `7e6e1a0`, `0a8f233`, `89f0ead`, `b6043e0`, `ffe041f`, `f9325c9` and `e1780b1`. The items still open, which [ROADMAP.md](../ROADMAP.md) tracks
-   as one follow-up, are: `d3cf95a` (#886), `e6ed93a` (#894), `3790e3f`, `794e576`, `3b47927`, `53b6050`
-   (#904), `7b7f2f8`, `a738f04` (#893/#895), `988f45a` (dependency removal only), `b48477e`,
-   `7c7c10e` (#918), `ad9a611`, `d80bf0d` (BOM port only), `d3734f1`, `0286265`, `8744974`, `30e7ad9`,
+   list; the twelve rows marked `ported` are `dc29540`, `2f0936b`, `9c3633c`,
+   `7e6e1a0`, `0a8f233`, `89f0ead`, `b6043e0`, `ffe041f`, `f9325c9`, `e1780b1`, `7c7c10e` and `a738f04`. The items still open, which [ROADMAP.md](../ROADMAP.md) tracks
+   across port and release follow-ups, are: `d3cf95a` (#886), `e6ed93a` (#894), `3790e3f`, `794e576`, `3b47927`, `53b6050`
+   (#904, next installer release), `7b7f2f8`, `988f45a` (dependency removal only), `b48477e`,
+   `d80bf0d` (BOM port only), `d3734f1`, `0286265`, `8744974`, `30e7ad9`,
    `1a0e893` (#925), `760ab5a` (#933), the three release-version commits
    (`cfeaf04`, `8a75f1b`, `b618281`) and `860fa57`; plus the open PR #914 and #934 and the deferred issue
    decisions. Release version bumps stay deferred: the installer pin remains v5.0.6 and the fork package
@@ -915,7 +915,7 @@ evidence is recorded in [REVIEW.md](REVIEW.md).
    - `ffe041f` (delayed finals / token diagnostics): The original deferral is superseded by the deterministic tests and port recorded under [2026-11-03 delivery, compaction and delayed finals](#2026-11-03-delivery-compaction-and-delayed-finals); no generic #910 fix is claimed.
    - `f9325c9` (multipart compaction ceiling #930): The original coupled-port deferral is superseded by the joint adoption with `ffe041f` on 2026-11-03.
    - `e1780b1` (delivery / staging retry guards #929): The original deferral is superseded by the pending, completed, late and duplicate tool-result replay regressions and adoption on 2026-11-03.
-   - MCP ABI changes (`53b6050`, `a738f04`), Temporary Chat defaults (`7c7c10e`, `ad9a611`), and Full Access worktree restructuring (`760ab5a`, `e6ed93a`, `b48477e`): Kept deferred awaiting maintainer decisions or grouped adoption.
+   - MCP and Temporary Chat decisions are resolved by the 2026-11-03 opt-in Temporary Chat and MCP readiness decision below: adopt `7c7c10e` and `a738f04`, reject `ad9a611`, and coordinate `53b6050` with the next installer release. Full Access worktree restructuring (`760ab5a`, `e6ed93a`, `b48477e`) remains deferred as one group.
 
 ## 2026-11-03 dependency rereview
 
@@ -947,8 +947,9 @@ not a dependency version. The same test failed on the trial upgrade and passed a
 The root manifest and root lockfile return exactly to their base contents; the launcher lockfile
 changes only the Electron node and workspace pin.
 
-Re-review is machine-triggered by a latest version exceeding its exact
-`.github/dependency-deferrals.json` bound; there is no separate untracked revisit date.
+Re-review is machine-triggered by a latest version exceeding its
+`.github/dependency-deferrals.json` bound (an exact `latest`, or one or more `latestPrefix`
+version lines); there is no separate untracked revisit date.
 See [REVIEW.md](REVIEW.md#2026-11-03-dependency-rereview) for local acceptance and its limits.
 
 ### Latest-tag rollback recheck (2026-11-03)
@@ -965,6 +966,20 @@ That cannot satisfy the installed Playwright imports tested by
 replace the former 159-line exception with exact latest `157.0.8103-39`. Any different latest
 must resurface, including a return to 159. Reconsider also on Playwright layout support or a
 reviewed shim. No runtime upgrade or browser compatibility acceptance is claimed.
+
+### Both version lines deferred (2026-11-03)
+
+npm latest then moved again, to `159.0.8140-0` (published `2026-11-03T06:19:13.518Z`), after the
+157 tag above. `npm pack chromium-bidi@159.0.8140-0 --dry-run` lists 319 files, including
+`out/Default/gen/src/bidiMapper/*`, and no `lib/cjs` path, so it has the same layout as
+`157.0.8103-39` and `159.0.8138-0`. An exact `latest` bound would turn red every time the tag crossed
+between the two lines, although the compatibility conclusion is identical. The deferral is now a
+`latestPrefix` list of the two version lines, `157` and `159`; the checker accepts one prefix or a
+non-empty list of unique prefixes and defers a latest matching any entry, while every other line
+still resurfaces. A line-wide bound is deliberately coarse: a later release on either line could
+change the package layout. `tests/chromium-bidi-compatibility.test.ts` is the machine check of that
+layout against the installed Playwright; keep 12.1.0 and both lockfiles until it passes on a
+candidate, Playwright supports the new layout, or a shim is reviewed.
 
 ## 2026-11-03 delivery compaction and delayed finals
 
@@ -1037,3 +1052,46 @@ The four-axis reviewed ledger may advance to PR #959/head `e1b3c7e8`, issue #957
 branch heads after this register. Deferred items remain tracked in ROADMAP; installer/source
 versions, models, effort parameters and both lockfiles are unchanged. Verification is recorded
 in [REVIEW.md](REVIEW.md#2026-11-03-external-gate-changes).
+
+## 2026-11-03 opt-in Temporary Chat and MCP readiness
+
+The maintainer authorized these choices through the dispatching agent. Adopt `7c7c10e`
+(#918), authored by vechen <147659719+miuuyy@users.noreply.github.com>, with this fork's inverse
+legacy migration rather than upstream's removal-era assumption. Rename `useSavedChats` to
+`useTemporaryChats` across CLI, setup, provider, IPC, launcher settings and worker. A valid explicit
+new value takes precedence, including `false`; otherwise legacy `false` becomes Temporary Chat
+`true` and legacy `true` becomes `false`. A stored configuration or launcher state with neither key
+predates the setting and becomes `true`: the only public release (v5.0.6) always opens
+`?temporary-chat=true` and writes no such key, while every writer in the adopted 6.x source
+(`v6.0.0` through `v6.1.13`, this fork's lineage) persists one: the config writers all serialize
+`defaultConfig` or a parsed config, and the launcher state store writes its defaults on every
+update. An absent key in an existing file therefore comes from v5.0.6. Upstream `v6.1.14` onward
+removed Temporary Chat and writes neither key; the fork deferred that source, and a file from it
+would also map to Temporary Chat, the more private direction. The configuration and state version
+fields (3 and 1 in both generations) cannot tell the generations apart. A brand-new
+install has no stored file and starts from `defaultConfig`, which is `false` (saved chats).
+Save only the new key. Launcher runtime
+reads normalize before UI synchronization, and persisted launcher state drops the legacy key.
+Invalid runtime preference types fail explicitly. Preserve `--saved-chats` as the ordinary-chat
+alias so existing Windows CLI calls continue to work. Temporary Chat applies to Automatic and
+Zero Risk without enabling DOM inspection in Zero Risk; completed retained chats retire when the
+privacy preference changes. Prediction-only turns remain temporary and tool-free.
+
+Reject `ad9a611` (default Temporary Chat on for every install): new installations keep the
+saved-chat default, and installations with stored settings keep the mode they already use, so
+upgrading from v5.0.6 does not silently move anyone from Temporary Chat to saved history. Missing connectors
+in Temporary Chat explain how to turn the option off. Offline migration, helper IPC, connector
+failure and Zero Risk tests do not establish account-bound behavior; account acceptance remains
+in ROADMAP and requires separate authorization/login.
+
+Adopt `a738f04` (#893/#895), by the same author. Core integration installation is the MCP setup
+prerequisite; catalog verification is independent. Incomplete installations remain blocked.
+Doctor reports pending, failed and recovered catalog requests separately from proxy health;
+a healthy proxy must not hide the latest catalog error. Keep sanitized status/stage/code details
+and localized error text. This port does not change the tools/list ABI.
+
+Adopt `53b6050` (60-second command polling and tools/list ABI) with the **next installer version**,
+not as an independent update. It requires focused transport/poll-limit tests and connector refresh;
+coordinating it with release asks users to refresh only once. The release row tracks the trigger.
+No installer pin changes here. Keep `760ab5a`, `e6ed93a` and `b48477e` (Full Access additional
+workspaces) deferred as a group; retain Windows path and workspace authority boundaries.
