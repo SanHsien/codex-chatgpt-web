@@ -335,7 +335,7 @@ latest deferral, four-axis upstream ledger, independent #952 JSON and #953 busy-
 their regression tests and maintenance documentation. The [dependency decision](DECISIONS.md#2026-11-03-dependency-rereview)
 and [per-item upstream register](DECISIONS.md#2026-11-03-upstream-review-935959-and-current-workspace-roots)
 record package evidence, exact upstream heads, fork file/line evidence and reconsideration conditions.
-Co-authored-by: r83bksga8fc3 <r83bksga8fc3@proton.me>
+Original author of the #952 and #953 ports: r83bksga8fc3 (upstream PRs #952, #953).
 
 Read-only registry revalidation confirmed latest `157.0.8103-39`, published after the checked
 159 release. `npm view chromium-bidi time --json` and `versions --json` still list 159;

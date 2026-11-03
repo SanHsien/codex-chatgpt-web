@@ -10,7 +10,7 @@ This file records maintained-fork work and release identity. See this fork's
 - Review upstream #935–#959 and both workspace-branch commits; port #952 plain JSON preservation
   and #953 busy-status channel filtering with regression tests. Record bounded deferrals and
   advance only the reviewed-history ledger.
-  Co-authored-by: r83bksga8fc3 <r83bksga8fc3@proton.me>
+  Original author of #952 and #953: r83bksga8fc3 (upstream PRs #952, #953).
 
 - Port delivery/staging retry guards (`e1780b1`), multipart compaction transport limits
   (`f9325c9`) and delayed-final/context-cost diagnostics (`ffe041f`) to the Windows shared path.

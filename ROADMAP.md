@@ -1,7 +1,7 @@
 # 路線圖
 
 > 本 repo 後續工作的單一真相源。做完一項，就在同一個 commit 刪掉那一列；新工作只加在這裡。
-> 現況段的 GitHub 資料為 2026-10-29 快照；上游四軸已重查，fork Actions 與安全告警仍沿用當日先前查詢，開工前先重查。
+> 現況段的 fork Actions 與安全告警為 2026-10-29 查詢快照，開工前先重查；上游四軸資料有兩個日期：2026-10-29 審查水位（`860fa57`／PR #934／issue #933），以及 2026-11-03 重查後的最新水位（PR #959／issue #957／main 與工作區分支）。
 
 ## 現況
 2026-11-03 外部閘門重審（基底 SHA `ece4d7c38c901d19da3bd737a290e4a63a7e30a9`）：chromium-bidi latest 回到 157，封裝仍缺少 Playwright 要求的 lib/cjs，改採精確 latest 延後；上游 main 未變，已逐筆審查 #935～#959 與工作區分支兩筆 commit，採用 #952 JSON 與 #953 busy status 獨立修正，其餘依 [DECISIONS](docs/DECISIONS.md#2026-11-03-upstream-review-935959-and-current-workspace-roots) 保留條件式延後，baseline 為 PR #959／issue #957／main 與工作區分支。系統 Bun 1.4.4 使版本檢查及 freshness 執行相容性失敗；以既有 repo-local Bun 1.4.2 執行 bootstrap 與完整 dev_check 均 exit 0，上游四軸與依賴 freshness current，核心 1,140 pass／100 skip／0 fail，launcher 419 pass／1 skip／0 fail，runtime smoke 通過；launcher audit 保留既有 minimatch 明示延後。原有快照保留，最新驗證見 [REVIEW](docs/REVIEW.md#2026-11-03-external-gate-changes)。
