@@ -22,6 +22,7 @@
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
 | 續移植 6.1.14～6.1.17 其餘 defer 項的 Windows 適用修正 | 尚有 rendering／native task restoration、UI 契約、BOM 與診斷等差量待依 DECISIONS 條件逐項評估；Full Access `760ab5a`／`e6ed93a`／`b48477e` 維持成組延後 | 依 DECISIONS 剩餘清單逐項判斷 Windows 適用性與相依條件；修 bug 先紅後綠，保留模型／effort 與 Windows 路徑防線，通過完整本機閘門；帳戶與打包獨立驗收，不升公開安裝器 pin；`53b6050` 改由發版列追蹤 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-10-29-upstream-review-6114-6117-912-934)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-opt-in-temporary-chat-and-mcp-readiness) |
+| 審查上游 issue #961 與新出的 turndown 7.2.5、electron 45.2.2 | 2026-11-04 strict 上游閘門（issue #957→#961）與依賴 freshness（turndown、electron、motion 14.9.1）回報 attention，dev_check 停在這兩關 | 依 UPSTREAM／DECISIONS 逐項判斷並推進 baseline；依賴升級或寫精確延後；完整 dev_check exit 0 | Codex | `bun run scripts/check-upstream-baseline.ts --strict`、`bun run scripts/check-dependency-freshness.ts --strict` |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |

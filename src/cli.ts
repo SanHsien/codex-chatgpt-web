@@ -24,6 +24,9 @@ import { formatDoctorReport, runDoctor } from "./doctor";
 import { runChatGptMcpMain } from "./adapters/chatgpt-web/mcp-main";
 import { runCommand } from "./process";
 import { startServer } from "./server";
+import { refreshCodexCatalogOverlay } from "./codex-catalog-overlay";
+import { setNativeCodexUpstream } from "./native-passthrough";
+import { resolveNativeCodexUpstream } from "./native-upstream";
 import { assertServiceIdle, cancelActiveTurns, getServiceStatus, installService, interruptActiveTurn, restartService, startService, stopService, uninstallService } from "./service";
 import { existingFullSetupCredentials, preflightSetup, setup, type SetupOptions } from "./setup";
 import { installRuntimeKeyBytes, managedRuntimeKeyPath, stopTunnel, tunnelStatus, waitForTunnelReady } from "./tunnel";
@@ -618,8 +621,23 @@ async function main(): Promise<void> {
   } else if (command === "serve") {
     assertNoArgs(args);
     const config = loadConfig();
+    const upstream = resolveNativeCodexUpstream(config);
+    setNativeCodexUpstream(upstream.url);
     const server = startServer(config);
     stdout.write(`codex-chatgpt-web ${VERSION} listening on http://${config.host}:${server.port}/v1 (${config.mode})\n`);
+    stdout.write(`Non-Web models are forwarded to ${upstream.url} (${upstream.source})\n`);
+    // Another tool may re-sync the pinned catalog at any time; keep the merged copy following it.
+    const refreshCatalog = () => {
+      try {
+        const current = loadConfig();
+        refreshCodexCatalogOverlay({ ...current, subagentProtocol: readCodexSubagentProtocol(current.subagentProtocol) });
+      } catch (error) {
+        console.warn(`[codex-chatgpt-web] catalog_overlay_refresh_failed ${error instanceof Error ? error.message : String(error)}`);
+      }
+    };
+    refreshCatalog();
+    // Unreferenced: graceful shutdown relies on the event loop draining.
+    setInterval(refreshCatalog, 30_000).unref();
     await new Promise<void>(() => {});
   } else if (command === "dev") await runDevCommand(args);
   else if (command === "mcp") await runChatGptMcpMain(args);

@@ -3,6 +3,16 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-11-04
+
+- Forward non-Web models to the route Codex used before setup (recorded in the integration
+  journal), or to `nativeUpstreamUrl` when configured, instead of the hardcoded official backend.
+  All native endpoints share that upstream; `/healthz` and Doctor report it.
+- When Codex pins `model_catalog_json`, point it at a bridge-owned merged copy (pinned catalog plus
+  Web models) while the route is active; disconnect and uninstall restore the original line, and a
+  running bridge re-merges when the pinned file changes. See
+  [DECISIONS](docs/DECISIONS.md#2026-11-04-native-upstream-follows-the-route-codex-used-before-setup).
+
 ## 2026-11-03
 
 - Port verified opt-in Temporary Chat (`7c7c10e`, #918) across CLI, settings, IPC and worker.

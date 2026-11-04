@@ -38,7 +38,12 @@ import {
   requireChatGptWebModelRoute,
   type ChatGptWebModelRoute,
 } from "./chatgpt-web-models";
-import { forwardNativeCodexRequest, type NativeFetch, type NativeImageEndpoint } from "./native-passthrough";
+import {
+  forwardNativeCodexRequest,
+  getNativeCodexUpstream,
+  type NativeFetch,
+  type NativeImageEndpoint,
+} from "./native-passthrough";
 import { fetchNativeCodex } from "./native-network";
 import {
   buildCompactV1Output,
@@ -1032,6 +1037,7 @@ export function startServer(
           last_successful_model_catalog_request_at: lastSuccessfulModelCatalogRequestAt,
           model_catalog_requests: modelCatalogRequests,
           last_model_catalog_result: lastModelCatalogResult,
+          native_upstream: getNativeCodexUpstream(),
           ...activity(),
         });
       }

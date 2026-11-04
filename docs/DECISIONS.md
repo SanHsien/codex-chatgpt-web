@@ -1095,3 +1095,45 @@ not as an independent update. It requires focused transport/poll-limit tests and
 coordinating it with release asks users to refresh only once. The release row tracks the trigger.
 No installer pin changes here. Keep `760ab5a`, `e6ed93a` and `b48477e` (Full Access additional
 workspaces) deferred as a group; retain Windows path and workspace authority boundaries.
+
+## 2026-11-04 native upstream follows the route Codex used before setup
+
+Setup replaces Codex `openai_base_url` with the bridge. The bridge used to forward every non-Web
+model to the hardcoded official backend, so a route that Codex used before setup (for example a
+local multi-provider router serving `anthropic/*` and `combo/*` rows) silently stopped working: the
+official backend rejects those models for a ChatGPT account.
+
+Decision: all native endpoints (`responses`, `responses/compact`, `models`, `alpha/search`,
+`images/*`) share one configurable upstream. `nativeUpstreamUrl` in `config.json` wins when set;
+otherwise `serve` uses the integration journal's `previous.openai_base_url`; only when Codex had no
+custom route does traffic go to `https://chatgpt.com/backend-api/codex`. The incoming Codex
+authorization header is forwarded unchanged, as before. Resolving from the journal at start-up (not
+copying it into `config.json` during setup) keeps one source of truth: a later
+`--replace-codex-route` setup updates the journal and the next start follows it. `/healthz` and
+Doctor report the active upstream so a fallback to the official backend is visible.
+
+A route recorded in the journal is trusted as the user's own previous choice; the bridge never
+discovers or probes other local services. A previous value pointing at the bridge itself is ignored.
+
+### Pinned `model_catalog_json`
+
+When Codex config pins `model_catalog_json`, Codex reads that file and never asks the bridge for
+`/models`, so Web rows cannot appear. Options considered:
+
+| Option | Rejected / chosen because |
+| --- | --- |
+| Write Web rows into the pinned file | rejected: edits another tool's file; its next re-sync silently removes them; uninstall must surgically strip rows. |
+| Remove the pin so Codex asks the bridge | rejected: changes which catalog Codex trusts for every native row and diverges from what the other tool configured. |
+| Point the pin at a bridge-owned merged copy | **chosen**: the pinned file is never written; the merged copy is the pinned catalog plus the Web rows built by the same `augmentNativeModelCatalog` used for `/models`. |
+
+The overlay state lives in its own journal (`codex/catalog-overlay.json`) instead of a new route
+journal version, because restoring it is intentionally lenient and independent of the route's
+strict ownership checks: install, reconnect and Setup apply it; disconnect and uninstall put the
+original line back byte-for-byte **only while the line still names the merged copy**, then delete the
+merged copy. A newer value belongs to someone else and is left alone. A missing pinned file is left
+untouched rather than replaced.
+
+Re-sync by the other tool: if it rewrites its own catalog file, the running bridge re-merges within
+30 seconds (and at every start). If it rewrites the Codex config line back to its own file, Web rows
+disappear until Setup or reconnect runs again; Doctor reports this as a `catalog-overlay` warning.
+Reconsider if Codex gains a way to combine a pinned catalog with a remote `/models` list.

@@ -4,6 +4,7 @@ import { getConfigDir, getConfigPath, loadConfig } from "./config";
 import { join } from "node:path";
 import { inspectCodexCompaction } from "./doctor-compaction";
 import { inspectCodexIntegration } from "./codex-integration";
+import { inspectCodexCatalogOverlay } from "./codex-catalog-overlay";
 import { browserLoginStateExists, loginVerificationMarkerPath } from "./browser-login";
 import { getServiceStatus } from "./service";
 import { tunnelStatus } from "./tunnel";
@@ -81,6 +82,25 @@ function modelCatalogCheck(health: Record<string, unknown>): DoctorCheck {
   };
 }
 
+function catalogOverlayCheck(): DoctorCheck {
+  try {
+    const state = inspectCodexCatalogOverlay();
+    if (state === "absent") {
+      return { id: "catalog-overlay", status: "ok", message: "Codex asks the bridge for its model list (no pinned catalog)" };
+    }
+    return state === "active"
+      ? { id: "catalog-overlay", status: "ok", message: "Codex reads the merged model catalog (pinned catalog plus Web models)" }
+      : {
+          id: "catalog-overlay",
+          status: "warning",
+          message: "Codex model_catalog_json no longer names the merged catalog; Web models are hidden from the model picker",
+          detail: "Another tool re-pinned its own catalog. Rerun setup (or reconnect) to merge the Web models again.",
+        };
+  } catch (error) {
+    return { id: "catalog-overlay", status: "warning", message: "Codex catalog overlay state is unreadable", detail: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 async function proxyChecks(config: AppConfig): Promise<DoctorCheck[]> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 2_000);
@@ -111,6 +131,10 @@ async function proxyChecks(config: AppConfig): Promise<DoctorCheck[]> {
     return [
       { id: "proxy", status: "ok", message: `Responses proxy is healthy on 127.0.0.1:${config.port}` },
       modelCatalogCheck(body),
+      ...(typeof body.native_upstream === "string"
+        ? [{ id: "native-upstream", status: "ok" as const, message: `Non-Web models are forwarded to ${body.native_upstream}` }]
+        : []),
+      catalogOverlayCheck(),
     ];
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);

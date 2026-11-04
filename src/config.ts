@@ -126,6 +126,8 @@ export interface AppConfig {
   zeroRiskProEnabled: boolean;
   /** Optional adapter-silence budget for the Responses watchdog. */
   stallTimeoutSec?: number;
+  /** Where non-Web models go; omitted means the route Codex used before setup. */
+  nativeUpstreamUrl?: string;
   autoApproveToolCalls: boolean;
   controlToken: string;
   runtimeCommand: string[];
@@ -543,6 +545,10 @@ function parseConfig(value: unknown, path: string): AppConfig {
   if (parsed.stallTimeoutSec !== undefined
     && (!Number.isFinite(parsed.stallTimeoutSec) || parsed.stallTimeoutSec <= 0)) {
     throw new Error(`Invalid stallTimeoutSec in ${path}`);
+  }
+  if (parsed.nativeUpstreamUrl !== undefined
+    && (typeof parsed.nativeUpstreamUrl !== "string" || !/^https?:\/\/[^\s?#]+$/i.test(parsed.nativeUpstreamUrl))) {
+    throw new Error(`Invalid nativeUpstreamUrl in ${path}`);
   }
   const solAvailable = parsed.solAvailable !== false;
   const proAvailable = parsed.proAvailable === true;

@@ -7,7 +7,32 @@ import {
 import { BRIDGE_REASONING_PREFIX } from "./responses/reasoning-envelope";
 import { fetchNativeCodex } from "./native-network";
 
-const CODEX_BACKEND = "https://chatgpt.com/backend-api/codex";
+export const CHATGPT_CODEX_BACKEND = "https://chatgpt.com/backend-api/codex";
+let nativeUpstream = CHATGPT_CODEX_BACKEND;
+
+/**
+ * Non-Web models go to one native upstream. It defaults to the official backend; `serve` replaces
+ * it with the route Codex used before setup (for example a local multi-provider router), so the
+ * bridge does not strand models that only that route understands. Only http(s) bases are accepted.
+ */
+export function setNativeCodexUpstream(value: string): void {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`Invalid native Codex upstream: ${JSON.stringify(value)}`);
+  }
+  if ((url.protocol !== "http:" && url.protocol !== "https:") || url.search || url.hash
+    || url.username || url.password) {
+    throw new Error(`Invalid native Codex upstream: ${JSON.stringify(value)}`);
+  }
+  nativeUpstream = url.href.replace(/\/+$/, "");
+}
+
+export function getNativeCodexUpstream(): string {
+  return nativeUpstream;
+}
+
 const FIRST_PARTY_CODEX_ORIGINATORS = new Set([
   "codex_cli_rs",
   "codex-tui",
@@ -250,7 +275,7 @@ export async function forwardNativeCodexRequest(
       body = originalBody;
     }
   }
-  const upstreamRequest = new Request(`${CODEX_BACKEND}/${endpoint}${incomingUrl.search}`, {
+  const upstreamRequest = new Request(`${nativeUpstream}/${endpoint}${incomingUrl.search}`, {
     method,
     headers,
     ...(body ? { body } : {}),

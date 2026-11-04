@@ -2,6 +2,12 @@ import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import type { AppConfig } from "./config";
 import { getConfigPath, loadConfig, saveConfig } from "./config";
+import {
+  applyCodexCatalogOverlay,
+  getCodexCatalogOverlayPath,
+  getMergedCodexCatalogPath,
+  restoreCodexCatalogOverlay,
+} from "./codex-catalog-overlay";
 import { installCodexInterruptHook, installCodexInterruptHookCommand } from "./codex-interrupt-hook";
 import {
   CODEX_REALTIME_WEBRTC_CALL_BASE_URL,
@@ -144,6 +150,8 @@ export function setCodexSubagentProtocol(
     getCodexModelsCachePath(),
     getCodexJournalPath(),
     getCodexJournalRecoveryPath(),
+    getCodexCatalogOverlayPath(),
+    getMergedCodexCatalogPath(),
   ].map(path => snapshotFile(path, { followSymlink: path === getCodexConfigPath() }));
   try {
     const journal = installCodexIntegration(nextConfig);
@@ -233,6 +241,31 @@ export function preflightCodexIntegration(
 export function installCodexIntegration(
   config: AppConfig,
   options: InstallCodexIntegrationOptions = {},
+): CodexIntegrationJournal {
+  // The route code must see the pinned catalog line as the user left it; the overlay is re-derived.
+  const hadOverlay = restoreCodexCatalogOverlay();
+  let journal: CodexIntegrationJournal;
+  try {
+    journal = installCodexIntegrationRoute(config, options);
+  } catch (error) {
+    if (hadOverlay) reapplyCatalogOverlay(config);
+    throw error;
+  }
+  if (journal.active) applyCodexCatalogOverlay(config);
+  return journal;
+}
+
+function reapplyCatalogOverlay(config: AppConfig | (() => AppConfig)): void {
+  try {
+    applyCodexCatalogOverlay(config);
+  } catch (error) {
+    console.warn(`[codex-chatgpt-web] catalog_overlay_failed ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+function installCodexIntegrationRoute(
+  config: AppConfig,
+  options: InstallCodexIntegrationOptions,
 ): CodexIntegrationJournal {
   const configPath = getCodexConfigPath();
   mkdirSync(dirname(configPath), { recursive: true, mode: 0o700 });
@@ -352,6 +385,7 @@ export function installCodexIntegration(
 }
 
 export function deactivateCodexIntegration(options: { forRuntimeRecovery?: boolean } = {}): SetCodexIntegrationActiveResult {
+  restoreCodexCatalogOverlay();
   const existing = readJournal();
   if (!existing) return { changed: false, active: false };
   if (existing.version === 2) {
@@ -398,6 +432,7 @@ export function activateCodexIntegration(options: { recoveryOnly?: boolean } = {
   const current = readFileSync(existing.configPath, "utf8");
   if (existing.version === 10 && existing.active) {
     verifyInstalledRoute(current, existing);
+    reapplyCatalogOverlay(() => ({ ...loadConfig(), subagentProtocol: existing.installed.subagent_protocol }));
     return { changed: false, active: true };
   }
   let baseline: string;
@@ -452,10 +487,12 @@ export function activateCodexIntegration(options: { recoveryOnly?: boolean } = {
     ...(existing.format ? { format: existing.format } : {}),
   };
   writeIntegrationState(connected, { path: existing.configPath, data: route.text }, [getCodexModelsCachePath()]);
+  reapplyCatalogOverlay(() => ({ ...loadConfig(), subagentProtocol: protocol }));
   return { changed: true, active: true };
 }
 
 export function uninstallCodexIntegration(): UninstallCodexIntegrationResult {
+  restoreCodexCatalogOverlay();
   const journal = readJournal();
   if (!journal) return { changed: false };
   if (!existsSync(journal.configPath)) throw new Error(`Codex config is missing: ${journal.configPath}`);
