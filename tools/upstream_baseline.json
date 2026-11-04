@@ -9,7 +9,7 @@
     "mainCommit": "860fa576eb47d9e20d7d8289235bfea94392d2fd",
     "latestPullRequest": 959,
     "latestPullRequestHead": "e1b3c7e8cd3a40d4063f196a4e42568649d42e6e",
-    "latestNonPullRequestIssue": 957,
+    "latestNonPullRequestIssue": 963,
     "branches": [
       {
         "name": "fix/current-workspace-roots",
@@ -21,6 +21,6 @@
       }
     ]
   },
-  "reviewedAt": "2026-11-03",
+  "reviewedAt": "2026-11-04",
   "status": "reviewed-not-merged"
 }

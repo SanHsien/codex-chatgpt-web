@@ -5,6 +5,10 @@ This file records maintained-fork work and release identity. See this fork's
 
 ## 2026-11-04
 
+- Review upstream issues #960–#963 (#960/#962 are API 404; Windows reports #961/#963 deferred for
+  diagnosis) and advance the reviewed issue axis to #963.
+- Adopt Electron 45.2.2 (Chromium 156.0.8078.80, Node 24.22.2); re-defer turndown 7.2.5 and
+  motion 14.9.1 with refreshed bounds.
 - Forward non-Web models to the route Codex used before setup (recorded in the integration
   journal), or to `nativeUpstreamUrl` when configured, instead of the hardcoded official backend.
   All native endpoints share that upstream; `/healthz` and Doctor report it.

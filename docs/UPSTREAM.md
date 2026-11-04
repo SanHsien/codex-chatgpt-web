@@ -503,3 +503,10 @@ record exact heads, local file/line evidence and concrete reconsideration condit
 Workspace authority, image retention/MCP, account-tier limits and other coupled changes remain deferred.
 Latest PR #959/head `e1b3c7e8cd3a40d4063f196a4e42568649d42e6e`, latest issue #957 and both
 branch heads are reviewed history, not adoption of their code. No upstream writes occurred.
+
+## 2026-11-04: #960–#963
+
+Only the non-PR issue axis moved. Main, latest PR #959/head `e1b3c7e8cd3a40d4063f196a4e42568649d42e6e`
+and both branch heads are unchanged. Read-only review of every number #960–#963; #960 and #962 return
+API 404. Both Windows reports (#961, #963) are deferred for diagnosis; no source patch exists. See the
+[per-item decisions](DECISIONS.md#2026-11-04-upstream-review-960963). No upstream writes occurred.

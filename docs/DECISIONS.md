@@ -1142,3 +1142,31 @@ Re-sync by the other tool: if it rewrites its own catalog file, the running brid
 30 seconds (and at every start). If it rewrites the Codex config line back to its own file, Web rows
 disappear until Setup or reconnect runs again; Doctor reports this as a `catalog-overlay` warning.
 Reconsider if Codex gains a way to combine a pinned catalog with a remote `/models` list.
+
+## 2026-11-04 upstream review: #960–#963
+
+Read-only GitHub issue bodies and comments were inspected; main, the latest PR/head and both branch
+heads are unchanged. The table records reviewed history, not a merge.
+
+| Item | Decision and fork evidence | Reconsideration condition |
+| --- | --- | --- |
+| #960 / #962 | not applicable: each exact issue API returns 404; no source patch exists. | The number becomes available. |
+| #961 | defer diagnosis. Windows Plus, Full harness: the turn ends with `A newer Codex instruction superseded this ChatGPT response.` This fork emits the same message from `chatGptTurnSupersededError` (`src/adapters/chatgpt-web/adapter-error.ts:67`) when a newer Codex instruction replaces an in-flight turn (`src/adapters/chatgpt-web/turn-execution.ts:540`), which is intended cancellation, not by itself a defect. The report has screenshots and an attached diagnostics file but no identified trigger, no upstream triage and no fix. | A privacy-safe diagnostic shows the supersede firing without a newer Codex instruction (for example a duplicate or replayed request), with a Windows reproduction and a regression. |
+| #963 | defer diagnosis. Windows 6.1.17, GPT-6 Sol (Web): `Reconnecting 5/5`, repeated `ChatGPT opened another user turn while the bound assistant response was detached` (`src/adapters/chatgpt-web/browser-worker.ts:3486`) followed by retained compaction fallback, and 120 s `effort_selection` stage timeouts (`src/adapters/chatgpt-web/browser-worker.ts:5640`). The report itself says the concurrent Cloudflare check is not established as the cause, and the tunnel-ID rejection is a separate setup observation. No root cause or patch is supplied; raising timeouts or loosening the detached-turn binding is not a proven repair. | A controlled Windows reproduction isolates why the bound response detaches or the effort menu never settles, with a regression that keeps the turn-binding and no-resend guarantees. |
+
+The four-axis reviewed ledger advances to issue #963; PR #959/head `e1b3c7e8` and both exact branch
+heads are unchanged. Deferred items are tracked in ROADMAP.
+
+## 2026-11-04 dependency rereview
+
+Strict freshness reported three attention rows. Unrelated deferrals and the minimatch security
+deadline stay in force.
+
+| Package / reviewed latest | Decision | Evidence and reconsideration condition |
+| --- | --- | --- |
+| `electron` 45.2.2 | adopt from 45.2.1 | Patch release: Chromium 156.0.8078.80, Node 24.22.2, and two fixes (Wayland hidden-parent crash, `removeInsertedCSS()` user origin). Exact launcher manifest and lock pin move together. Node stays on major 24, so the Node 24 typings deferral keeps its reason. Windows package and installer smoke are required as for 45.2.1; results are in REVIEW. |
+| `turndown` 7.2.5 | defer; retain 7.2.0 | 7.2.5 only speeds up output concatenation and bumps development dependencies; no advisory affects turndown. The exact pin moves together with `@types/turndown`. Reconsider on a security or correctness fix relevant to Markdown conversion, or when both move in a dedicated pass. |
+| `motion` 14.9.1 | defer; retain 12.43.0 | A patch on the already-deferred 14 line. The 2026-11-03 visual acceptance condition (packaged onboarding/page/toast transitions) is still unmet. |
+
+Sources checked on 2026-11-04: [Electron v45.2.2 release notes](https://github.com/electron/electron/releases/tag/v45.2.2),
+[turndown v7.2.5](https://github.com/mixmark-io/turndown/releases/tag/v7.2.5) and npm registry metadata.

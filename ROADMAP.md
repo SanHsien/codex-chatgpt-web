@@ -22,7 +22,6 @@
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
 | 續移植 6.1.14～6.1.17 其餘 defer 項的 Windows 適用修正 | 尚有 rendering／native task restoration、UI 契約、BOM 與診斷等差量待依 DECISIONS 條件逐項評估；Full Access `760ab5a`／`e6ed93a`／`b48477e` 維持成組延後 | 依 DECISIONS 剩餘清單逐項判斷 Windows 適用性與相依條件；修 bug 先紅後綠，保留模型／effort 與 Windows 路徑防線，通過完整本機閘門；帳戶與打包獨立驗收，不升公開安裝器 pin；`53b6050` 改由發版列追蹤 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-10-29-upstream-review-6114-6117-912-934)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-opt-in-temporary-chat-and-mcp-readiness) |
-| 審查上游 issue #961 與新出的 turndown 7.2.5、electron 45.2.2 | 2026-11-04 strict 上游閘門（issue #957→#961）與依賴 freshness（turndown、electron、motion 14.9.1）回報 attention，dev_check 停在這兩關 | 依 UPSTREAM／DECISIONS 逐項判斷並推進 baseline；依賴升級或寫精確延後；完整 dev_check exit 0 | Codex | `bun run scripts/check-upstream-baseline.ts --strict`、`bun run scripts/check-dependency-freshness.ts --strict` |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
@@ -30,9 +29,9 @@
 | 驗證新版 UI、模型選擇與完整工具連接 | 維護者同意帳戶驗收並完成必要登入 | 依 TEST_PLAN 與 release-validation，在隔離 DEV profile 用一筆最小聊天核對模型、effort、送出／完成、Temporary Chat 選項與 connector 可用性及工具回執；保存去識別證據，達標即停 | 維護者 | [docs/TEST_PLAN.md:11](docs/TEST_PLAN.md)、[AGENTS.md:16](AGENTS.md)；接續開發報告（2026-10-2x）「實機冒煙測試」 |
 | 發布已驗證的 Windows 新版 | 實機與打包驗收完成，維護者決定發布；下一次安裝器版本一併採用 `53b6050` 的 60 s command poll／tools/list ABI，與發版同步只刷新一次 connector | 先完成 poll 上限與 transport 回歸，再刷新 connector 核對 ABI；版本、README、安裝腳本、`REVIEWED_RELEASE_VERSION` 與 release-contract 同步；以 Bun 1.4.2 通過 canonical gate，驗證資產雜湊與更新路徑 | Codex | [docs/DECISIONS.md:620](docs/DECISIONS.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md)、[AGENTS.md:3](AGENTS.md) |
 | 重評回覆提早中止與本地 effort 標籤補丁 | 上游 #910 有平台通用根因／Windows 重現，或 #911 上游修正／新標籤被實際觀察 | 用實際失敗輸入先重現；修正後驗證完成偵測、滑桿位置與模型家族，不猜測未見翻譯 | Codex | [docs/DECISIONS.md:662](docs/DECISIONS.md)、[docs/DECISIONS.md:672](docs/DECISIONS.md) |
-| 重審 #935～#959 與工作區分支的延後項 | DECISIONS 各項觸發條件成立；涉及 image retention／MCP、帳戶方案與傳輸界線者先由維護者決定 | 依逐項檔案與行號證據採用；工作區與跨 turn 來源保留權限防線；修 bug 先紅後綠，通過完整本機閘門，帳戶驗收獨立執行 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-upstream-review-935959-and-current-workspace-roots) |
+| 重審 #935～#963 與工作區分支的延後項 | DECISIONS 各項觸發條件成立；涉及 image retention／MCP、帳戶方案與傳輸界線者先由維護者決定 | 依逐項檔案與行號證據採用；工作區與跨 turn 來源保留權限防線；修 bug 先紅後綠，通過完整本機閘門，帳戶驗收獨立執行 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-upstream-review-935959-and-current-workspace-roots)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-04-upstream-review-960963) |
 | 重審 minimatch 舊 API 安全延後 | 2026-11-17 到期，或相容父套件發布／告警與受影響 lock 節點變動 | 移除舊 API 路徑或重新審查精確延後；audit、verify 與 archive/filter 回歸通過，打包行為另依 release 驗收 | Codex | [.github/audit-deferrals.json](.github/audit-deferrals.json)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-launcher-minimatch-advisory-ghsa-g3hv-75wg-m249) |
-| 重審 chromium-bidi、motion、@vitejs/plugin-react 延後升級 | freshness 回報 latest 超出延後界線，或相容工具鏈／動畫視覺驗收條件成立 | 依宣告的精確版本或版本線界線重評升級或延後理由；兩個 workspace audit 與完整 verify 通過；Motion 升級另查頁面／提示動畫，plugin-react 與相容 Vite 一起驗證，chromium-bidi 須通過相容性測試 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-dependency-rereview) |
+| 重審 chromium-bidi、motion、@vitejs/plugin-react、turndown 延後升級 | freshness 回報 latest 超出延後界線，或相容工具鏈／動畫視覺驗收條件成立 | 依宣告的精確版本或版本線界線重評升級或延後理由；兩個 workspace audit 與完整 verify 通過；Motion 升級另查頁面／提示動畫，plugin-react 與相容 Vite 一起驗證，chromium-bidi 須通過相容性測試 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-dependency-rereview) |
 
 ## 刻意不做
 | 不做什麼 | 理由 | 什麼情況下重新考慮 |
