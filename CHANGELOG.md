@@ -8,6 +8,8 @@ This file records maintained-fork work and release identity. See this fork's
 - Forward non-Web models to the route Codex used before setup (recorded in the integration
   journal), or to `nativeUpstreamUrl` when configured, instead of the hardcoded official backend.
   All native endpoints share that upstream; `/healthz` and Doctor report it.
+  A loopback upstream is fetched directly instead of asking the launcher for a proxy, which the
+  launcher only resolves for the official backend.
 - When Codex pins `model_catalog_json`, point it at a bridge-owned merged copy (pinned catalog plus
   Web models) while the route is active; disconnect and uninstall restore the original line, and a
   running bridge re-merges when the pinned file changes. See

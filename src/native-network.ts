@@ -26,6 +26,9 @@ export function nativeProxyFromPac(value: unknown): string | undefined {
 
 /** Native Codex keeps its own auth and Bun transport, but shares the launcher's OS proxy policy. */
 export async function fetchNativeCodex(request: Request): Promise<Response> {
+  // A loopback upstream (the route Codex used before setup, e.g. a local router) never goes through
+  // the OS proxy, and the launcher only resolves proxies for the official backend.
+  if (["127.0.0.1", "localhost", "[::1]"].includes(new URL(request.url).hostname)) return fetch(request);
   const descriptorPath = process.env.CODEX_CHATGPT_WEB_BROWSER_HOST_DESCRIPTOR?.trim();
   // Standalone CLI and explicitly configured proxy environments retain Bun's existing semantics,
   // including NO_PROXY. No proxy variables or machine-wide settings are rewritten.

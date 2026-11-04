@@ -100,3 +100,35 @@ test("native fetch reaches a proxy-only target, refreshes routing, and never ret
     rmSync(root, { recursive: true, force: true });
   }
 }, 15_000);
+
+test("a loopback native upstream is fetched directly; the launcher resolves proxies only for its own allow-list", async () => {
+  for (const key of envKeys) delete process.env[key];
+  const root = mkdtempSync(join(tmpdir(), "native-network-loopback-"));
+  let controlCalls = 0;
+  const upstream = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("data: [DONE]\n\n") });
+  const control = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch() {
+    controlCalls++;
+    // The real launcher refuses anything but chatgpt.com native Codex URLs.
+    return Response.json({ error: "Proxy resolution is restricted to native Codex requests" }, { status: 400 });
+  } });
+  const descriptor = join(root, "launcher.json");
+  writeFileSync(descriptor, JSON.stringify({
+    version: 3, kind: "codex-web-gpt-launcher", profile: "production", pid: process.pid,
+    endpoint: "http://127.0.0.1:39110", control: { endpoint: control.url.origin, token: "launcher-control-token-0123456789abcdefghijklmnop" },
+    helper: { executable: process.execPath, script: import.meta.path },
+    partition: "persist:codex-web-gpt-chatgpt", idleUrl: LAUNCHER_BROWSER_IDLE_URL,
+    surfaceId: "launcher_surface_id_0123456789AB", surfaceTargets: {}, createdAt: new Date().toISOString(),
+  }), { mode: 0o600 });
+  process.env.CODEX_CHATGPT_WEB_BROWSER_HOST_DESCRIPTOR = descriptor;
+  try {
+    for (const host of ["127.0.0.1", "localhost"]) {
+      const response = await fetchNativeCodex(new Request(`http://${host}:${upstream.port}/v1/responses`, { method: "POST", body: "{}" }));
+      expect(await response.text()).toContain("[DONE]");
+    }
+    expect(controlCalls).toBe(0);
+  } finally {
+    control.stop(true);
+    upstream.stop(true);
+    rmSync(root, { recursive: true, force: true });
+  }
+});

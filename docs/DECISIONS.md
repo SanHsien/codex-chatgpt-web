@@ -1115,6 +1115,11 @@ Doctor report the active upstream so a fallback to the official backend is visib
 A route recorded in the journal is trusted as the user's own previous choice; the bridge never
 discovers or probes other local services. A previous value pointing at the bridge itself is ignored.
 
+A loopback upstream (`127.0.0.1`, `localhost`, `[::1]`) is fetched directly. The launcher's proxy
+resolver stays restricted to `https://chatgpt.com/backend-api/codex/` and answers HTTP 400 for
+anything else; a loopback target never needs the OS proxy, so widening that allow-list is not
+needed. A non-loopback custom upstream still fails with that explicit error until a need appears.
+
 ### Pinned `model_catalog_json`
 
 When Codex config pins `model_catalog_json`, Codex reads that file and never asks the bridge for
