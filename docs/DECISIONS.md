@@ -1164,7 +1164,7 @@ deadline stay in force.
 
 | Package / reviewed latest | Decision | Evidence and reconsideration condition |
 | --- | --- | --- |
-| `electron` 45.2.2 | adopt from 45.2.1 | Patch release: Chromium 156.0.8078.80, Node 24.22.2, and two fixes (Wayland hidden-parent crash, `removeInsertedCSS()` user origin). Exact launcher manifest and lock pin move together. Node stays on major 24, so the Node 24 typings deferral keeps its reason. Windows package and installer smoke are required as for 45.2.1; results are in REVIEW. |
+| `electron` 45.2.2 | adopt from 45.2.1 | Patch release: Chromium 156.0.8078.80, Node 24.22.2, and two fixes (Wayland hidden-parent crash, `removeInsertedCSS()` user origin). Exact launcher manifest and lock pin move together. Node stays on major 24, so the Node 24 typings deferral keeps its reason. Package built; the scripted installer smoke timed out three times (installer over 120 s) and remains outstanding, while the installed launcher was verified manually; see REVIEW. |
 | `turndown` 7.2.5 | defer; retain 7.2.0 | 7.2.5 only speeds up output concatenation and bumps development dependencies; no advisory affects turndown. The exact pin moves together with `@types/turndown`. Reconsider on a security or correctness fix relevant to Markdown conversion, or when both move in a dedicated pass. |
 | `motion` 14.9.1 | defer; retain 12.43.0 | A patch on the already-deferred 14 line. The 2026-11-03 visual acceptance condition (packaged onboarding/page/toast transitions) is still unmet. |
 

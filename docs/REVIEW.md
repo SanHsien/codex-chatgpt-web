@@ -543,3 +543,27 @@ unique prefixes (fail-closed on empty, duplicate, malformed or mixed-with-`lates
 the new "several version lines" test failed (1 fail / 10 pass) before the checker change; green after:
 `bun test tests/dependency-freshness.test.ts` 11 pass / 0 fail. `npm run check:dependencies` exits 0
 with no attention rows. The assertions use synthetic fixture versions only.
+
+## 2026-11-04 upstream #960–#963 and Electron 45.2.2
+
+Base HEAD: `3f1cecf23a458e2670916b6c23a1412968c8af64`.
+
+- Full `tools\dev_check.ps1`: exit 0, `DEV CHECK PASSED` (strict upstream and dependency gates
+  current); root 1,158 pass / 100 skip / 0 fail; launcher 423 pass / 0 fail;
+  `RELOCATABLE_RUNTIME_SMOKE_OK`. A first run failed one launcher test,
+  `manual browser operations wait for the first measured surface` (1 ms polling against a 1 s
+  deadline) while other sessions loaded the machine; it passed three isolated reruns and the next
+  full run. No test or timeout was changed.
+- `bun run app:package`: exit 0; installer `codex-web-gpt-6.1.13-win-x64.exe` SHA-256
+  `12411cca8441c8c698d8e7bb8514457d352410f4b483ecb7655e64cb806d0733`.
+- `bun run app:smoke`: exit 1 three times; the silent installer (`/S /currentuser`) exceeded its
+  120 s limit each time (`ETIMEDOUT`). The packaged runtime has 5,565 files (172 MB); the machine
+  was concurrently running other test suites, and in the first attempt the local bridge watchdog
+  restarted the launcher during installation. These are hypotheses, not a confirmed cause.
+  Timeouts were not increased. The killed installer left `resourcesuntime` incomplete, so the
+  launcher refused to start (`Runtime bundle file is missing`); the directory was restored from
+  the same build (`launcher/build/runtime`, bundleId `88928d4c…`, 5,565 files).
+- Instead of the scripted smoke, the installed Electron 45.2.2 launcher was started: bridge
+  healthy, `doctor` ready, one `anthropic/claude-haiku-4-5` `codex exec` returned `PONG`, and the
+  Codex model list showed four `(Web)` rows. This is not the isolated `--launcher-smoke-test`
+  acceptance; the scripted package smoke remains outstanding for the next release pass.
