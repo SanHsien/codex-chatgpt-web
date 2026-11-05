@@ -1202,3 +1202,13 @@ The four-axis ledger advances to PR #964/head `445aa23b` and issue #965; main an
 | --- | --- | --- |
 | `electron` 45.2.3 | adopt from 45.2.2 | Patch release backporting upstream ANGLE, Chromium, Dawn, FFmpeg, PDFium, Skia and V8 fixes ([release notes](https://github.com/electron/electron/releases/tag/v45.2.3)). Exact manifest and lock pin move together; Node stays on major 24. Packaged together with the proxy start timeout fix; package and install results are in REVIEW. |
 | `vite` 8.3.6 | defer; retain 6.4.5 | A patch on the already-deferred 8 line; the Vite 8 plus plugin-react 6 migration is still a dedicated pass. |
+
+## 2026-11-05 single-effort routes ignore the requested effort
+
+The catalog already advertises GPT-6 Sol Instant and GPT-5.6 Sol Instant with exactly one
+effort (`low`, also the default). Codex still forwards a global `model_reasoning_effort`
+(for example `medium`), and the route rejected it with `does not support effort "medium"`, so
+the user had to remember to switch to `low` every time. A route with exactly one supported effort
+has nothing to choose, so it now uses that effort whatever was requested. Routes with several
+efforts keep rejecting an unsupported one; account gating of the single effort is unchanged.
+This is not model or effort substitution between alternatives, which stays refused.

@@ -5,6 +5,8 @@ This file records maintained-fork work and release identity. See this fork's
 
 ## 2026-11-05
 
+- Instant Web models always run at their only effort (`low`) instead of rejecting a global
+  Codex effort such as `medium`.
 - Adopt Electron 45.2.3 (backported Chromium/V8 fixes); re-defer Vite 8.3.6.
 - Wait up to 90 s (was 20 s) for a live Responses daemon to become healthy, so a slow cold start
   after reboot no longer stops it and restores the previous Codex route. A daemon that exits still

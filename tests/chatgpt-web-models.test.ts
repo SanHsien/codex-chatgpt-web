@@ -355,6 +355,13 @@ describe("fixed ChatGPT Web model routes", () => {
       routeChatGptWebRequest(instant, config);
       expect(instant._chatgptModelFamily).toBe(family);
       expect(instant.options.reasoning).toBe("low");
+      // A single-effort route has nothing to choose: a global Codex effort (for example
+      // model_reasoning_effort = "medium") must not make Instant unusable.
+      for (const requested of ["medium", "high", "xhigh"]) {
+        const pinned = parsed(`chatgpt-web/gpt-${family}-sol-instant`, requested);
+        routeChatGptWebRequest(pinned, config);
+        expect(pinned.options.reasoning).toBe("low");
+      }
       for (const effort of ["low", "max", "ultra", "invented"]) {
         expect(() => routeChatGptWebRequest(parsed(`chatgpt-web/gpt-${family}-sol`, effort), config)).toThrow("does not support effort");
       }

@@ -629,7 +629,8 @@ function resolveRouteEffort(
   reasoning?: string,
 ): ChatGptWebAutomaticModelRoute {
   if (!route.supportedCodexEfforts) return route;
-  const effort = reasoning ?? route.codexEffort;
+  // A single-effort route (Instant) has nothing to choose; ignore a global Codex effort setting.
+  const effort = route.supportedCodexEfforts.length === 1 ? route.codexEffort : reasoning ?? route.codexEffort;
   if (!chatGptWebRouteEfforts(route, capabilities).includes(effort as ChatGptWebCodexEffort)) {
     throw new Error(`${route.displayName} does not support effort ${JSON.stringify(effort)} for this account`);
   }
