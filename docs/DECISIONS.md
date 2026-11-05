@@ -1195,3 +1195,10 @@ healthy and already-exited cases. Reconsider if the daemon gains a readiness sig
 | #965 | defer diagnosis. macOS arm64 performance report: a one-command Native2 turn takes 84–168 s; the reporter could not isolate MCP transport from model or browser time and asks for timing diagnostics. Not a Windows reproduction and no defect is identified. | A Windows measurement that separates broker delivery, result acknowledgement and model continuation, or upstream adds such timing diagnostics. |
 
 The four-axis ledger advances to PR #964/head `445aa23b` and issue #965; main and branch heads are unchanged.
+
+## 2026-11-05 dependency rereview
+
+| Package / reviewed latest | Decision | Evidence and reconsideration condition |
+| --- | --- | --- |
+| `electron` 45.2.3 | adopt from 45.2.2 | Patch release backporting upstream ANGLE, Chromium, Dawn, FFmpeg, PDFium, Skia and V8 fixes ([release notes](https://github.com/electron/electron/releases/tag/v45.2.3)). Exact manifest and lock pin move together; Node stays on major 24. Packaged together with the proxy start timeout fix; package and install results are in REVIEW. |
+| `vite` 8.3.6 | defer; retain 6.4.5 | A patch on the already-deferred 8 line; the Vite 8 plus plugin-react 6 migration is still a dedicated pass. |
