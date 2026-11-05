@@ -567,3 +567,16 @@ Base HEAD: `3f1cecf23a458e2670916b6c23a1412968c8af64`.
   healthy, `doctor` ready, one `anthropic/claude-haiku-4-5` `codex exec` returned `PONG`, and the
   Codex model list showed four `(Web)` rows. This is not the isolated `--launcher-smoke-test`
   acceptance; the scripted package smoke remains outstanding for the next release pass.
+
+## 2026-11-05 proxy start timeout and Electron 45.2.3
+
+Base HEAD: `9644687`. Full `tools\dev_check.ps1`: exit 0 (root 1,158 pass / 0 fail; launcher
+426 pass / 0 fail; new `proxy start` regressions red before the fix, green after).
+`bun run app:package`: exit 0. The scripted `app:smoke` was not rerun. Instead the installer
+was run directly (`/S /currentuser`, no timeout) while a temporary standalone bridge kept
+`127.0.0.1:17841` healthy, so the local bridge watchdog could not restart the launcher during
+installation: exit 0 in 75 s, `resourcesuntime` complete (5,565 files). The installed launcher
+contains `PROXY_START_TIMEOUT_MS = 90_000`; its daemon reached `listening` 2 s after start, the
+Codex route reconnected, and `native_upstream` is the pre-setup route. The first launcher window
+appeared about two minutes after launch, consistent with first-run scanning of the new binaries
+(not measured further). The scripted package smoke remains outstanding for the release pass.
