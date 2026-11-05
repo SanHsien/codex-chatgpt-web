@@ -510,3 +510,9 @@ Only the non-PR issue axis moved. Main, latest PR #959/head `e1b3c7e8cd3a40d4063
 and both branch heads are unchanged. Read-only review of every number #960–#963; #960 and #962 return
 API 404. Both Windows reports (#961, #963) are deferred for diagnosis; no source patch exists. See the
 [per-item decisions](DECISIONS.md#2026-11-04-upstream-review-960963). No upstream writes occurred.
+
+## 2026-11-05: #964–#965
+
+Main and both branch heads are unchanged. Latest PR #964 (closed, unmerged; head
+`445aa23bba01beba631453af022aa44c623e2e85`) and issue #965 were reviewed read-only and deferred;
+see the [per-item decisions](DECISIONS.md#2026-11-05-upstream-review-964965). No upstream writes occurred.

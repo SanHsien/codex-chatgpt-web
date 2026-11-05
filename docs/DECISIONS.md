@@ -1186,3 +1186,12 @@ answered yet. 90 s stays below the tunnel start budget (120 s) so a hung daemon 
 the route is still restored. Regression tests use a virtual clock for the slow-but-healthy, never
 healthy and already-exited cases. Reconsider if the daemon gains a readiness signal earlier than
 `/healthz`, or if starts routinely approach the cap.
+
+## 2026-11-05 upstream review: #964–#965
+
+| Item | Decision and fork evidence | Reconsideration condition |
+| --- | --- | --- |
+| #964 `445aa23bba01beba631453af022aa44c623e2e85` | defer. Closed, unmerged. It adds an opt-in `doctor --verify-mcp` that round-trips a random file hash through the MCP broker (`src/doctor-mcp.ts`, +357 lines) and wires the launcher's Verify action to a time-limited receipt, but it also carries the closed #940 world-state prerequisite that this fork already deferred with the #933/#936/#939 workspace group (`src/adapters/chatgpt-web/codex-rollout-environment.ts`, `thread-environment.ts`). The author states that prerequisite must be reconciled with upstream first. | The MCP proof lands upstream without the #940 prerequisite, or the workspace group is adopted; then verify the broker round-trip on Windows Full harness with tunnel/daemon binding and no stale turn. |
+| #965 | defer diagnosis. macOS arm64 performance report: a one-command Native2 turn takes 84–168 s; the reporter could not isolate MCP transport from model or browser time and asks for timing diagnostics. Not a Windows reproduction and no defect is identified. | A Windows measurement that separates broker delivery, result acknowledgement and model continuation, or upstream adds such timing diagnostics. |
+
+The four-axis ledger advances to PR #964/head `445aa23b` and issue #965; main and branch heads are unchanged.
