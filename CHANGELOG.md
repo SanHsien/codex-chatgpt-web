@@ -3,6 +3,12 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-11-05
+
+- Wait up to 90 s (was 20 s) for a live Responses daemon to become healthy, so a slow cold start
+  after reboot no longer stops it and restores the previous Codex route. A daemon that exits still
+  fails the wait immediately.
+
 ## 2026-11-04
 
 - Review upstream issues #960–#963 (#960/#962 are API 404; Windows reports #961/#963 deferred for

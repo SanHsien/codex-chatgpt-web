@@ -1170,3 +1170,19 @@ deadline stay in force.
 
 Sources checked on 2026-11-04: [Electron v45.2.2 release notes](https://github.com/electron/electron/releases/tag/v45.2.2),
 [turndown v7.2.5](https://github.com/mixmark-io/turndown/releases/tag/v7.2.5) and npm registry metadata.
+
+## 2026-11-05 proxy start timeout
+
+On the first launcher start after a reboot the Responses daemon stayed alive but printed nothing
+for 21.6 s; `waitForProxy` gave up at 20 s, stopped it and restored the previous Codex route
+(`Responses proxy did not become healthy on 127.0.0.1:17841 within 20000ms`). A manual start of
+the same command reached `listening` in about 4 s, so the evidence points to cold-start latency
+(empty disk cache and antivirus scanning of the runtime), not a daemon defect; no daemon error
+output exists to prove the cause.
+
+Decision: raise the proxy start wait to 90 s (`PROXY_START_TIMEOUT_MS`). The wait already ends
+immediately when the daemon exits, so the longer cap only applies to a live daemon that has not
+answered yet. 90 s stays below the tunnel start budget (120 s) so a hung daemon still fails and
+the route is still restored. Regression tests use a virtual clock for the slow-but-healthy, never
+healthy and already-exited cases. Reconsider if the daemon gains a readiness signal earlier than
+`/healthz`, or if starts routinely approach the cap.

@@ -22,6 +22,9 @@ const MAX_CONTROL_OUTPUT_BYTES = 1024 * 1024;
 const DRAIN_IDLE_TIMEOUT_MS = 15_000;
 const DRAIN_POLL_INTERVAL_MS = 100;
 const TUNNEL_START_TIMEOUT_MS = 120_000;
+// A cold first start after reboot (empty disk cache, antivirus scanning the runtime) has kept a
+// live daemon silent for over 20 s; a dead daemon still fails the wait immediately.
+const PROXY_START_TIMEOUT_MS = 90_000;
 const TUNNEL_HEALTH_POLL_INTERVAL_MS = 1_000;
 const TUNNEL_MONITOR_INTERVAL_MS = 10_000;
 const TUNNEL_MONITOR_FAILURE_THRESHOLD = 3;
@@ -627,7 +630,7 @@ class RuntimeSupervisor {
       && (!requireAccepting || body?.accepting_turns === true);
   }
 
-  async waitForProxy(config, timeoutMs = 20_000) {
+  async waitForProxy(config, timeoutMs = PROXY_START_TIMEOUT_MS) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       const daemon = this.daemon;
@@ -2151,6 +2154,7 @@ class RuntimeSupervisor {
 
 module.exports = {
   MAX_RESTARTS_PER_WINDOW,
+  PROXY_START_TIMEOUT_MS,
   RESTART_WINDOW_MS,
   TUNNEL_HEALTH_POLL_INTERVAL_MS,
   TUNNEL_MONITOR_FAILURE_THRESHOLD,

@@ -13,6 +13,7 @@ const {
   RuntimeSupervisor,
   managedTunnelConnectArgs,
   validateConfig,
+  PROXY_START_TIMEOUT_MS,
 } = require("../electron/runtime-supervisor.cjs");
 
 async function freePort() {
@@ -2178,4 +2179,45 @@ test("observed CLI fresh-conversation changes retire completed tabs once and def
     assert.equal(lease.reused, false);
     assert.equal(lease.tabId, "new");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+// A cold first start after reboot (disk cache empty, antivirus scanning the runtime) can keep a
+// live daemon silent for more than 20 s. Giving up then restores the previous Codex route and
+// strands the user; only a dead daemon or the start cap should end the wait.
+async function waitWithVirtualClock(fixture, healthyAfterMs) {
+  const realNow = Date.now;
+  let virtual = realNow.call(Date);
+  const start = virtual;
+  Date.now = () => virtual;
+  fixture.proxyHealth = async () => {
+    virtual += 5_000;
+    return virtual - start >= healthyAfterMs;
+  };
+  try {
+    return await RuntimeSupervisor.prototype.waitForProxy.call(fixture, { port: 17841 });
+  } finally {
+    Date.now = realNow;
+  }
+}
+
+test("proxy start waits for a live daemon that becomes healthy after a slow cold start", async () => {
+  await waitWithVirtualClock({ daemon: { pid: 4242 }, lastChildFailure: {} }, 45_000);
+});
+
+test("proxy start still fails at its cap when a live daemon never becomes healthy", async () => {
+  await assert.rejects(
+    waitWithVirtualClock({ daemon: { pid: 4242 }, lastChildFailure: {} }, Number.POSITIVE_INFINITY),
+    new RegExp(`within ${PROXY_START_TIMEOUT_MS}ms`),
+  );
+  assert.ok(PROXY_START_TIMEOUT_MS <= 120_000, "a hung daemon must not block startup indefinitely");
+});
+
+test("proxy start fails at once when the daemon has already exited", async () => {
+  await assert.rejects(
+    RuntimeSupervisor.prototype.waitForProxy.call(
+      { daemon: null, lastChildFailure: { daemon: "daemon exited with code 1" } },
+      { port: 17841 },
+    ),
+    /daemon exited with code 1/,
+  );
 });
