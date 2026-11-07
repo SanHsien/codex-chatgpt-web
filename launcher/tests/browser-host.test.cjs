@@ -2190,6 +2190,42 @@ for (const useTemporaryChats of [false, true]) test(`verification refresh and au
   }
 });
 
+test("connector verification records a pre-helper navigation abort once and releases its operation", async () => {
+  const records = [];
+  let helperCalls = 0;
+  const failure = Object.assign(new Error("(-3) loading 'https://chatgpt.com/'"), { code: "ERR_ABORTED", errno: -3 });
+  const fixture = Object.assign(Object.create(BrowserHost.prototype), {
+    ready: async () => {}, activateHomeSurface() {},
+    state: {}, turnTabs: new Map(), manualOperation: null,
+    getUseTemporaryChats: () => false,
+    setState(patch) { Object.assign(this.state, patch); },
+    view: { webContents: {
+      getURL: () => "about:blank", isDestroyed: () => false, setBackgroundThrottling() {},
+      loadURL: async () => {
+        assert.equal(fixture.manualOperation, "connector verification");
+        throw failure;
+      },
+    } },
+    logger: {
+      info: (event, detail) => records.push(["info", event, detail]),
+      error: (event, detail) => records.push(["error", event, detail]),
+    },
+    waitForAuthenticated: async () => { assert.fail("failed navigation must not proceed to authentication"); },
+    verifyConnectorWithBrowserHelper: async () => { helperCalls += 1; },
+  });
+
+  await assert.rejects(fixture.verifyConnector("Codex Native2"), error => error === failure);
+
+  assert.deepEqual(records, [["error", "connector.verification_failed", {
+    appName: "Codex Native2",
+    errorName: failure.name,
+    message: failure.message,
+  }]]);
+  assert.equal(helperCalls, 0);
+  assert.equal(fixture.manualOperation, null);
+  assert.deepEqual(fixture.state, { status: "error", message: failure.message });
+});
+
 test("connector verification records the helper failure in launcher diagnostics", async () => {
   const calls = [];
   const failure = new Error("ChatGPT connector proof did not leave a verified empty composer");

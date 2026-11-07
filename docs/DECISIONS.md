@@ -691,7 +691,7 @@ Release notes for [v6.1.14](https://github.com/miuuyy/codex-chatgpt-web/releases
 [v6.1.17](https://github.com/miuuyy/codex-chatgpt-web/releases/tag/v6.1.17) (the last three
 all 2026-10-29) were read alongside the code and test delta. Release dates do not prove Windows
 acceptance.
-All product ports below are deferred or rejected, except the rows marked `ported` (`dc29540`, `2f0936b`, `9c3633c`; see the 2026-10-31 port section); the fork source stays 6.1.13, the public
+All product ports below are deferred or rejected, except the rows marked `ported` (`dc29540`, `2f0936b`, `9c3633c`, and 2026-11-07 ports `d3cf95a`, `1a0e893`; see the port sections below); the fork source stays 6.1.13, the public
 installer/updater stays 5.0.6, and Bun stays 1.4.2. Follow-up work belongs only in ROADMAP.md.
 Earlier decisions are superseded only where explicitly stated below.
 
@@ -702,7 +702,7 @@ about local adoption, even where upstream has already merged or released the cha
 
 | Commit | Decision | Reason and reconsideration condition |
 | --- | --- | --- |
-| `d3cf95a70387` rich JSON rendering (#886) | defer | Escapes string lexemes and changes multipart size accounting. Port with round-trip and partition-budget regressions before any browser acceptance. |
+| `d3cf95a70387` rich JSON rendering (#886) | ported (2026-11-07) | Escapes string lexemes and changes multipart size accounting. Ported to `src/adapters/chatgpt-web/prompt.ts` with round-trip, Unicode delimiter shielding and partition-budget regressions in `tests/prompt-contract.test.ts`. See the 2026-11-07 port section below. |
 | `afa35a7bd76c` remove Temporary Chat | reject this intermediate design | Superseded upstream by `7c7c10e`/`ad9a611`; do not remove and then restore a user preference. The final opt-in migration is adopted by the 2026-11-03 decision below. |
 | `e6ed93a4006b` cwd-less updates (#894) | defer | Replaces first-root cwd inference with current native rollout authority across environment/store types. Reconsider with reordered-root, missing-rollout and restricted-mode negative regressions. Supersedes the earlier monitor trigger: a fix now exists. |
 | `3790e3f46c51` native steering test synchronization | defer | Accompanies native-task restoration; import with that implementation, not as an unrelated test-only change. |
@@ -722,20 +722,20 @@ about local adoption, even where upstream has already merged or released the cha
 | `7e6e1a0bfae4` Doctor compaction override (#919) | ported (2026-11-02) | Read-only global/default-profile TOML inspection ported to `src/doctor-compaction.ts` and `src/doctor.ts` with no-override, safe override, window-ceiling warning, default profile, BOM/syntax handling, and no-mutation regressions in `tests/doctor-compaction.test.ts`. See the 2026-11-02 port section below. |
 | `7c7c10edee41` restore Temporary Chat (#918) | ported with inverse legacy migration (2026-11-03); see decision below | Renames useSavedChats to useTemporaryChats across CLI, IPC, settings and worker. Preserve old preferences by inverse migration with explicit-opt-out, connector-unavailable and Zero Risk regressions; account acceptance remains separately opt-in. |
 | `ad9a6114a598` default Temporary Chat on | reject default-on | Keep the saved-chat default for new installs and preserve existing behavior, including the implicit Temporary Chat of v5.0.6 configurations; do not silently change a privacy-related default. |
-| `d80bf0d49cef` BOM settings/verification | defer BOM port; reject duplicate verification change | BOM-tolerant JSON reads need Windows state/window preservation tests. Fork verify already uses build:renderer; keep the canonical repair-free gate. |
-| `d3734f1f378c` cancellation measurement | defer | Changes live smoke timing to start at provider terminal. Not needed for this read-only maintenance task; reassess when explicitly running cancellation acceptance. |
+| `d80bf0d49cef` BOM settings/verification | reject | Rejected port. The fork already has equivalent and cleaner BOM-tolerant JSON parsing in `launcher/electron/json-file.cjs` (committed on 2026-10-25 via `ee3b8f8`), verified by `launcher/tests/utf8-bom-compatibility.test.cjs`. Fork `scripts/verify.ts` also already uses `build:renderer`. |
+| `d3734f1f378c` cancellation measurement | defer | Changes live smoke timing to start at provider terminal. Not needed for this read-only maintenance task; reassess when cancellation acceptance is explicitly run. |
 | `0a8f233f88d3` owned runtime persistence failure (#905) | ported (2026-11-02) | Ported bounded recovery tasks, safe child termination and unsafe start guards to `launcher/electron/runtime-supervisor.cjs`, covered in `launcher/tests/runtime-supervisor.test.cjs` by three parameterized unsafe-cleanup cases (active-turn, unverified-pid, shutdown-error), one cleanup-wait case, and a real-child integration case that forces a filesystem write failure, confirms child exit and blocks starts until persistence recovers. See the 2026-11-02 port section below. |
 | `89f0ead030f1` exact explicit model picker (#921) | ported (2026-11-02) | Ported exact Sol/Astra matching, 6 slider positions and Astra Max verification while retaining local #911 Simplified Chinese effort labels. Verified with `tests/chatgpt-model-selection.test.ts` and `tests/chatgpt-model-family-browser.test.ts`. See the 2026-11-02 port section below. |
 | `b6043e022eaf` rendered identity/stream diagnostics (#914) | ported (2026-11-02) | Ported DOM BR boundary normalization, hidden/duplicate identity rejection and `src/adapters/chatgpt-web/stream-diagnostics.ts` lifecycle observers without adopting #914 draft reload recovery. Verified by `tests/stream-diagnostics.test.ts` and `tests/browser-turn-binding.test.ts`. See the 2026-11-02 port section below. |
 | `0286265634a4` native session reminder layer | defer | Adds native view, restricted preload and renderer entry. Requires Windows browser focus, layering, resize and dismissal checks; offline build alone is insufficient. |
-| `87449745382b` merge #921 | defer | Same exact-picker candidate as `89f0ead`; no additional independent implementation. |
+| `87449745382b` merge #921 | reject duplicate | Same exact-picker candidate as `89f0ead`; already ported via `89f0ead` with no additional independent implementation. |
 | `b95b38a0f45b` merge main into worktree branch | reject direct merge | Integration history; authority and UI components require their own acceptance. |
-| `30e7ad9deb73` isolate ChatGPT UI contracts | defer | Moves shared selectors/parsers to chatgpt-ui and adds observed-variant diagnostics/fixtures. Review with the picker candidate to avoid a partial import breaking callers and losing the local #911 handling. |
+| `30e7ad9deb73` isolate ChatGPT UI contracts | reject structural churn | Re-extracting shared selectors to a separate `chatgpt-ui` module carries high regression risk against local Chinese labels (#911) with no Windows behavioral benefit. The fork already maintains model picker and inline reasoning controls in `src/chatgpt-session.ts`. |
 | `8a75f1ba3916` release 6.1.15 | defer source/release adoption | Includes exact picker, Temporary Chat default, native reminder and Full Access changes; preserve fork source/release separation. |
 | `2f0936b6360b` inline model control (#924/#927/#928) | ported (2026-10-31) | Narrow observed reasoning selector added with retained variants and unrelated-button negatives; exact model/effort verification before Send is unchanged. No fallback or guessed selector. See the port section below. |
 | `f9325c967be3` multipart compaction ceiling (#930) | ported | Windows shared-path adoption on 2026-11-03: exact exclusive boundary, account/family/effort/part-count limits, checkpoint/final instruction, atomic records, rebuilt attachments and ordinary-request-no-trim regressions. |
 | `e1780b1c1b87` delivery/staging retry guards (#929) | ported | Windows shared-path adoption on 2026-11-03: bound visible alert and exact staging ACK fixtures; pending/duplicate results block retry, completed/late canonical results permit continuation without replay, with the existing retry cap. |
-| `1a0e8934e608` connector navigation diagnostics (#925) | defer | Records failed home navigation checkpoint; inspect sanitization and cancellation classification before porting. It does not establish a turn_id-conflict fix. |
+| `1a0e8934e608` connector navigation diagnostics (#925) | ported (2026-11-07) | Wrapped `refreshChatGptHomeDocument` in `try` block in `launcher/electron/browser-host.cjs` so pre-helper navigation aborts record `connector.verification_failed` in diagnostics and clean up `manualOperation`. Verified by red-then-green test in `launcher/tests/browser-host.test.cjs`. See the 2026-11-07 port section below. |
 | `9c3633c6e260` positive Luna evidence (#932) | ported (2026-10-31, with `dc29540` prerequisite 2026-11-02) | Missing paid controls must not overwrite the catalog with Luna-only. Ported together with the inline picker selector and the #902 Think sprite; model reinstall remains an account-bound step. See the port section below. |
 | `b6182818bb14` release 6.1.16 | defer source/release adoption | Important Windows model-control fix, but source incorporation and account/package acceptance remain separate work. Do not raise package versions or the 5.0.6 installer pin in a review-only update. |
 | `760ab5a8ad87` preserve added Full Access workspaces after compaction (#933) | defer port | Keeps the rollout's declared roots and adds the current claim's extra roots (Codex's per-thread visualization/output folder), only when rollout and claim are both Full Access, cwd matches and every declared native root is already in the claim; cwd, permissions and task identity still come from the exact rollout. The patch sits on top of the 6.1.14 authority changes (`e6ed93a`, `b48477e`) that the fork has deferred, and the fork's `thread-environment.ts` is still the 6.1.13 shape, so it is not a standalone cherry-pick. Reconsider it together with those two commits: import its `tests/environment.test.ts` cases (declared session/turn roots plus an added output root) and add Windows drive-letter/namespace path-identity cases, a restricted-mode negative (an extra root must still be rejected) and dropped/replaced/foreign-root negatives. Whether the fork's 6.1.13 code shows the same `workspace_roots, writable_roots` conflict was not reproduced in this review; a fresh Windows report of that conflict on the fork moves this to high priority. |
@@ -774,10 +774,10 @@ downloaded; issue bodies, public release notes and source/test patches were suff
 | [#919](https://github.com/miuuyy/codex-chatgpt-web/issues/919) compaction override | closed, released; Windows | defer | Bounded read-only Doctor candidate in `7e6e1a0`; require profile and no-write tests. |
 | #920 | API 404 | reject as actionable item | Absent or removed at review time; reconsider if retrievable. |
 | [#922](https://github.com/miuuyy/codex-chatgpt-web/issues/922) UI/quota question | closed | defer documentation assessment | No confirmed shared-quota bug. Upstream removed a blanket no-Work/Codex-quota promise; evaluate any matching fork wording in both README languages without claiming account billing evidence. |
-| [#923](https://github.com/miuuyy/codex-chatgpt-web/issues/923) Astra effort menu | closed, released; macOS | defer linked portable fix | Exact-picker candidate #921; strict selection already failed closed. Requires fork fixtures and Windows acceptance. |
+| [#923](https://github.com/miuuyy/codex-chatgpt-web/issues/923) Astra effort menu | closed, released; macOS | ported via `89f0ead` (2026-11-02) | Linked portable fix is exact-picker #921, ported with Sol/Astra matching and Astra Max verification; strict selection already failed closed. Closed on the fork; model reinstall remains an account-bound step. |
 | [#924](https://github.com/miuuyy/codex-chatgpt-web/issues/924) inline picker | closed, released; macOS | ported via `2f0936b` (2026-10-31) | Independent Windows evidence exists in #927; inspect and test `2f0936b` against fork callers rather than guessing menu labels. |
-| [#925](https://github.com/miuuyy/codex-chatgpt-web/issues/925) connector navigation/turn identity | closed, partial release; macOS | defer | Navigation diagnostic and selector changes are distinct from the unresolved turn_id report; require fresh Windows evidence before relaxing identity checks. A comment added after the first pass (2026-10-29T15:33Z, v6.1.16, macOS) reports a turn accepted by ChatGPT whose assistant response the bridge did not detect in the DOM; it has no Windows evidence and stays a separate, unreproduced item. |
-| [#926](https://github.com/miuuyy/codex-chatgpt-web/issues/926) Luna-only Plus | closed, released; Linux | defer linked portable fix | Shared paid-capability detection has a confirmed Windows counterpart #932; no Linux packaging is imported. |
+| [#925](https://github.com/miuuyy/codex-chatgpt-web/issues/925) connector navigation/turn identity | closed, partial release; macOS | navigation diagnostic ported via `1a0e893` (2026-11-07); turn_id / undetected-response part deferred | Navigation diagnostic is ported (see the 2026-11-07 port section). The unresolved turn_id report stays deferred pending fresh Windows evidence before relaxing identity checks. A comment added after the first pass (2026-10-29T15:33Z, v6.1.16, macOS) reports a turn accepted by ChatGPT whose assistant response the bridge did not detect in the DOM; it has no Windows evidence and stays a separate, unreproduced item. |
+| [#926](https://github.com/miuuyy/codex-chatgpt-web/issues/926) Luna-only Plus | closed, released; Linux | ported via `9c3633c` (2026-10-31) with `dc29540` prerequisite (2026-11-02) | Shared paid-capability detection has a confirmed Windows counterpart #932, ported with positive Luna evidence; no Linux packaging is imported. Closed on the fork. |
 | [#929](https://github.com/miuuyy/codex-chatgpt-web/issues/929) delivery/ACK/frozen page | open, partial release; macOS | ported bounded retry fix (2026-11-03) | Canonical alert and staging changes differ from reporter's broad retry/near-match proposal. Preserve exact ACK and no-replay guards; generic frozen/missing-final behavior still needs evidence. |
 | [#930](https://github.com/miuuyy/codex-chatgpt-web/issues/930) multipart compaction | closed, released; macOS | ported linked portable fix | Shared prompt fix `f9325c9` adopted on 2026-11-03 with checkpoint, ceiling and no ordinary-history trimming regressions; the original issue report remains macOS evidence. |
 | [#932](https://github.com/miuuyy/codex-chatgpt-web/issues/932) Luna-only/crash | closed, released; Windows/cross-platform | ported via `9c3633c` + `dc29540` (2026-11-02) | Confirms Windows relevance of inline picker/positive capability detection; requires coordinated model-catalog tests and separate opted-in reinstall validation. |
@@ -827,15 +827,14 @@ red-then-green test. Only #924 (`2f0936b`), #932 (`9c3633c`) and their prerequis
 
 4. **Upstream `tests/chatgpt-capabilities-browser.test.ts`**:
    - Ported its second case (a unique recognized Think control proves Luna; unknown or ambiguous controls are rejected; the draft is never touched) as `tests/chatgpt-capabilities-browser.test.ts`, gated by `CHATGPT_DOM_TEST_BROWSER` like the other real-browser tests.
-   - Its first case is not ported: it reads `chatgpt-model-picker-power-2026-09-29.html`, a fixture belonging to the still-deferred UI-contract extraction (`30e7ad9`), not the now-ported exact picker (`89f0ead`, #921). The paid inline-control behavior it checks is covered offline in `tests/chatgpt-session.test.ts`. Reconsider the fixture with `30e7ad9`.
+   - Its first case is not ported: it reads `chatgpt-model-picker-power-2026-09-29.html`, a fixture belonging to the UI-contract extraction (`30e7ad9`, rejected above), not the now-ported exact picker (`89f0ead`, #921). The paid inline-control behavior it checks is covered offline in `tests/chatgpt-session.test.ts`. Reconsider the fixture only if upstream introduces a newly observed inline-picker variant requiring DOM regression.
 
 5. **Still deferred or rejected from the 2026-10-29 review**: the table above is the complete
-   list; the twelve rows marked `ported` are `dc29540`, `2f0936b`, `9c3633c`,
-   `7e6e1a0`, `0a8f233`, `89f0ead`, `b6043e0`, `ffe041f`, `f9325c9`, `e1780b1`, `7c7c10e` and `a738f04`. The items still open, which [ROADMAP.md](../ROADMAP.md) tracks
-   across port and release follow-ups, are: `d3cf95a` (#886), `e6ed93a` (#894), `3790e3f`, `794e576`, `3b47927`, `53b6050`
+   list; the fourteen rows marked `ported` are `dc29540`, `2f0936b`, `9c3633c`,
+   `7e6e1a0`, `0a8f233`, `89f0ead`, `b6043e0`, `ffe041f`, `f9325c9`, `e1780b1`, `7c7c10e`, `a738f04`, `d3cf95a`, and `1a0e893`. The items still open, which [ROADMAP.md](../ROADMAP.md) tracks
+   across port and release follow-ups, are: `e6ed93a` (#894), `3790e3f`, `794e576`, `3b47927`, `53b6050`
    (#904, next installer release), `7b7f2f8`, `988f45a` (dependency removal only), `b48477e`,
-   `d80bf0d` (BOM port only), `d3734f1`, `0286265`, `8744974`, `30e7ad9`,
-   `1a0e893` (#925), `760ab5a` (#933), the three release-version commits
+   `d3734f1`, `0286265`, `760ab5a` (#933), the three release-version commits
    (`cfeaf04`, `8a75f1b`, `b618281`) and `860fa57`; plus the open PR #914 and #934 and the deferred issue
    decisions. Release version bumps stay deferred: the installer pin remains v5.0.6 and the fork package
    remains 6.1.13.
@@ -1212,3 +1211,33 @@ the user had to remember to switch to `low` every time. A route with exactly one
 has nothing to choose, so it now uses that effort whatever was requested. Routes with several
 efforts keep rejecting an unsupported one; account gating of the single effort is unchanged.
 This is not model or effort substitution between alternatives, which stays refused.
+
+## 2026-11-07 port: rich JSON rendering (#886) and connector navigation diagnostics (#925); disposition of remaining 6.1.14–6.1.17 deferrals
+
+Adopted the two standalone, Windows-applicable fixes from the remaining 6.1.14–6.1.17 deferred ledger:
+
+1. **Rich JSON rendering (`d3cf95a`, #886)**:
+   - Encodes rich-text delimiters inside JSON string lexemes only in `src/adapters/chatgpt-web/prompt.ts` (`serializeMultipartContext`), escaping `\\(["\\])|[<>[\]*_~():#\x60]` to Unicode hex while leaving structural JSON syntax and decoded payload values intact.
+   - Updated `multipartRecordWeight` and `partitionMultipartContext` to serialize and measure through `serializeMultipartContext`.
+   - Verified by red-then-green regression test in `tests/prompt-contract.test.ts`.
+
+2. **Connector navigation failure logging (`1a0e893`, #925)**:
+   - Wrapped `refreshChatGptHomeDocument(useTemporaryChats)` within the `try` block of `runConnectorVerification` in `launcher/electron/browser-host.cjs`.
+   - A pre-helper navigation abort now records `connector.verification_failed` in launcher diagnostics and cleans up `manualOperation` rather than failing unhandled before diagnostic logging.
+   - Verified by red-then-green regression test in `launcher/tests/browser-host.test.cjs`.
+
+3. **Dispositions of remaining 6.1.14–6.1.17 deferrals**:
+   - `d80bf0d` (BOM settings/verification): rejected port. The fork already has equivalent and cleaner BOM-tolerant JSON parsing in `launcher/electron/json-file.cjs` (committed on 2026-10-25 via `ee3b8f8`), verified by `launcher/tests/utf8-bom-compatibility.test.cjs`. Fork `scripts/verify.ts` also already uses `build:renderer`.
+   - `30e7ad9` (isolate ChatGPT UI contracts): rejected structural churn. The fork's model picker, inline controls (`2f0936b`), and Chinese effort labels (`#911`) were already ported in `src/chatgpt-session.ts` and `src/adapters/chatgpt-web/model-selection.ts`. Re-extracting to a separate module is structural churn with high regression risk against local labels and no Windows behavioral benefit.
+   - Native task restoration (`794e576`, `3b47927`, `3790e3f`, `7b7f2f8`): retain deferral. Coupled with issue #935 and cross-turn authority boundaries; `3b47927` modifies `extractChatGptTurnUserRevision` (`sourceWasDelegation` -> `sourceWasSyntheticInstruction`) and reverses attribution precedence from human messages to synthetic goals, which requires maintainer direction alongside the workspace/world-state group.
+   - `d3734f1` (cancellation measurement): retain deferral. Modifies live smoke timing; reassess when cancellation acceptance is explicitly run.
+   - `0286265` (native session reminder layer): retain deferral. Adds native Electron views requiring live Windows focus, layering, resize and dismissal acceptance.
+   - `988f45a` (dependencies/Electron preparation): reject pin replacement; defer chromium-bidi removal (installed Playwright core requires its lib/cjs layout, see 2026-11-03 dependency rereview). Electron and Bun remain pinned to fork specifications.
+   - `8744974` (merge #921): rejected duplicate. Implementation was already ported via `89f0ead`.
+   - Release version bumps (`cfeaf04`, `8a75f1b`, `b618281`, `860fa57`): retain fork separation (source 6.1.13, installer 5.0.6).
+   - Specified exclusions: MCP contract (`53b6050`), Temporary Chat default (`ad9a611`), and Full Access additional workspaces (`760ab5a`, `e6ed93a`, `b48477e`) remain tracked by their respective roadmap triggers.
+   - Open draft PRs and deferred issues:
+     - PR [#914](https://github.com/miuuyy/codex-chatgpt-web/pull/914): retain deferral. Rendered marker fix ported (`b6043e0`, 2026-11-02); reload recovery requires stabilized, bounded Windows reproduction and no-resubmit proof.
+     - PR [#934](https://github.com/miuuyy/codex-chatgpt-web/pull/934): retain deferral. Changes clipboard ownership and IPC; requires stable tests proving clipboard restoration and exact acceptance without resubmission on Windows.
+     - Issue [#912](https://github.com/miuuyy/codex-chatgpt-web/issues/912): retain deferral of intermediate preference redesign. Addressed via final #918 inverse migration (2026-11-03 decision).
+     - Issue [#913](https://github.com/miuuyy/codex-chatgpt-web/issues/913): retain deferral. macOS measurements and local patches do not establish this fork's Windows/OpenCode contract; components #904 and #930 are separately bounded.

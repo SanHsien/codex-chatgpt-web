@@ -21,13 +21,13 @@
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 續移植 6.1.14～6.1.17 其餘 defer 項的 Windows 適用修正 | 尚有 rendering／native task restoration、UI 契約、BOM 與診斷等差量待依 DECISIONS 條件逐項評估；Full Access `760ab5a`／`e6ed93a`／`b48477e` 維持成組延後 | 依 DECISIONS 剩餘清單逐項判斷 Windows 適用性與相依條件；修 bug 先紅後綠，保留模型／effort 與 Windows 路徑防線，通過完整本機閘門；帳戶與打包獨立驗收，不升公開安裝器 pin；`53b6050` 改由發版列追蹤 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-10-29-upstream-review-6114-6117-912-934)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-opt-in-temporary-chat-and-mcp-readiness) |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
 | 驗證新版 UI、模型選擇與完整工具連接 | 維護者同意帳戶驗收並完成必要登入 | 依 TEST_PLAN 與 release-validation，在隔離 DEV profile 用一筆最小聊天核對模型、effort、送出／完成、Temporary Chat 選項與 connector 可用性及工具回執；保存去識別證據，達標即停 | 維護者 | [docs/TEST_PLAN.md:11](docs/TEST_PLAN.md)、[AGENTS.md:16](AGENTS.md)；接續開發報告（2026-10-2x）「實機冒煙測試」 |
 | 發布已驗證的 Windows 新版 | 實機與打包驗收完成（含 2026-11-04 Electron 45.2.2 未完成的 `app:smoke`：安裝程式三次超過 120 秒），維護者決定發布；下一次安裝器版本一併採用 `53b6050` 的 60 s command poll／tools/list ABI，與發版同步只刷新一次 connector | 先完成 poll 上限與 transport 回歸，再刷新 connector 核對 ABI；版本、README、安裝腳本、`REVIEWED_RELEASE_VERSION` 與 release-contract 同步；以 Bun 1.4.2 通過 canonical gate，驗證資產雜湊與更新路徑 | Codex | [docs/DECISIONS.md:620](docs/DECISIONS.md)、[docs/DECISIONS.md:647](docs/DECISIONS.md)、[AGENTS.md:3](AGENTS.md) |
+| 重審 6.1.14～6.1.17 剩餘延後項（原生任務組、cancellation、session reminder、chromium-bidi 移除、PR #914/#934 與延後 issue） | 原生任務組（`794e576`、`3b47927`、`3790e3f`、`7b7f2f8`）與 #935 及 Full Access 工作區組（`760ab5a`、`e6ed93a`、`b48477e`，於「刻意不做」及 DECISIONS:707/720/741 追蹤）一同審查；`d3734f1` 在明確執行 cancellation 冒煙驗收時；`0286265` 在具備 Windows 實機焦點／圖層／縮放驗收時；`988f45a`（chromium-bidi 移除）在 Playwright 依賴解耦時；PR #914／#934 依 DECISIONS:752/758 具備 Windows 穩定重現與無重複送出測試時；延後 issue（#912、#913、#922，及 #925 之 turn_id 部分）依 DECISIONS 逐項條件成立時。註：`53b6050` 隨下一次安裝器發版一併採用（於本表「發布已驗證的 Windows 新版」列追蹤）；Full Access 附加工作區組（`760ab5a`、`e6ed93a`、`b48477e`）維持成組延後，於「刻意不做」追蹤 | 依逐項檔案與行號證據採用；工作區與跨 turn 來源保留權限防線；修 bug 先紅後綠，通過完整本機閘門，帳戶驗收獨立執行 | Codex | [docs/DECISIONS.md:703](docs/DECISIONS.md#2026-10-29-upstream-review-6114-6117-912-934)、[docs/DECISIONS.md:1216](docs/DECISIONS.md#2026-11-07-port-rich-json-rendering-886-and-connector-navigation-diagnostics-925-disposition-of-remaining-61146117-deferrals) |
 | 重評回覆提早中止與本地 effort 標籤補丁 | 上游 #910 有平台通用根因／Windows 重現，或 #911 上游修正／新標籤被實際觀察 | 用實際失敗輸入先重現；修正後驗證完成偵測、滑桿位置與模型家族，不猜測未見翻譯 | Codex | [docs/DECISIONS.md:662](docs/DECISIONS.md)、[docs/DECISIONS.md:672](docs/DECISIONS.md) |
 | 重審 #935～#963 與工作區分支的延後項 | DECISIONS 各項觸發條件成立；涉及 image retention／MCP、帳戶方案與傳輸界線者先由維護者決定 | 依逐項檔案與行號證據採用；工作區與跨 turn 來源保留權限防線；修 bug 先紅後綠，通過完整本機閘門，帳戶驗收獨立執行 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-upstream-review-935959-and-current-workspace-roots)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-04-upstream-review-960963) |
 | 重審 minimatch 舊 API 安全延後 | 2026-11-17 到期，或相容父套件發布／告警與受影響 lock 節點變動 | 移除舊 API 路徑或重新審查精確延後；audit、verify 與 archive/filter 回歸通過，打包行為另依 release 驗收 | Codex | [.github/audit-deferrals.json](.github/audit-deferrals.json)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-launcher-minimatch-advisory-ghsa-g3hv-75wg-m249) |
@@ -36,6 +36,7 @@
 ## 刻意不做
 | 不做什麼 | 理由 | 什麼情況下重新考慮 |
 | --- | --- | --- |
+| 單獨引入 Full Access 附加工作區與未受限 cwd 變更（`760ab5a`、`e6ed93a`、`b48477e`） | 變更授權邊界，不可單獨 cherry-pick；需與跨 turn 來源及 #935 成組審查，見 [docs/DECISIONS.md:707](docs/DECISIONS.md) | Windows 實機出現 `workspace_roots, writable_roots` 衝突的新回報（升為高優先）；或維護者決定引入完整權限模型變更，且具備受限模式負向測試與 Windows 路徑等價回歸 |
 | 因原始碼升級就直接改公開安裝 pin | 發布與來源版刻意分開，見 [docs/DECISIONS.md:647](docs/DECISIONS.md) | 已取得發布授權並完成打包與帳戶驗收 |
 | 改用 Codex Native3 或猜測新的 effort 翻譯 | 既有 connector 與標籤決策見 [docs/DECISIONS.md:620](docs/DECISIONS.md)、[docs/DECISIONS.md:678](docs/DECISIONS.md) | 工具契約分岔或新標籤有實測證據 |
 | 引進非 Windows 發布與重寫歷史 | 平台邊界見 [AGENTS.md:7](AGENTS.md)；無共同祖先是已知狀態 | 維護者另立平台或歷史遷移需求 |

@@ -580,3 +580,25 @@ contains `PROXY_START_TIMEOUT_MS = 90_000`; its daemon reached `listening` 2 s a
 Codex route reconnected, and `native_upstream` is the pre-setup route. The first launcher window
 appeared about two minutes after launch, consistent with first-run scanning of the new binaries
 (not measured further). The scripted package smoke remains outstanding for the release pass.
+
+## 2026-11-07 rich JSON rendering (#886) and connector navigation diagnostics (#925)
+
+Base HEAD: `2f110f135b9d311fa8dfbf52e463a502df2f8a48`.
+
+Scope: Port standalone Windows-applicable fixes from 6.1.14–6.1.17 deferrals:
+- `1a0e8934e608` (connector navigation failure logging, #925)
+- `d3cf95a70387` (rich JSON delimiter shielding in multipart context, #886)
+- Ledger updates in `docs/DECISIONS.md` (2026-10-29 table and 2026-11-07 disposition section) and roadmap alignment in `ROADMAP.md`.
+
+Red-then-green regression verification:
+- `1a0e8934e608` (`connector.verification_failed` diagnostic on pre-helper navigation abort):
+  - Red check (`node --test --test-name-pattern="connector verification records a pre-helper navigation abort once" launcher/tests/browser-host.test.cjs` before implementation): exit 1 (assertion failed: record not added, manual operation not released).
+  - Green check (`node --test launcher/tests/browser-host.test.cjs` after implementation): exit 0 (136 pass / 0 fail).
+- `d3cf95a70387` (rich JSON delimiter shielding in multipart context):
+  - Red check (`bun test tests/prompt-contract.test.ts` before implementation): exit 1 (assertion failed: raw delimiters unshielded).
+  - Green check (`bun test tests/prompt-contract.test.ts` after implementation): exit 0 (32 pass / 0 fail).
+
+Gate results:
+- `bun run launcher:test`: 427 pass / 1 skip / 0 fail.
+- Not run in this review: `bun run verify` and the Full `tools/dev_check.ps1` gate.
+- Whitespace: `git diff --check` exits 0.

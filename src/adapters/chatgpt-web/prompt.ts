@@ -351,8 +351,19 @@ interface MultipartRecordWeight {
   chars: number;
 }
 
+function serializeMultipartContext(value: unknown): string {
+  const json = withoutRetiredTurnHandles(JSON.stringify(value));
+  // #886: even fenced JSON can enter ChatGPT's rich user-message renderer, which
+  // rewrites escaped quotes and Markdown and auto-links URLs. Encode string
+  // lexemes only; structural JSON punctuation and decoded context stay unchanged.
+  return json.replace(/"(?:\\.|[^"\\])*"/g, lexeme => lexeme.replace(
+    /\\(["\\])|[<>[\]*_~():#`]/g,
+    (match, escaped: string | undefined) => "\\u" + (escaped ?? match).charCodeAt(0).toString(16).padStart(4, "0"),
+  ));
+}
+
 function multipartRecordWeight(record: MultipartContextRecord): MultipartRecordWeight {
-  const text = withoutRetiredTurnHandles(JSON.stringify(record));
+  const text = serializeMultipartContext(record);
   return { tokens: estimateTokens(text) + 1, chars: text.length + 1 };
 }
 
@@ -441,12 +452,12 @@ function partitionMultipartContext(
     return group;
   });
   if (offset !== records.length) throw new Error("ChatGPT multipart context partition lost records");
-  const payloads = groups.map((group, index) => withoutRetiredTurnHandles(JSON.stringify({
+  const payloads = groups.map((group, index) => serializeMultipartContext({
     version: 1,
     part_index: index + 1,
     total_parts: totalParts,
     records: group,
-  })));
+  }));
   return payloads;
 }
 

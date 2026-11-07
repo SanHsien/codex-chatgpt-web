@@ -3143,8 +3143,8 @@ class BrowserHost {
     const connectorName = validateConnectorName(appName);
     this.setState({ status: "testing", message: "Checking ChatGPT connector" });
     const useTemporaryChats = this.getUseTemporaryChats();
-    await this.refreshChatGptHomeDocument(useTemporaryChats);
     try {
+      await this.refreshChatGptHomeDocument(useTemporaryChats);
       const result = await this.verifyConnectorWithBrowserHelper({
         helper: this.helper,
         descriptorPath: this.descriptorPath,
