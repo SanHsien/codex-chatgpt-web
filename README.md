@@ -20,7 +20,8 @@
   <img src="https://img.shields.io/badge/unofficial-ChatGPT_Web_automation-555555" alt="非官方 ChatGPT Web 自動化">
 </p>
 
-> **維護 fork 說明。** 此倉庫由
+> **維護 fork 說明。** 此倉庫是原作者 miuuyy 的上游專案 `miuuyy/codex-chatgpt-web`
+> 的維護 fork（出處與授權見 [NOTICE.md](NOTICE.md)），由
 > [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web) 維護。在保留上游
 > MIT 專案及產品行為的同時，提供 Windows-only 維護。**僅支援 Windows。** 原始碼、PowerShell 安裝器與
 > 自動更新都使用此 fork 的 Windows release **v5.0.6**。請參閱 [FORK.md](FORK.md)

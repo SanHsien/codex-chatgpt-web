@@ -20,7 +20,9 @@
   <img src="https://img.shields.io/badge/unofficial-ChatGPT_Web_automation-555555" alt="Unofficial ChatGPT Web automation">
 </p>
 
-> **Maintained fork notice.** This repository is maintained at
+> **Maintained fork notice.** This repository is a maintained fork of the upstream project
+> `miuuyy/codex-chatgpt-web` (original author: miuuyy; attribution and license: [NOTICE.md](NOTICE.md)),
+> maintained at
 > [SanHsien/codex-chatgpt-web](https://github.com/SanHsien/codex-chatgpt-web). It preserves the
 > upstream MIT project and product behavior while providing Windows-only maintenance. **Windows only.**
 > Source, the PowerShell installer, and auto-update use this fork's Windows release **v5.0.6**. See [FORK.md](FORK.md), [development](docs/DEVELOPMENT.md), and the maintained-fork
