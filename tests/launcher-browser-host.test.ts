@@ -433,13 +433,10 @@ test("launcher liveness verification checks only owned process and loopback CDP 
 });
 
 test("launcher session verification reports its own deadline instead of a generic abort", async () => {
-  const server = createServer(async (request, response) => {
+  // The server never answers, so only the client's own deadline can end this request.
+  // A late response scheduled against the 5 ms budget raced the timer under load.
+  const server = createServer(async (request) => {
     for await (const _chunk of request) { /* consume request */ }
-    await new Promise(resolveDelay => setTimeout(resolveDelay, 30));
-    if (!response.destroyed) {
-      response.writeHead(500, { "content-type": "application/json" });
-      response.end('{"error":"late"}\n');
-    }
   });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
@@ -452,6 +449,7 @@ test("launcher session verification reports its own deadline instead of a generi
     await expect(inspectLauncherBrowserHost(path, { detectCapabilities: true, timeoutMs: 5 }))
       .rejects.toThrow("session inspection timed out after 5ms");
   } finally {
+    server.closeAllConnections();
     await new Promise<void>(resolveClose => server.close(() => resolveClose()));
   }
 });
