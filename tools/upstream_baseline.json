@@ -9,7 +9,7 @@
     "mainCommit": "32fd3436eb6ed94898b987a3c369003bb6fb8d54",
     "latestPullRequest": 985,
     "latestPullRequestHead": "c45d98b3f7f8f3d7aaed82f125e62f0398cafd48",
-    "latestNonPullRequestIssue": 986,
+    "latestNonPullRequestIssue": 987,
     "branches": [
       {
         "name": "fix/current-workspace-roots",

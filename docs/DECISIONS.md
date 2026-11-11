@@ -1284,7 +1284,7 @@ cancellation smoke harness of `d3734f1` (earlier range, deferred, not executed).
 | #984 | open | defer | Honors the selected language in the embedded browser. Launcher UI; needs a Windows check of the embedded browser before adoption. |
 | #985 | open | defer | Resets embedded browser session data. Destructive to the signed-in state; needs an explicit maintainer decision and a Windows account-bound check. |
 
-### Issues (#961-#986)
+### Issues (#961-#987)
 
 | Issue | State | Decision | Reason |
 | --- | --- | --- | --- |
@@ -1302,6 +1302,7 @@ cancellation smoke harness of `d3734f1` (earlier range, deferred, not executed).
 | #982 | open, macOS | defer | Midnight-delta check rejects plain-line `<subagents>`; reproduced on macOS. Reconsider with a Windows repro. |
 | #983 | open | defer | Free (Luna-only) account setup fails on the effort slider verification; account-bound, not reproducible here. |
 | #986 | open, Windows x64, 6.1.18, filed 2026-11-11 | defer; high priority | Windows report of fresh Web turns failing with `ChatGPT web turn is missing cw...` (missing trusted cwd) after toggling Bigger Context, a follow-up to #936 on 6.1.18. Adjacent to the recorded `workspace_roots, writable_roots` conflict, but the error text is not identical, and the upstream fix (`8203fb7`, which does not apply to this fork) is not yet proven for it. Causal role of the setting is unconfirmed by the reporter. Reconsider first: the Full Access authority group port (`8203fb7` with `e6ed93a`/`b48477e`/`760ab5a`), gated on a Windows reproduction that shows which root check fails. |
+| #987 | open, Windows x64, 6.1.18, filed 2026-11-11 | defer | "Local execution policy blocks a lot of calls" (Codex Desktop 26.1103): Codex refuses some local tool calls such as inspecting a Chrome tab or launching Discord or Chrome in debugging mode. The refusal comes from the Codex-side execution policy shown in the report, not from the bridge; no bridge log or reproduction is provided. Reconsider with a bridge-side trace or a reproduction on Windows that shows the bridge rejecting or altering the call. |
 
 ### Re-judged deferral groups
 
