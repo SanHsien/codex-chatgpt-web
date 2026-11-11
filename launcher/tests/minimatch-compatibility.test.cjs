@@ -7,10 +7,12 @@ const { join } = require('node:path');
 const manifest = require('../package.json');
 
 test('modern packaging consumers resolve the reviewed override and retain matching APIs', () => {
-  const range = manifest.overrides['minimatch@>=5'];
+  const range = manifest.overrides['minimatch@>=7.0.0 <11.0.1'];
   assert.equal(typeof range, 'string', 'modern minimatch consumers need a reviewed security override');
+  assert.equal(range, '11.0.5', 'the modern line must resolve to the patched 11.0.5 release');
   const semver = require('semver');
-  for (const consumer of ['app-builder-lib', '@electron/universal', 'filelist']) {
+  // filelist is a legacy consumer (minimatch 5, not overridden); the legacy test covers it.
+  for (const consumer of ['app-builder-lib', '@electron/universal']) {
     const consumerRequire = createRequire(require.resolve(consumer));
     const mm = consumerRequire('minimatch');
     assert.ok(semver.satisfies(consumerRequire('minimatch/package.json').version, range), consumer);
