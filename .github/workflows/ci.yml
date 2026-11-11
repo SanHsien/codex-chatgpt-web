@@ -27,6 +27,11 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
         working-directory: launcher
+      # bun install does not run Electron's runtime download (electron 45 ships no postinstall);
+      # install it here, outside any test budget, instead of during the Zero Risk test.
+      - name: Install Electron runtime
+        run: bun node_modules/electron/install.js
+        working-directory: launcher
       - name: Prepare AVX2-independent Windows runtime
         shell: pwsh
         run: ./scripts/prepare-windows-baseline-bun.ps1 -Version 1.4.2 -GitHubEnv $env:GITHUB_ENV
