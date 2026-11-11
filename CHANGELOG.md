@@ -3,6 +3,16 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-11-11
+
+- Review upstream 860fa57..32fd343 (v6.1.18, 12 commits, PRs #973-#985, issues #965-#983) and advance the
+  reviewed watermark to `32fd343`. Fork source stays 6.1.13; the public Windows installer/updater stays v5.0.6.
+- Port upstream fixes: exported recognized stream network error codes only (`3d43448`), retained observed
+  ChatGPT turn identities across helper replacement (`1be1e97`, #948), minimatch 11.0.5 for the modern line
+  (`5d4d9b6`, GHSA-g3hv-75wg-m249, lock regenerated), and the ready-tunnel test hardening (`32fd343`).
+- Defer the native-task and Full Access authority groups, update-check reporting, and the macOS-only browser
+  login fix, with triggers recorded in DECISIONS.
+
 ## 2026-11-05
 
 - Instant Web models always run at their only effort (`low`) instead of rejecting a global

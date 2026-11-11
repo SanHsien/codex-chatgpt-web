@@ -1241,3 +1241,78 @@ Adopted the two standalone, Windows-applicable fixes from the remaining 6.1.14â€
      - PR [#934](https://github.com/miuuyy/codex-chatgpt-web/pull/934): retain deferral. Changes clipboard ownership and IPC; requires stable tests proving clipboard restoration and exact acceptance without resubmission on Windows.
      - Issue [#912](https://github.com/miuuyy/codex-chatgpt-web/issues/912): retain deferral of intermediate preference redesign. Addressed via final #918 inverse migration (2026-11-03 decision).
      - Issue [#913](https://github.com/miuuyy/codex-chatgpt-web/issues/913): retain deferral. macOS measurements and local patches do not establish this fork's Windows/OpenCode contract; components #904 and #930 are separately bounded.
+
+## 2026-11-11 upstream review: 860fa57..32fd343 (v6.1.18, #965-#985)
+
+Reviewed-history update that also ports four fixes. The read-only range is
+`860fa576eb47d9e20d7d8289235bfea94392d2fd...32fd3436eb6ed94898b987a3c369003bb6fb8d54`
+(`upstream/main`): 12 non-merge commits and merge `9f2370c` (#973). Read alongside the code delta
+and the commit bodies. The watermark advances to `32fd343`; the source stays 6.1.13 and the public
+installer pin stays 5.0.6 (Bun 1.4.2 and Electron 44.9.1 kept). Upstream content was read as
+untrusted data. The scan of added lines found no zero-width characters, no `curl|bash`, `iwr|iex`,
+`bypassPermissions` or `--dangerously-skip-permissions`. The hits were read: an HTML comment in the
+PR template of `2d7c80a` (documentation only), and `--dangerously-bypass-approvals-and-sandbox` in the
+cancellation smoke harness of `d3734f1` (earlier range, deferred, not executed).
+
+### Commits
+
+| Commit | Decision | Reason and reconsideration condition |
+| --- | --- | --- |
+| `3d43448` export recognized network error codes (stream diagnostics) | ported | Only an allowlist of Chromium `net::ERR_*` codes is exported; any other CDP `errorText` becomes `unknown`, so messages, URLs and proxy details never leave. Red: the upstream test failed (`networkError` absent). Green after the source hunk applied cleanly: `tests/stream-diagnostics.test.ts` 8 pass, 0 fail. |
+| `1be1e97` retain observed turn identities across helpers (#948) | ported | The observer keeps observed identities with the document, and the submission baseline copies that history instead of the current snapshot, so a helper replacement cannot acknowledge Send from remounted history. Red: on Edge (`CHATGPT_DOM_TEST_BROWSER`), after scrolling, `currentSubmissionEvidence` threw `ChatGPT exposed 3 new conversation turns`. Green: `undefined`; `user_turn` for the new request with `acceptedUserIdentity` `group:user:new-request`; competing turns throw `2 new` and, after a fresh baseline, `3 new`, exactly as the upstream test asserts. Caveat: under `bun test` on this host, Playwright `browser.close()` does not return (a bare launch/setContent test also times out), so the upstream DOM test hits its 15 s timeout after its assertions. The same steps were run as a standalone Bun script against the same Edge build. The DOM tests stay gated by `CHATGPT_DOM_TEST_BROWSER`. |
+| `5d4d9b6` minimatch to 11.0.5 for modern lines (GHSA-g3hv-75wg-m249) | ported (manual, lock regenerated) | The fork's override `minimatch@>=5` to 11.0.4 kept a version below the advisory boundary `<11.0.1`. Replaced with `minimatch@>=7.0.0 <11.0.1` to 11.0.5. Legacy `filelist/minimatch` (5.1.9) and the 3.1.5 nodes now resolve without an override, as upstream designed. `launcher/bun.lock` regenerated with `bun install --lockfile-only`. Red: `tests/launcher-minimatch-override.test.ts` fails on the pre-change manifest and lock (override missing; 11.0.4 is below 11.0.5) and passes after. Launcher audit (`scripts/audit-launcher.ts`): no vulnerabilities. The audit-deferral for the 3.1.5 nodes still holds. |
+| `adabeb1` launcher Vite 6.4.5 | skip, already equivalent | The fork's `launcher/bun.lock` already resolves `vite@6.4.5` under `^6.4.4`. |
+| `32fd343` ready tunnel check independent of scheduling (test only) | ported (test hardening) | Adds a 5 s timeout and a mocked `Date` to one already-ready tmux test. Not a red/green change: the test is timing-dependent and has no behavioral assertion change. `launcher/tests/runtime-supervisor.test.cjs`: 63 pass, 1 skip, 0 fail. |
+| `8203fb7` accept current workspace roots recorded by Codex (#936/#939/#944/#945) | defer | The patch does not apply to `environment.ts` or `thread-environment.ts` (6.1.13 shape). It changes the authorization root check, so it belongs to the Full Access group with `e6ed93a`, `b48477e`, `760ab5a` (see 2026-10-29). Reconsider with that group, or on a Windows report of the `workspace_roots, writable_roots` conflict; require reordered-root, missing-rollout, restricted-mode and foreign-root negatives. |
+| `beee796` preserve native task provenance through compaction (#935/#957) | defer | The patch does not apply (`compaction-continuation.ts`, `environment.ts`). Same native-task group as `794e576`/`3b47927`. The ledger trigger (repeated-compaction, new-steering and forged-source negatives, plus the authority group) is not met on this fork. |
+| `c3b24da` preserve native goal edits during active web turns | defer | The patch does not apply (`environment.ts`, `native-context.ts`). Same native-task/authority group as `beee796`. |
+| `ce18786` expose update check failures, respect GitHub rate limits | defer | Touches `update.cjs` (retry and `retryAt`), `App.tsx`, `UpdateSettings.tsx`, `i18n.ts`, with its own tests. No fork-side equivalent, and no Windows report of a silent update failure or a rate limit. Port as a separate change with red tests. Reconsider on a Windows update-check failure with no visible message, or a rate-limit report. |
+| `373dd19` save security-key sign-ins by quitting dedicated Chrome gracefully (#973, merged) | defer | The fix is macOS-specific (`NSRunningApplication`, Command-Q semantics). A Windows equivalent (graceful CDP `Browser.close` before capture) is plausible but not verified, and there is no Windows account repro. Reconsider on a Windows security-key or passkey sign-in that loses the session after Continue. |
+| `2d7c80a` PR template and CONTRIBUTING screenshot rule | skip | Contribution policy for upstream PRs. This fork accepts no outside PRs (AGENTS: fork writes belong to the fork). |
+| `1cc49aa` release 6.1.18 | defer source/release adoption | Version strings only. Consistent with `860fa57`: no version or installer-pin change in a review-only update. |
+| `9f2370c` merge #973 | reject direct merge | Integration history; the component `373dd19` is decided above. |
+
+### Pull requests (#965-#985)
+
+| PR | State | Decision | Reason |
+| --- | --- | --- | --- |
+| #964 | closed | no change | Already reviewed on 2026-11-05. |
+| #973 | merged | defer (see `373dd19`) | macOS-specific fix. |
+| #978 | open | defer | Compaction effort and repeated failed Temporary Chat sends. Open and not stabilized; reconsider when merged, with a Windows repro of the failed-send loop. |
+| #979 | open draft | defer | Two-part history handoff proposal; draft. |
+| #981 | open | reject | Adds a Microsoft 365 Copilot provider and launcher integration. Outside this fork's ChatGPT Web scope; a new provider needs a separate requirement. |
+| #984 | open | defer | Honors the selected language in the embedded browser. Launcher UI; needs a Windows check of the embedded browser before adoption. |
+| #985 | open | defer | Resets embedded browser session data. Destructive to the signed-in state; needs an explicit maintainer decision and a Windows account-bound check. |
+
+### Issues (#961-#986)
+
+| Issue | State | Decision | Reason |
+| --- | --- | --- | --- |
+| #961 | open, Windows 11 | defer | "stream disconnected ... superseded" report without a root cause. Keep with #963 for a controlled Windows diagnosis. |
+| #963 | open, Windows | defer | Unchanged decision (2026-11-04). |
+| #965 | closed | reject | macOS performance report. |
+| #968 | closed | no change | Portuguese-language Windows MCP tunnel `removeChild` report, closed upstream; no fork reproduction. |
+| #969 | open, Linux | reject | Linux-only; this fork is Windows-only. |
+| #970 | closed | no change | Covered by #976 (below). |
+| #971 | open, macOS | defer | macOS env-context report. |
+| #974 | open, Windows 11, 6.1.18 | defer | "stream disconnected ... final DOM could not be aligned". A Windows report, but no bounded DOM capture or repro; same family as #910. Reconsider with a Windows reproduction and sanitized DOM evidence. |
+| #975 | open, Windows 11, Codex Desktop 26.1103 | defer | ChatGPT redirects back to the sign-in section after use. No logs or steps; not reproduced. Reconsider with a Windows repro and session-state evidence. |
+| #976 | open, macOS | defer | Native `gpt-6-astra` turns rejected for the reserved `web.run` function. macOS; reconsider if Windows Codex Desktop reports the same. |
+| #977 | open, macOS | defer | Composer draft restore breaks Bigger Context; reproduced on stock 6.1.17, macOS only. |
+| #982 | open, macOS | defer | Midnight-delta check rejects plain-line `<subagents>`; reproduced on macOS. Reconsider with a Windows repro. |
+| #983 | open | defer | Free (Luna-only) account setup fails on the effort slider verification; account-bound, not reproducible here. |
+| #986 | open, Windows x64, 6.1.18, filed 2026-11-11 | defer; high priority | Windows report of fresh Web turns failing with `ChatGPT web turn is missing cw...` (missing trusted cwd) after toggling Bigger Context, a follow-up to #936 on 6.1.18. Adjacent to the recorded `workspace_roots, writable_roots` conflict, but the error text is not identical, and the upstream fix (`8203fb7`, which does not apply to this fork) is not yet proven for it. Causal role of the setting is unconfirmed by the reporter. Reconsider first: the Full Access authority group port (`8203fb7` with `e6ed93a`/`b48477e`/`760ab5a`), gated on a Windows reproduction that shows which root check fails. |
+
+### Re-judged deferral groups
+
+- Native task group `794e576`/`3b47927` and `beee796`/`c3b24da`, and the Full Access authority group `8203fb7`/`e6ed93a`/`b48477e`/`760ab5a`: the new commits patch the `environment.ts` and `compaction-continuation.ts` regions that the fork's 6.1.13 shape lacks, so none applies. The trigger is not met; the group stays deferred as one unit.
+- `53b6050` (60 s command polls, ABI): unchanged; adopt with the next installer release.
+
+### Dependencies and gate status (2026-11-11)
+
+- `launcher/package.json` and `bun.lock`: `minimatch@>=7.0.0 <11.0.1` to 11.0.5 (upstream `5d4d9b6`); Vite moved in range to 6.4.6. The regression test `tests/launcher-minimatch-override.test.ts` was red on the pre-change manifest and lock.
+- Root `playwright-core` 1.65.0 was tried and reverted: `tests/chromium-bidi-compatibility.test.ts` failed (lazy BiDi imports need a layout the installed chromium-bidi 12.1.0 lacks). It is deferred with `latest: 1.65.0` in `.github/dependency-deferrals.json`.
+- New deferrals with reviewed bounds: Electron 45.3.0 (packaged smoke required), motion 14.12.0, `@vitejs/plugin-react` 6.3.0, Vite 8.3.8, chromium-bidi 160 line.
+- Test-only: `tests/launcher-browser-host.test.ts` deadline race (commit `9901977`). The server now never answers, so only the client deadline can end the request. Red was reproduced under induced CPU load (`aborted` / `ECONNRESET` instead of `timed out`); green on three loaded runs.
+- Load-sensitive timing tests (GPT-6 Plus stages, multipart compaction, oversized predictions, suspension clock) are recorded in ROADMAP. Their budgets were not widened.
+- Gate: `scripts/check-upstream-baseline.ts --strict` current; `scripts/check-dependency-freshness.ts --strict` current; `bun run verify` is the remaining item. See the 2026-11-11 CHANGELOG entry for the latest run result.
