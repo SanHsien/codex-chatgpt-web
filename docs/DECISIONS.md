@@ -1387,3 +1387,17 @@ Focused command:
 
 Windows Edge DOM tests are intentionally not run. Offline DOM, mocks and source contracts establish
 only local behavior; signed-in UI, MCP and packaged release acceptance remain independent.
+
+## 2026-11-13 launcher dependencies: Electron 45.3.1 adopted, motion re-deferred
+
+| Package | Decision | Reason |
+| --- | --- | --- |
+| `electron` 45.3.1 | adopt from 45.2.3 | The 2026-11-11 deferral asked for the packaged app:smoke and installer validation, or a security fix that only ships in 45.3.0; both now hold. 45.3.0 backports Chromium/Dawn/V8 fixes (Chromium 156.0.8078.96) and fixes incorrect display of hidden windows on Windows ([notes](https://github.com/electron/electron/releases/tag/v45.3.0)); 45.3.1 stops trusting eMudhra's revoked RSA intermediates ([notes](https://github.com/electron/electron/releases/tag/v45.3.1)). In the 45 line these ship only in 45.3.x. Exact manifest and lock pin move together; only the `electron` lock entry changed. Node stays on major 24. The Electron freshness deferral is removed. |
+| `motion` 14.13.0 | defer (bound 14.12.0 -> 14.13.0) | Still a major move from 12.43.0; the packaged animation inspection from 2026-11-04 is still outstanding. |
+
+Evidence (Bun 1.4.2): launcher `bun run test` 427 pass / 0 fail / 1 skip; `bun run package:win` built the unsigned Windows package; `bun run smoke:package` (the same script as root `app:smoke`: silent `/S /currentuser` install within its 120 s limit, then `--launcher-smoke-test`) printed `PACKAGED_LAUNCHER_SMOKE_OK win32/x64`, so the installer step that timed out on 2026-11-04 and with 45.2.2 passed this time. The script installs over an existing current-user installation; see REVIEW.
+
+## 2026-11-13 security: `hono` override 4.13.12 -> 4.13.18
+
+- `bun audit` flagged `hono` <4.13.16 through `@modelcontextprotocol/sdk > @hono/node-server > hono` (GHSA-4m76-xfj5-7975, `mount()` path bypassing middleware scoped inside the mount prefix). Hono published a batch of advisories on 2026-11-12 (also GHSA-46wx-v44x-9hh2, GHSA-4h7h-rv7c-7m2v, GHSA-h7mg-cq63-vhpq, GHSA-3gg2-335m-rxc6). The root override moved to 4.13.18, the newest 4.13 patch; only the `hono` lock entry changed. The project uses only the MCP stdio transport, so the HTTP adapter path stays unused; the pin keeps `bun audit` a working release gate.
+- Evidence (Bun 1.4.2): `bun run audit` "No vulnerabilities found"; `scripts/check-dependency-freshness.ts --strict` current.

@@ -5,6 +5,9 @@ This file records maintained-fork work and release identity. See this fork's
 
 ## 2026-11-13
 
+- Raise the `hono` override 4.13.12 -> 4.13.18 (GHSA-4m76-xfj5-7975 and the 2026-11-12 Hono advisory batch).
+- Adopt Electron 45.3.1 for the launcher (Chromium/V8 backports, Windows hidden-window fix, revoked
+  eMudhra intermediates distrusted); packaged launcher smoke passes. Re-defer motion 14.13.0.
 - Review all ten upstream commits in `32fd343..f08d165`; advance the reviewed main and branch watermarks
   to `f08d165` and latest PR #985 head to `d935e3c`. The live strict upstream check is current on all four axes. Source remains 6.1.13; public Windows installer/updater remains v5.0.6.
 - Port UUID subagent-list recognition for corroborated calendar deltas (#982), Mermaid preview-shell

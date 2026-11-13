@@ -602,3 +602,8 @@ Gate results:
 - `bun run launcher:test`: 427 pass / 1 skip / 0 fail.
 - Not run in this review: `bun run verify` and the Full `tools/dev_check.ps1` gate.
 - Whitespace: `git diff --check` exits 0.
+
+## 2026-11-13 Electron 45.3.1 package and installer smoke
+
+- Launcher `bun run test`: 427 pass, 0 fail, 1 skip. `bun run package:win` built the unsigned Windows installer. `bun run smoke:package` installed it silently (`/S /currentuser`) within 120 s, ran `--launcher-smoke-test`, verified the durable runtime manifest and printed `PACKAGED_LAUNCHER_SMOKE_OK win32/x64`.
+- Side effect: the installer uses the product GUID, so on a machine that already has Codex Web GPT installed for the current user it replaces that installation in place (`%LOCALAPPDATA%\Programs\Codex Web GPT`). On 2026-11-13 this replaced the maintainer's working launcher with the local 45.3.1 build; the launcher restarted and the bridge on 127.0.0.1:17841 answered `/healthz` 200 again about 13 minutes later. The ROADMAP has a row to make the script refuse to reinstall over an existing installation without an explicit opt-in.
