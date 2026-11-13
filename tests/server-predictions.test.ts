@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
+import * as tokenEstimate from "../src/lib/token-estimate";
 import { defaultConfig, type AppConfig } from "../src/config";
 import { responseRequest } from "../src/server";
 import type { CodexParsedRequest, CodexProviderConfig } from "../src/types";
@@ -74,13 +75,25 @@ test("disabled, Free, and manual-mode predictions stop before constructing an ad
 });
 
 test("oversized predictions skip rather than opening a tab, staging, or silently shortening history", async () => {
-  for (const proAvailable of [false, true]) {
-    const result = await send({ ...base, input: [{ type: "message", role: "user", content: [{
-      type: "input_text", text: "preserve this entire history ".repeat(60_000),
-    }] }] }, { ...defaultConfig("full"), proAvailable, experimentalBiggerContext: true });
-    expect(result.response.status).toBe(400);
-    expect(result.constructions).toBe(0);
-    expect(result.text).toContain("Next-message prediction skipped");
+  const history = "preserve this entire history";
+  const body = { ...base, input: [{ type: "message", role: "user", content: [{ type: "input_text", text: history }] }] };
+  const before = structuredClone(body);
+  // Force the token limit with a small payload, so JSON/tokenizer throughput is
+  // irrelevant. A shortened history no longer matches and cannot take this path.
+  const estimate = spyOn(tokenEstimate, "estimateTokens").mockImplementation(text =>
+    text.includes(history) ? 240_000 : Math.ceil(text.length / 4));
+  try {
+    for (const proAvailable of [false, true]) {
+      estimate.mockClear();
+      const result = await send(body, { ...defaultConfig("full"), proAvailable, experimentalBiggerContext: true });
+      expect(result.response.status).toBe(400);
+      expect(result.constructions).toBe(0);
+      expect(result.text).toContain("Next-message prediction skipped");
+      expect(estimate.mock.calls.some(([text]) => text.includes(history))).toBeTrue();
+      expect(body).toEqual(before);
+    }
+  } finally {
+    estimate.mockRestore();
   }
 });
 
