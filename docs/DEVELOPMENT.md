@@ -24,6 +24,19 @@ launcher, or consume model quota. Browser, account, MCP, and release smoke remai
 and cannot be inferred from unit tests.
 See [TEST_PLAN.md](TEST_PLAN.md), [REVIEW.md](REVIEW.md), and [UPSTREAM.md](UPSTREAM.md).
 
+## Package smoke overwrite consent
+
+Launcher `bun run smoke:package` installs the package silently with `/S /currentuser` using the
+product GUID. Before installation it reads `HKCU\Software\<guid>` for `InstallLocation`.
+An existing registration blocks installation unless `CODEX_WEB_GPT_SMOKE_ALLOW_OVERWRITE` is
+exactly `1`; the error reports the registered location and the required consent. Registry query
+failures or invalid locations also block installation. A clean CI runner needs no consent.
+
+To intentionally replace an existing installation, set
+`$env:CODEX_WEB_GPT_SMOKE_ALLOW_OVERWRITE = '1'` for that smoke run, then remove it with
+`Remove-Item Env:CODEX_WEB_GPT_SMOKE_ALLOW_OVERWRITE`. This replaces the installed launcher;
+it does not isolate the installer from the current user's installation.
+
 ## Dependency freshness
 
 `bun run check:dependencies` checks root and launcher using Bun `outdated` and `audit` without

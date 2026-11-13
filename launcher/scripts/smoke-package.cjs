@@ -3,6 +3,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { validateRuntimeBundle } = require("../electron/runtime-install.cjs");
+const { checkInstallOverwrite } = require("./smoke-package-install.cjs");
 
 if (process.platform !== "win32") throw new Error("Windows-only package smoke must run on Windows");
 
@@ -37,6 +38,7 @@ function artifact() {
 }
 
 try {
+  checkInstallOverwrite(launcherManifest.build.nsis.guid);
   const installer = artifact();
   const env = { ...process.env, TMPDIR: scratch, CODEX_WEB_GPT_LAUNCHER_DATA_DIR: path.join(scratch, "launcher-data"), CODEX_CHATGPT_WEB_HOME: coreHome, CODEX_HOME: path.join(scratch, "codex-home"), CODEX_WEB_GPT_SMOKE_FILE: markerPath };
   run(installer, ["/S", "/currentuser"], { timeout: 120_000 });
