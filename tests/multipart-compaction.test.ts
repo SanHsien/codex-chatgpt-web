@@ -1,4 +1,6 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
+import * as inputTokens from "../src/adapters/chatgpt-web/input-tokens";
+import * as tokenEstimate from "../src/lib/token-estimate";
 import {
   compileChatGptWebPrompt,
   type CompiledChatGptWebPrompt,
@@ -142,20 +144,27 @@ test("multipart compaction keeps history just below the ceiling without an extra
   const parsed = request();
   parsed.context.messages = [
     ...Array.from({ length: 10 }, (_, index) => ({
-      role: "user" as const, content: `history-${index} ${"word ".repeat(22_400)}`, timestamp: index + 1,
+      role: "user" as const, content: `history-${index} preserve this message`, timestamp: index + 1,
     })),
     { role: "user", content: "checkpoint now", timestamp: 11 },
   ];
-  const compiled = compileChatGptWebPrompt(parsed, capabilities, turnToken, { experimentalMultipartParts: 6 });
-  const tokens = estimateCompiledChatGptWebInputTokens(compiled, parsed.modelId);
-  expect(tokens).toBeGreaterThan(235_000);
-  expect(tokens).toBeLessThan(240_000);
-  expect(compiled.trimmedCompactionMessages).toBeUndefined();
-  expect(compiled.multipart!.parts.flatMap(part => JSON.parse(part).records)
-    .filter(record => record.kind === "message").map(record => record.message.content))
-    .toEqual(parsed.context.messages.map(message => message.content));
-  expect(compiled.multipart!.commit).not.toContain("history is incomplete");
-  expect(() => assertMultipartFits(compiled, parsed)).not.toThrow();
+  // Exercise the no-margin decision one token below the ceiling, independently of
+  // large-input tokenization. Other integration cases retain real token counts.
+  const messageEstimate = spyOn(tokenEstimate, "estimateTokens").mockImplementation(text => Math.ceil(text.length / 4));
+  const totalEstimate = spyOn(inputTokens, "estimateCompiledChatGptWebInputTokens").mockReturnValue(239_999);
+  try {
+    const compiled = compileChatGptWebPrompt(parsed, capabilities, turnToken, { experimentalMultipartParts: 6 });
+    expect(totalEstimate).toHaveBeenCalledWith(compiled, parsed.modelId);
+    expect(compiled.trimmedCompactionMessages).toBeUndefined();
+    expect(compiled.multipart!.parts.flatMap(part => JSON.parse(part).records)
+      .filter(record => record.kind === "message").map(record => record.message.content))
+      .toEqual(parsed.context.messages.map(message => message.content));
+    expect(compiled.multipart!.commit).not.toContain("history is incomplete");
+    expect(() => assertMultipartFits(compiled, parsed)).not.toThrow();
+  } finally {
+    totalEstimate.mockRestore();
+    messageEstimate.mockRestore();
+  }
 });
 
 test("ordinary multipart turns retain all history and fail preflight above the ceiling", () => {
