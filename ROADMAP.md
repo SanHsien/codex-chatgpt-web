@@ -22,7 +22,6 @@
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
 | 修正 `bun test` 下 Edge 真瀏覽器測試的 `browser.close()` 不返回問題 | 2026-11-11 審 `1be1e97`（#948）時，`CHATGPT_DOM_TEST_BROWSER` 的 DOM 測試在 bun test 下 15 s／5 s 逾時，單獨探針證實 `launch` 與操作正常、只卡 `close`；目前 DOM 證據只能靠獨立腳本 | 找出 close 不返回的原因（Playwright 版本與 bun 行程處理）後，`tests/browser-turn-binding.test.ts` 的 DOM 案例在 bun test 內直接綠 | Codex | docs/DECISIONS.md#2026-11-11-upstream-review-860fa57-32fd343-v6118-965-985 |
-| 本機高負載下時序測試不穩（`browser-worker-contract`：「GPT-6 Plus stages High…」與「the suspension clock ignores wall-clock jumps…」；`multipart-compaction`：「keeps history just below the ceiling…」；`server-predictions`：「oversized predictions skip…」） | 2026-11-11 完整 `dev_check` 三次執行，每次 3～4 個失敗且各不相同（最長 11.6 s）。隔離重跑證據：`browser-worker-contract`＋`multipart-compaction`＋`server-predictions` 共 180/180 通過；`chatgpt-model-selection`＋`server-compaction` 38/38 通過。suspension clock 在 8 個忙碌行程的負載下失敗（量到 160 ms，斷言 < 50 ms），隔離時通過。原因是預設 5 s 逾時與牆鐘斷言在並行壓力下脆弱，尚未在 HEAD 上實際對照，列為待辦 | 不放寬預算湊綠。改成注入時鐘或以行為斷言取代牆鐘比較；先在忙碌負載下重現紅燈，再修綠，逐測試各自一個 commit。`launcher-browser-host` 的 deadline 競態已於 `9901977` 單獨修正 | Codex | docs/DECISIONS.md#2026-11-11-upstream-review-860fa57-32fd343-v6118-965-985 |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |

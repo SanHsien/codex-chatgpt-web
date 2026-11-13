@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
@@ -17,6 +17,7 @@ import type { CodexProviderConfig } from "../src/types";
 import { compileChatGptWebPrompt, formatChatGptWebMultipartCommit, formatChatGptWebMultipartStage } from "../src/adapters/chatgpt-web/prompt";
 import { estimateCompiledChatGptWebInputTokens } from "../src/adapters/chatgpt-web/input-tokens";
 import { estimateTokens } from "../src/lib/token-estimate";
+import * as tokenEstimate from "../src/lib/token-estimate";
 import { chatGptHtmlToMarkdown } from "../src/adapters/chatgpt-web/markdown";
 
 function personalizedTemporaryChatRole(
@@ -837,22 +838,28 @@ test.each(["low", "high"] as const)("GPT-6 Plus stages High but keeps the Instan
   const capabilities = { localToolsEnabled: false, solAvailable: true, extraHighAvailable: false, proAvailable: false };
   let released = false;
   let browserStages = 0;
-  const prepared = { ...compileChatGptWebPrompt({
-    modelId: CHATGPT_WEB_MODEL_ID, stream: true, options: { reasoning },
-    context: { messages: [{ role: "user", content: "Keep the entire task.", timestamp: 1 }] },
-  }, capabilities, undefined, { experimentalMultipartParts: 2 }), release() { released = true; } };
-  const worker: any = ChatGptBrowserWorker.forProvider({
-    adapter: "chatgpt-web", baseUrl: `browser://${root}`, chatgptWeb: { browserDiagnosticsPath: root },
-  });
-  worker.runStage = async () => { browserStages++; throw new Error("Test reached browser acquisition"); };
+  // This contract concerns mode routing, not tokenizer startup or throughput.
+  const estimate = spyOn(tokenEstimate, "estimateTokens").mockImplementation(text => Math.ceil(text.length / 4));
   try {
+    const prepared = { ...compileChatGptWebPrompt({
+      modelId: CHATGPT_WEB_MODEL_ID, stream: true, options: { reasoning },
+      context: { messages: [{ role: "user", content: "Keep the entire task.", timestamp: 1 }] },
+    }, capabilities, undefined, { experimentalMultipartParts: 2 }), release() { released = true; } };
+    const worker: any = ChatGptBrowserWorker.forProvider({
+      adapter: "chatgpt-web", baseUrl: `browser://${root}`, chatgptWeb: { browserDiagnosticsPath: root },
+    });
+    worker.runStage = async () => { browserStages++; throw new Error("Test reached browser acquisition"); };
     await expect(worker.runBrowserTurn({
       traceId: "six_context", modelId: CHATGPT_WEB_MODEL_ID, modelFamily: "6", reasoning, capabilities,
       prepare: async () => prepared, onTextDelta() {}, onReasoningSummary() {},
     })).rejects.toThrow(reasoning === "low" ? "GPT-6 Instant uses standard context" : "Test reached browser acquisition");
     expect(browserStages).toBe(reasoning === "low" ? 0 : 1);
     expect(released).toBeTrue();
-  } finally { rmSync(root, { recursive: true, force: true }); }
+    expect(estimate).toHaveBeenCalled();
+  } finally {
+    estimate.mockRestore();
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("two-part saved chats re-prove unchanged effort after the first message creates the conversation URL", async () => {
@@ -4946,16 +4953,28 @@ test("the suspension clock charges only tick gaps that mean the process was froz
   expect(clock.suspendedMs()).toBe(15 * 60_000 - 1_000);
 });
 
-test("the suspension clock ignores wall-clock jumps because it is monotonic", async () => {
-  const realNow = Date.now;
+test("the suspension clock ignores wall-clock jumps because it is monotonic", () => {
+  let monotonicNow = 0;
+  let wallNow = 1_000_000;
+  let wallReads = 0;
+  const realMonotonicNow = performance.now;
+  const realWallNow = Date.now;
+  performance.now = () => monotonicNow;
+  Date.now = () => { wallReads++; return wallNow; };
   const clock = new ChatGptSuspensionClock(10, 50);
-  clock.start();
   try {
-    Date.now = () => realNow() + 60 * 60_000;
-    await new Promise(resolveSleep => setTimeout(resolveSleep, 60));
-    expect(clock.suspendedMs()).toBeLessThan(50);
+    for (const jump of [60 * 60_000, -2 * 60 * 60_000]) {
+      wallNow += jump;
+      monotonicNow += 10;
+      expect(clock.suspendedMs()).toBe(0);
+    }
+    // A real monotonic gap is still charged, independently of the wall clock.
+    monotonicNow += 100;
+    expect(clock.suspendedMs()).toBe(90);
+    expect(wallReads).toBe(0);
   } finally {
-    Date.now = realNow;
+    Date.now = realWallNow;
+    performance.now = realMonotonicNow;
   }
 });
 
