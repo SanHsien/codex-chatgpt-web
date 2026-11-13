@@ -17,7 +17,7 @@ action control, Codex sandboxing, and approvals aligned with the workspace's ris
 
 The stable MCP v1 SDK currently declares the vulnerable `@hono/node-server` 1.x range even though
 this project uses only its stdio transport. The lockfile explicitly resolves that unused HTTP
-adapter to patched 2.0.12. `bun audit`, the MCP protocol test, and the compiled-binary smoke test are
+adapter to a patched 2.x release through the root `overrides` pin (see `docs/DECISIONS.md`). `bun audit`, the MCP protocol test, and the compiled-binary smoke test are
 release gates; remove the override when the stable SDK itself moves to the patched major.
 
 Once the GitHub repository is public, use its private Security Advisory reporting flow. Until that

@@ -1317,3 +1317,9 @@ cancellation smoke harness of `d3734f1` (earlier range, deferred, not executed).
 - Test-only: `tests/launcher-browser-host.test.ts` deadline race (commit `9901977`). The server now never answers, so only the client deadline can end the request. Red was reproduced under induced CPU load (`aborted` / `ECONNRESET` instead of `timed out`); green on three loaded runs.
 - Load-sensitive timing tests (GPT-6 Plus stages, multipart compaction, oversized predictions, suspension clock) are recorded in ROADMAP. Their budgets were not widened.
 - Gate: `scripts/check-upstream-baseline.ts --strict` current; `scripts/check-dependency-freshness.ts --strict` current; `bun run verify` is the remaining item. See the 2026-11-11 CHANGELOG entry for the latest run result.
+
+## 2026-11-13 security: `@hono/node-server` 2.1.3 -> 2.1.6
+
+- `bun run audit` (inside `bun run verify`) reported two moderate advisories for `@hono/node-server` >=2.0.0 <2.1.6: GHSA-qv5m-9pm6-hqp3 (unhandled `ECONNRESET` during an asynchronous WebSocket upgrade crashes the process) and GHSA-jpvv-r467-5p4w (backslash parsed as a path separator, an access-control bypass behind a reverse proxy). The exact pin moved to 2.1.6, the first fixed patch release in the same minor line.
+- Evidence (Bun 1.4.2): `bun run audit` "No vulnerabilities found"; `pwsh -NoProfile -File tools/dev_check.ps1 -Quick` passed; `bun run test` 1162 pass / 101 skip / 0 fail; `tests/dependency-freshness.test.ts` 11 pass.
+- Not changed: the strict upstream baseline check reports new unreviewed upstream commits; that review is a separate ROADMAP item.

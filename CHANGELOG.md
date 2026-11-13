@@ -3,6 +3,11 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-11-13
+
+- Raise the `@hono/node-server` override 2.1.3 -> 2.1.6 for two moderate advisories
+  (GHSA-qv5m-9pm6-hqp3, GHSA-jpvv-r467-5p4w); `bun run audit` is clean again.
+
 ## 2026-11-11
 
 - Review upstream 860fa57..32fd343 (v6.1.18, 12 commits, PRs #973-#985, issues #965-#983) and advance the
