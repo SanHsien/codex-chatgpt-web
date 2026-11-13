@@ -11,7 +11,7 @@ import { chatGptStoppedThinkingError } from "../src/adapters/chatgpt-web/adapter
 import { CHATGPT_STOPPED_THINKING_LABELS } from "../src/adapters/chatgpt-web/ui-labels";
 import { CHATGPT_WEB_MODEL_ID } from "../src/adapters/chatgpt-web/model";
 import { CHATGPT_CONNECTOR_NAME, DEV_CHATGPT_CONNECTOR_NAME, defaultChromeExecutable, legacyChatGptConnectorMigrationMessage } from "../src/config";
-import { CHATGPT_SEND_BUTTON_SELECTOR, CHATGPT_STOP_BUTTON_SELECTOR, CHATGPT_THINK_BUTTON_SELECTOR, parseChatGptEffortSliderState } from "../src/chatgpt-session";
+import { CHATGPT_COMPOSER_SELECTOR, CHATGPT_EFFORT_SLIDER_CONTAINER_SELECTOR, CHATGPT_SEND_BUTTON_SELECTOR, CHATGPT_STOP_BUTTON_SELECTOR, CHATGPT_THINK_BUTTON_SELECTOR, parseChatGptEffortSliderState } from "../src/chatgpt-session";
 import { ChatGptExternalTurnProgress, chatGptExternalToolCallsAreInFlight } from "../src/adapters/chatgpt-web/turn-progress";
 import type { CodexProviderConfig } from "../src/types";
 import { compileChatGptWebPrompt, formatChatGptWebMultipartCommit, formatChatGptWebMultipartStage } from "../src/adapters/chatgpt-web/prompt";
@@ -1314,6 +1314,7 @@ test("large Markdown-rich context uses one plain-text editing command before exa
     fill: async (value: string) => { calls.push(["fill", value]); },
     focus: async () => { calls.push(["focus"]); },
     evaluate: async (fn: unknown, value: string, options: unknown) => {
+      calls.push(["evaluateFn", (fn as { name?: string })?.name]);
       calls.push(["evaluate", value]);
       calls.push(["evaluateOptions", options]);
       expect(typeof fn).toBe("function");
@@ -1334,6 +1335,7 @@ test("large Markdown-rich context uses one plain-text editing command before exa
   }, dialogPage("").page, prompt, false);
 
   expect(calls[0]).toEqual(["fill", ""]);
+  expect(calls.filter(call => call[0] === "evaluateFn")).toEqual([["evaluateFn", "replacePlainTextInComposer"]]);
   expect(calls.filter(call => call[0] === "evaluate")).toEqual([["evaluate", prompt]]);
   expect(calls.filter(call => call[0] === "evaluateOptions")).toEqual([
     ["evaluateOptions", { timeout: 20_000 }],
@@ -1916,6 +1918,156 @@ for (const useTemporaryChats of [false, true]) test(`connector verification prep
       "connector-verification-succeeded",
     ]);
   } finally {
+    rmSync(diagnosticsRoot, { recursive: true, force: true });
+  }
+});
+
+test("capability inspection records open slider state in safe logs before Escape closes the picker", async () => {
+  const diagnosticsRoot = mkdtempSync(join(tmpdir(), "cgw-capability-inspection-"));
+  let pickerOpen = false;
+  const logs: string[] = [];
+  const originalInfo = console.info;
+  console.info = (...values: unknown[]) => {
+    logs.push(values.map(value => typeof value === "string" ? value : JSON.stringify(value)).join(" "));
+  };
+  const slider = {
+    waitFor: async () => {},
+  };
+  const sliderContainer = {
+    filter() { return this; },
+    locator: () => slider,
+    isVisible: async () => pickerOpen,
+    waitFor: async () => {},
+    evaluate: async (read: (element: Element) => unknown) => {
+      const { createDocument } = require("@mixmark-io/domino") as { createDocument(html: string): Document };
+      const document = createDocument(`<div data-model-reasoning-effort-slider>
+        <span data-orientation="horizontal" aria-disabled="true">
+          <span data-selected="true"></span>
+          <span data-selected="false"></span>
+          <span data-selected="false"></span>
+        </span>
+        <span role="slider" aria-valuemin="0" aria-valuemax="2" aria-valuenow="0"></span>
+      </div>`);
+      return read(document.querySelector("[data-model-reasoning-effort-slider]")!);
+    },
+  };
+  const ownedMenu = { isVisible: async () => pickerOpen };
+  const hiddenSurface = {
+    filter() { return this; },
+    last() { return this; },
+    locator() { return this; },
+    isVisible: async () => false,
+    evaluateAll: async () => [],
+  };
+  const control = {
+    filter() { return this; },
+    isVisible: async () => true,
+    getAttribute: async (name: string) => {
+      if (name === "aria-controls") return pickerOpen ? "radix-effort-menu" : null;
+      if (name === "aria-expanded") return pickerOpen ? "true" : "false";
+      if (name === "data-state") return pickerOpen ? "open" : "closed";
+      return null;
+    },
+    click: async () => { pickerOpen = true; },
+  };
+  const composer = {
+    filter() { return this; },
+    count: async () => 1,
+    locator: () => ({ count: async () => 1, locator: () => control }),
+  };
+  const page = {
+    url: () => "https://chatgpt.com/",
+    locator: (selector: string) => {
+      if (selector === CHATGPT_COMPOSER_SELECTOR) return composer;
+      if (selector === '[id="radix-effort-menu"]') return ownedMenu;
+      if (selector === CHATGPT_EFFORT_SLIDER_CONTAINER_SELECTOR) return sliderContainer;
+      return hiddenSurface;
+    },
+    keyboard: {
+      press: async (key: string) => {
+        if (key === "Escape") pickerOpen = false;
+      },
+    },
+    evaluate: async (_fn: unknown, arg?: unknown) => {
+      if (arg && typeof arg === "object" && "effortSliderContainerSelector" in arg) {
+        return {
+          location: { origin: "https://chatgpt.com", pathSegments: 0, temporaryChat: false },
+          composer: { visibleCount: 1, textChars: [0], privateDraft: "secret" },
+          effortControls: [{ tag: "button", ariaExpanded: String(pickerOpen) }],
+          effortSliders: pickerOpen
+            ? [{
+                min: 0,
+                max: 2,
+                value: 0,
+                power: false,
+                enabled: false,
+                ticks: [{ locked: null }, { locked: null }, { locked: null }],
+              }]
+            : [],
+        };
+      }
+      if (arg && typeof arg === "object" && "sampleFrames" in arg) {
+        return { activeTag: "button" };
+      }
+      return {};
+    },
+  };
+  const inspectSessionExclusive = (ChatGptBrowserWorker.prototype as unknown as {
+    inspectSessionExclusive(detectCapabilities: boolean, traceId?: string): Promise<unknown>;
+  }).inspectSessionExclusive;
+
+  try {
+    expect(await inspectSessionExclusive.call({
+      config: { appName: "Codex Native2", browserDiagnosticsPath: diagnosticsRoot },
+      ensurePage: async () => page,
+      prepareChatSurface: async (_page: unknown, _capture: unknown, temporary: boolean) => {
+        expect(temporary).toBe(true);
+      },
+    }, false, "inspect-session-only")).toEqual({
+      authenticated: true,
+      temporary: true,
+      url: "https://chatgpt.com/",
+    });
+    expect(readdirSync(diagnosticsRoot)).toEqual([]);
+
+    await expect(inspectSessionExclusive.call({
+      config: { appName: "Codex Native2", browserDiagnosticsPath: diagnosticsRoot },
+      ensurePage: async () => page,
+      prepareChatSurface: async (_page: unknown, capture: ((checkpoint: string) => Promise<void>) | undefined, temporary: boolean) => {
+        expect(temporary).toBe(true);
+        await capture?.("composer-ready");
+      },
+    }, true, "inspect-capability-failure")).rejects.toThrow(
+      "ChatGPT effort availability could not be verified from its slider ticks",
+    );
+
+    expect(pickerOpen).toBe(false);
+    const [traceDirectory] = readdirSync(diagnosticsRoot);
+    expect(traceDirectory).toStartWith("inspect-capability-failure-");
+    expect(JSON.parse(readFileSync(join(diagnosticsRoot, traceDirectory!, ".trace-state"), "utf8")).status).toBe("failed");
+    const checkpoints = readdirSync(join(diagnosticsRoot, traceDirectory!))
+      .filter(name => name.endsWith(".json"))
+      .sort()
+      .map(name => JSON.parse(readFileSync(join(diagnosticsRoot, traceDirectory!, name), "utf8")));
+    expect(checkpoints.map(checkpoint => checkpoint.checkpoint)).toEqual([
+      "capability-inspection-started",
+      "composer-ready",
+      "capability-inspection-failed",
+    ]);
+    expect(checkpoints.at(-1)?.state?.effortSliders).toEqual([{
+      min: 0,
+      max: 2,
+      value: 0,
+      power: false,
+      enabled: false,
+      ticks: [{ locked: null }, { locked: null }, { locked: null }],
+    }]);
+    const pageStateLine = logs.find(line => line.startsWith("[chatgpt-web] page_state "));
+    expect(pageStateLine).toContain('"checkpoint":"03-capability-inspection-failed"');
+    expect(pageStateLine).toContain('"effortSliders":[{"min":0,"max":2,"value":0,"power":false,"enabled":false');
+    expect(logs.join("\n")).not.toContain("secret");
+  } finally {
+    console.info = originalInfo;
     rmSync(diagnosticsRoot, { recursive: true, force: true });
   }
 });

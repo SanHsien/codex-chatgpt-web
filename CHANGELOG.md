@@ -5,6 +5,13 @@ This file records maintained-fork work and release identity. See this fork's
 
 ## 2026-11-13
 
+- Review all ten upstream commits in `32fd343..f08d165`; advance the reviewed main and branch watermarks
+  to `f08d165` and latest PR #985 head to `d935e3c`. The live strict upstream check is current on all four axes. Source remains 6.1.13; public Windows installer/updater remains v5.0.6.
+- Port UUID subagent-list recognition for corroborated calendar deltas (#982), Mermaid preview-shell
+  alignment (#974), atomic restored-draft replacement for plain prompts (#977), and owned Radix effort-menu
+  activation with sanitized failure diagnostics before cleanup (#983), with regression coverage.
+- Keep launcher language/restart changes (#984) and browser-data reset/lifecycle changes (#985) deferred
+  for Windows acceptance; record each commit and reconsideration condition in DECISIONS.
 - Raise the `@hono/node-server` override 2.1.3 -> 2.1.6 for two moderate advisories
   (GHSA-qv5m-9pm6-hqp3, GHSA-jpvv-r467-5p4w); `bun run audit` is clean again.
 

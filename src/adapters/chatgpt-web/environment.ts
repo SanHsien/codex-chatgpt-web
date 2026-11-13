@@ -496,7 +496,10 @@ export function extractChatGptSteeringEnvironmentClaim(parsed: CodexParsedReques
 
 // The root list keeps a single trailing \s* after the last <root>: a \s* both before and after each root let a run of
 // whitespace split between neighbouring roots in exponentially many ways (CodeQL js/redos).
-export const CALENDAR_ENVIRONMENT_PATTERN = /^<environment_context>\s*<current_date>\d{4}-\d{2}-\d{2}<\/current_date>\s*(?:<timezone>[^<>]+<\/timezone>\s*)?<filesystem>\s*(?:<workspace_roots>((?:\s*<root>[^<>]+<\/root>)+\s*)<\/workspace_roots>\s*)?(<permission_profile type="(?:disabled|managed)">[\s\S]*?<\/permission_profile>)\s*<\/filesystem>\s*(?:<subagents>\s*(?:<agent name="[^<>"\r\n]+"\s*\/>\s*)*<\/subagents>\s*)?<\/environment_context>$/;
+const SUBAGENT_UUID_LINE = String.raw`-[ \t]+[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}(?::[ \t]*[^<>\r\n]+)?`;
+export const CALENDAR_ENVIRONMENT_PATTERN = new RegExp(
+  String.raw`^<environment_context>\s*<current_date>\d{4}-\d{2}-\d{2}<\/current_date>\s*(?:<timezone>[^<>]+<\/timezone>\s*)?<filesystem>\s*(?:<workspace_roots>((?:\s*<root>[^<>]+<\/root>)+\s*)<\/workspace_roots>\s*)?(<permission_profile type="(?:disabled|managed)">[\s\S]*?<\/permission_profile>)\s*<\/filesystem>\s*(?:<subagents>\s*(?:(?:<agent name="[^<>"\r\n]+"\s*\/>\s*)*|${SUBAGENT_UUID_LINE}(?:[ \t]*\r?\n[ \t]*${SUBAGENT_UUID_LINE})*\s*)<\/subagents>\s*)?<\/environment_context>$`,
+);
 
 /**
  * Native world-state diffs omit unchanged cwd/shell at midnight but repeat the filesystem
@@ -533,7 +536,7 @@ export function extractChatGptCalendarEnvironmentDelta(
     const text = rawMessageText(item).trim();
     // Match the whole native fragment, not just the presence of a permission profile: another
     // profile, a malformed cwd, or any additional permission declaration must fail closed.
-    // Native midnight updates can also repeat a worker inventory. Its exact name-only
+    // Native midnight updates can also repeat a worker inventory. Its bounded name/UUID-only
     // shape is contextual; it grants neither filesystem authority nor child ownership.
     const match = CALENDAR_ENVIRONMENT_PATTERN.exec(text);
     if (!match

@@ -1,5 +1,21 @@
 # Upstream tracking
 
+## 2026-11-13: 32fd343..f08d165
+
+Reviewed all ten commits (eight non-merge commits and two merges) in the existing local
+`upstream/main` range `32fd3436eb6ed94898b987a3c369003bb6fb8d54..f08d16509e6a5447a0d0f2943abb172c69705160`.
+Live strict upstream check: latest PR #985, merged, head `d935e3cf75df72102f7414375f20887ef5f40c80`,
+latest non-PR issue #987, branches `main@f08d16509e6a5447a0d0f2943abb172c69705160` and
+`fix/current-workspace-roots@adabeb16abad149f64546b45e8ef88aa4c917f56`; all four axes current. See the
+[per-commit register](DECISIONS.md#2026-11-13-upstream-review-32fd343f08d165).
+
+Adopted four bounded core fixes: UUID subagent inventories in calendar deltas (#982), Mermaid preview
+alignment (#974), restored draft replacement (#977), and effort-menu capability inspection (#983).
+Launcher language changes (#984) and browser-data reset (#985) remain deferred for Windows acceptance;
+merge commits are skipped as duplicate integration history. Reviewed does not mean merged: source
+remains 6.1.13, public Windows installer/updater remains v5.0.6, and Bun remains 1.4.2.
+Earlier dated inventories below remain historical snapshots.
+
 The baseline is reviewed history, not a merge target. A read-only revalidation on 2026-09-13 found
 upstream `main` and its only branch still at `e85e3693fdb4e3e033348c08df0298c20fcdb612`, the latest
 PR at open [#470](https://github.com/miuuyy/codex-chatgpt-web/pull/470) head

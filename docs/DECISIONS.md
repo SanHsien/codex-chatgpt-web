@@ -1323,3 +1323,67 @@ cancellation smoke harness of `d3734f1` (earlier range, deferred, not executed).
 - `bun run audit` (inside `bun run verify`) reported two moderate advisories for `@hono/node-server` >=2.0.0 <2.1.6: GHSA-qv5m-9pm6-hqp3 (unhandled `ECONNRESET` during an asynchronous WebSocket upgrade crashes the process) and GHSA-jpvv-r467-5p4w (backslash parsed as a path separator, an access-control bypass behind a reverse proxy). The exact pin moved to 2.1.6, the first fixed patch release in the same minor line.
 - Evidence (Bun 1.4.2): `bun run audit` "No vulnerabilities found"; `pwsh -NoProfile -File tools/dev_check.ps1 -Quick` passed; `bun run test` 1162 pass / 101 skip / 0 fail; `tests/dependency-freshness.test.ts` 11 pass.
 - Not changed: the strict upstream baseline check reports new unreviewed upstream commits; that review is a separate ROADMAP item.
+
+## 2026-11-13 upstream review: 32fd343..f08d165
+
+Reviewed all ten commits in local `upstream/main`, from
+`32fd3436eb6ed94898b987a3c369003bb6fb8d54` (exclusive) through
+`f08d16509e6a5447a0d0f2943abb172c69705160` (inclusive), using commit bodies and complete source/test
+deltas. No fetch, merge, cherry-pick, upstream write or release action. Four core fixes are independently
+ported; the fork source remains 6.1.13 and installer/updater remains v5.0.6. Bun 1.4.2, both lockfiles,
+the existing Electron pin, Windows packaging and bilingual READMEs are preserved.
+
+### Commits (oldest first)
+
+| Commit | Decision | Reason and reconsideration condition |
+| --- | --- | --- |
+| `ddfb69a804d433067fd0ec87f236561c4e8a8270` embedded browser language | defer | Moves state-store initialization before Electron readiness and applies a process-wide Chromium `lang` switch. PR #984 is now merged and has unit tests, but that does not prove the packaged Windows browser's language or sign-in behavior. Reconsider together with `e9c9509` after Windows first-run, full-quit/reopen, invalid-language fallback and saved ChatGPT-language acceptance. No launcher locale change is ported. |
+| `e9c9509579c25a9c22e45c673198c21d48e64578` restart/language hints | defer | Companion UI copy for the deferred locale behavior; adopting it alone would promise unsupported behavior. Reconsider with `ddfb69a`, preserving this fork's product wording and zh-TW/English copy. |
+| `8b1fd95f6a2bece9dee9d8d8f4dfd6a8317f5918` merge #984 | skip | Duplicate integration history; both component commits are reviewed above. No direct merge into the fork. |
+| `ccf1061afb3660a124cb6097b9d9cb672a8bb3f8` embedded browser data reset | defer | Adds IPC and a confirmed UI action that clears cookies, cache and site data and forces sign-in again. PR #985 is merged, but the 2026-11-11 requirement for an explicit feature decision and Windows account-bound acceptance is still unmet. Reconsider with `d935e3c`, proving confirmation/cancel, owned-session isolation, active-turn handling, failure recovery and sign-in after reset. No data reset is performed. |
+| `d935e3cf75df72102f7414375f20887ef5f40c80` reset lifecycle | defer | Companion fix navigates all live contents idle before clearing storage, closes tabs afterward, rewrites the descriptor, waits for runtime startup and dismisses the session reminder after success. It depends on the deferred reset feature and the fork also defers the native session-reminder layer. Reconsider as one Windows-tested reset/lifecycle group; do not introduce the reminder layer implicitly. |
+| `890153cf78bfd01ffebaa7e23d5e5fbabfd2de46` UUID subagent inventories (#982) | adopt | Independently extend the fork's exported calendar pattern for UUID lines, optional labels and empty inventories. Keep the existing CodeQL root-list hardening and all rollout, current-turn, permission-profile and root corroboration. The inventory grants no authority or child ownership. Tests cover V1/V2 continuation, malformed UUIDs, injected cwd and changed roots/profiles. Reconsider if native inventory syntax changes or a negative regression fails. |
+| `e574edcbbdf12b7301b6aac5b9dc99e03abc19cc` Mermaid preview remounts (#974) | adopt | Remove preview-only shells before Markdown alignment while retaining separate Mermaid code and code views inside previews. The offline DOM fixture reproduces remount/duplicate shells, proves no repeated output and retains Mermaid source. This addresses a Windows-reported alignment family without weakening committed-range checks. Reconsider if ChatGPT changes preview/code markup. |
+| `33d248957bde6f035aae63641d47f56de8e831cf` restored composer drafts (#977) | adopt | Plain prompts and Bigger Context stages select the entire editor and insert in one synchronous step, preventing a draft restored after clear from being prepended. Connector-pill insertion retains its existing path; exact readback and abort checks remain authoritative. Selection/focus unit tests and the worker contract prove replacement selection. Reconsider if editor selection semantics change; signed-in draft restoration remains separate acceptance. |
+| `3b41eda2efa731245d171b51dbd30935e587c937` merge #985 | skip | Duplicate integration history; both reset component commits are deferred above. No direct merge. |
+| `f08d16509e6a5447a0d0f2943abb172c69705160` capability inspection (#983) | adopt | Use the existing owned Radix activation (click/pointerdown) instead of Enter and capture sanitized slider failure evidence before Escape. Forward and validate the inspection trace id. Adapt to the fork's existing `chatgpt-session.ts` module, retaining its `temporary: true` result and forced Temporary Chat inspection isolation. Tests prove the pointer fallback, open-slider capture, one failure checkpoint, cleanup and secret exclusion. Reconsider on menu/slider contract changes; account-tier behavior still needs separate acceptance. |
+
+### Inventory and superseded dispositions
+
+Live `bun run scripts/check-upstream-baseline.ts --strict` reports all four axes current: main `f08d165`,
+latest PR #985/head `d935e3c` (merged), non-PR issue #987, and two branches: main plus unchanged
+`fix/current-workspace-roots@adabeb16abad149f64546b45e8ef88aa4c917f56`. No checker bypass or fallback was added.
+
+This supersedes the 2026-11-11 deferrals for the bounded code fixes #974/#977/#982/#983 only;
+it does not close account-bound acceptance. #984/#985 are merged but still deferred in this fork.
+The supplied recent-PR snapshot also records #981 closed (provider remains out of scope), #978 open at
+`be5afa0f3e0840e89229d451a0e8bf3740243e09` and #979 open at
+`5841e1e79c937da51ed74f4c2986c441c9e6cb03`. Their unmerged heads are outside this ten-commit review;
+the existing compaction/authority deferrals remain. The native-task, Full Access, updater reporting,
+session-reminder and release/ABI groups retain their existing triggers.
+
+### Verification
+
+All commands use Bun 1.4.2. The added product regressions were run before source changes:
+25 pass, 7 fail and 1 module-load error (the new composer replacement export was absent).
+Failures identify V1/V2 UUID delta rejection, Mermaid remount consistency, plain-prompt insertion,
+Enter-based capability activation and missing pre-cleanup diagnostics. After porting, the five focused
+files passed: 358 pass, 1 skip, 0 fail. The baseline-contract red check separately produced
+3 pass, 1 fail before updating the baseline.
+
+Focused command:
+`bun test tests/environment.test.ts tests/browser-response-dom.test.ts tests/browser-worker-contract.test.ts tests/composer-insert.test.ts tests/chatgpt-session.test.ts`.
+
+- `pwsh -NoProfile -File tools/dev_check.ps1 -Quick`: exit 0; focused maintenance tests, version
+  6.1.13/Bun 1.4.2, typecheck and whitespace pass.
+- `bun run test`: exit 0; 1167 pass, 101 skip, 0 fail.
+- `bun run scripts/check-upstream-baseline.ts --strict`: exit 0, all four axes current.
+- `bun run scripts/check-dependency-freshness.ts --strict` is red for an unrelated reason: launcher
+  `motion` 14.13.0 and `electron` 45.3.1 were released past their recorded deferral bounds. That
+  re-judgement is tracked separately; this port touches no lockfile or launcher source.
+- `git diff --check`: exit 0. The upstream added-line scan finds no zero-width/bidi control
+  characters or remote-pipe/permission-bypass command patterns. This is a bounded text scan, not
+  proof of general security.
+
+Windows Edge DOM tests are intentionally not run. Offline DOM, mocks and source contracts establish
+only local behavior; signed-in UI, MCP and packaged release acceptance remain independent.
