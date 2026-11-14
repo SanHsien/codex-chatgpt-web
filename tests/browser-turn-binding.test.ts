@@ -1,13 +1,28 @@
-import { expect, test } from "bun:test";
-import { chromium, type Locator, type Page } from "playwright-core";
+import { afterAll, beforeAll, expect, test } from "bun:test";
+import { chromium, type Browser, type Locator, type Page } from "playwright-core";
 import { ChatGptBrowserWorker } from "../src/adapters/chatgpt-web/browser-worker";
 import { chatGptHtmlToMarkdown, ChatGptMarkdownBuffer } from "../src/adapters/chatgpt-web/markdown";
 import { readFileSync } from "node:fs";
 
+// Own the Edge process at suite scope: process shutdown can outlast a case's
+// assertion budget. Every case still gets fresh contexts, closed in its finally.
+let browser: Browser;
+beforeAll(async () => {
+  if (!process.env.CHATGPT_DOM_TEST_BROWSER) return;
+  browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
+}, 15_000);
+
+afterAll(async () => {
+  if (browser) await browser.close();
+}, 15_000);
+
+async function closeTestContexts(): Promise<void> {
+  for (const context of browser.contexts()) await context.close();
+}
+
 // 2026-11-08, #948: scrolling a real retained ChatGPT conversation removed whole
 // data-turn-key groups. Returning to them reported three new user turns without Send.
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("scrolling previously observed history cannot acknowledge Send after helper replacement", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const page = await browser.newPage();
     const group = (id: string) => `<div data-turn-key="${id}"><div data-user-message-bubble>${id}</div><div data-conversation-role="assistant">Answer</div></div>`;
@@ -38,11 +53,10 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("scrolling previously observe
     const fresh = await second.captureSubmissionBaseline(page, "Next request");
     await page.locator("main").evaluate((node, html) => { node.innerHTML = html; }, old);
     await expect(second.currentSubmissionEvidence(page, fresh)).rejects.toThrow("3 new conversation turns");
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 }, 15_000);
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("CodeMirror language invalidates the response cache and incomplete code is not delivered", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const page = await browser.newPage();
     await page.setContent(readFileSync(new URL("./fixtures/chatgpt-codemirror-reply-2026-10-11.html", import.meta.url), "utf8"));
@@ -58,11 +72,10 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("CodeMirror language invalida
       editor.appendChild(gap);
     });
     await expect(observe()).rejects.toThrow("one complete set of code lines");
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 });
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("paragraph identity survives file preview movement in both response layouts", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     for (const root of ['class="markdown"', 'data-markdown-text-style="assistant-message"']) {
       const page = await browser.newPage();
@@ -88,11 +101,10 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("paragraph identity survives 
       expect(() => buffer.finish()).toThrow();
       await page.close();
     }
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 }, 15_000);
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("activity tone and collapsed content invalidate the response cache", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const page = await browser.newPage();
     await page.setContent(readFileSync(new URL("./fixtures/chatgpt-activity-summaries.html", import.meta.url), "utf8"));
@@ -115,11 +127,10 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("activity tone and collapsed 
     expect(collapsed.visibleText).toBe("answer 1");
     await summary.evaluate(node => { node.parentElement!.hidden = false; });
     expect((await observe()).traceBlocks).toEqual(first.traceBlocks);
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 }, 15_000);
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("preserves the accepted user identity across Activity's temporary fallback group", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
     const prompt = "Read first.txt.\n\nReturn its contents.";
@@ -154,13 +165,12 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("preserves the accepted user 
       }
       await page.close();
     }
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 }, 15_000);
 
 // Execute the real observation/rebinding code against the reported renderer transition.
 // No account, network requests, or model submissions are used.
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("an exchange rekeys only with the exact submitted prompt and no competing turn", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const worker = Object.create(ChatGptBrowserWorker.prototype) as {
       captureSubmissionBaseline(page: Page, submittedText?: string): Promise<unknown>;
@@ -200,11 +210,10 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("an exchange rekeys only with
       }
       await page.close();
     }
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 }, 30_000);
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("collapsed plugin messages rebind only after their complete text is verified", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
     worker.config = { appName: "Clew review" };
@@ -247,11 +256,10 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("collapsed plugin messages re
       else expect(result.error).toBeInstanceOf(Error);
       await page.close();
     }
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 }, 20_000);
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("auto-linked URLs preserve exact prompt text and reject changed labels or destinations", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const page = await browser.newPage();
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
@@ -269,11 +277,10 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("auto-linked URLs preserve ex
       }, { url, scenario });
       expect(await worker.userMessageMatchesSubmission(page.locator('#group'), prompt)).toBe(scenario === "exact");
     }
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 });
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("reading a collapsed message restores the viewport and remounts its virtualized active answer", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const page = await browser.newPage();
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
@@ -298,11 +305,10 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("reading a collapsed message 
     expect(await page.locator('#answer').count()).toBe(1);
     expect(await page.locator('#scroll').evaluate(node => node.scrollHeight - node.clientHeight - node.scrollTop)).toBeLessThanOrEqual(1);
     expect(await page.locator('#composer').evaluate(node => document.activeElement === node)).toBeTrue();
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 });
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("plain user code blocks preserve the full submitted code and whitespace", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const page = await browser.newPage();
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
@@ -312,11 +318,10 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("plain user code blocks prese
       + 'Literal header\n\n<pre data-markdown-copy="code-block"><code data-markdown-copy-content="true" data-language="json">{"value":"a  b"}</code></pre>\n\n\tEnd.</div></div></div>');
     expect(await worker.userMessageMatchesSubmission(page.locator('#group'), prompt)).toBeTrue();
     expect(await worker.userMessageMatchesSubmission(page.locator('#group'), prompt.replace('a  b', 'a b'))).toBeFalse();
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 });
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("rich-text rebind requires the exact prepared turn token after expansion", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
     const token = "turn_0123456789abcdef0123456789abcdef";
@@ -354,11 +359,10 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("rich-text rebind requires th
       expect(invalid).toBeInstanceOf(Error);
       await page.close();
     }
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 }, 20_000);
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("rebind reads token boundaries across rendered lines without accepting hidden or ambiguous tokens", async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
     const token = "turn_0123456789abcdef0123456789abcdef";
@@ -394,14 +398,13 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("rebind reads token boundarie
         .toBe("group:assistant:persisted");
       await page.close();
     }
-  } finally { await browser.close(); }
+  } finally { await closeTestContexts(); }
 }, 20_000);
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("binds captured Activity before an answer exists and recognizes uploaded native-button tiles", async () => {
   const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: request => new URL(request.url).pathname === "/backend-api/files/process_upload_stream"
     ? new Response(JSON.stringify({ event: "file.processing.completed", file_id: "fixture-file" }) + "\n", { headers: { "content-type": "application/x-ndjson" } })
     : new Response("<main></main>", { headers: { "content-type": "text/html" } }) });
-  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const page = await browser.newPage();
     await page.goto(`http://127.0.0.1:${server.port}`);
@@ -425,5 +428,7 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("binds captured Activity befo
       await worker.attachFiles(page, { images: [{ ref: "codex-input-image-1", imageUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" }] });
       expect(await page.locator('input[type="file"]').evaluate(input => (input as HTMLInputElement).files?.[0]?.name)).toBe("codex-input-image-1.png");
     }
-  } finally { await browser.close(); server.stop(true); }
+  } finally {
+    try { await closeTestContexts(); } finally { server.stop(true); }
+  }
 }, 15_000);

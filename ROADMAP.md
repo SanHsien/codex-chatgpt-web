@@ -21,7 +21,6 @@
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 修正 `bun test` 下 Edge 真瀏覽器測試的 `browser.close()` 不返回問題 | 2026-11-11 審 `1be1e97`（#948）時，`CHATGPT_DOM_TEST_BROWSER` 的 DOM 測試在 bun test 下 15 s／5 s 逾時，單獨探針證實 `launch` 與操作正常、只卡 `close`；目前 DOM 證據只能靠獨立腳本 | 找出 close 不返回的原因（Playwright 版本與 bun 行程處理）後，`tests/browser-turn-binding.test.ts` 的 DOM 案例在 bun test 內直接綠 | Codex | docs/DECISIONS.md#2026-11-11-upstream-review-860fa57-32fd343-v6118-965-985 |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |

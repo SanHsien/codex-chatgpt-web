@@ -607,3 +607,13 @@ Gate results:
 
 - Launcher `bun run test`: 427 pass, 0 fail, 1 skip. `bun run package:win` built the unsigned Windows installer. `bun run smoke:package` installed it silently (`/S /currentuser`) within 120 s, ran `--launcher-smoke-test`, verified the durable runtime manifest and printed `PACKAGED_LAUNCHER_SMOKE_OK win32/x64`.
 - Side effect: the installer uses the product GUID, so on a machine that already has Codex Web GPT installed for the current user it replaces that installation in place (`%LOCALAPPDATA%\Programs\Codex Web GPT`). On 2026-11-13 this replaced the maintainer's working launcher with the local 45.3.1 build; the launcher restarted and the bridge on 127.0.0.1:17841 answered `/healthz` 200 again about 13 minutes later. Fixed 2026-11-13 in `88f84f7`: the script now refuses when `HKCU\Software\<guid>` has an `InstallLocation`, unless `CODEX_WEB_GPT_SMOKE_ALLOW_OVERWRITE=1` (see `docs/DEVELOPMENT.md`).
+
+## 2026-11-14 turn-binding DOM fixture lifecycle correction
+
+The Edge close issue is addressed in `tests/browser-turn-binding.test.ts` by moving
+process launch/shutdown to bounded suite hooks and explicitly closing each case's
+contexts in `finally`. The previous interpretation of every timeout as a non-returning
+`browser.close()` is superseded: shutdown can finish after the case deadline and overlap
+the next case. The existing exact-text, destination, competing-turn and token assertions
+are retained, as are their case timeouts. See the
+[decision](DECISIONS.md#2026-11-14-dom-fixture-browser-lifecycle).

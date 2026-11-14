@@ -1401,3 +1401,20 @@ Evidence (Bun 1.4.2): launcher `bun run test` 427 pass / 0 fail / 1 skip; `bun r
 
 - `bun audit` flagged `hono` <4.13.16 through `@modelcontextprotocol/sdk > @hono/node-server > hono` (GHSA-4m76-xfj5-7975, `mount()` path bypassing middleware scoped inside the mount prefix). Hono published a batch of advisories on 2026-11-12 (also GHSA-46wx-v44x-9hh2, GHSA-4h7h-rv7c-7m2v, GHSA-h7mg-cq63-vhpq, GHSA-3gg2-335m-rxc6). The root override moved to 4.13.18, the newest 4.13 patch; only the `hono` lock entry changed. The project uses only the MCP stdio transport, so the HTTP adapter path stays unused; the pin keeps `bun audit` a working release gate.
 - Evidence (Bun 1.4.2): `bun run audit` "No vulnerabilities found"; `scripts/check-dependency-freshness.ts --strict` current.
+
+## 2026-11-14 DOM fixture browser lifecycle
+
+The earlier `browser.close()` diagnosis was too narrow: a Bun test deadline can expire
+while Playwright is still waiting for Edge shutdown, after the DOM assertions have
+finished. The close promise can subsequently resolve while the next test is running.
+Launching and terminating an Edge process in every case charged that variable process
+lifecycle to each case's assertion timeout; the multi-scenario rebind case could exhaust
+its existing 30-second budget in the same way as the shorter 5-second cases. This does
+not establish a Bun or Playwright process-handling defect.
+
+The turn-binding fixture suite now owns one browser through `beforeAll`/`afterAll`,
+with separate 15-second limits for launch and shutdown. Each case retains fresh,
+isolated contexts and closes all remaining contexts in `finally` before the next case.
+The local HTTP fixture also stops its server if context cleanup fails. Existing case
+timeouts and product code remain unchanged. Reconsider process reuse if a future
+fixture changes browser-level state or requires a different launch configuration.
