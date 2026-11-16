@@ -1418,3 +1418,7 @@ isolated contexts and closes all remaining contexts in `finally` before the next
 The local HTTP fixture also stops its server if context cleanup fails. Existing case
 timeouts and product code remain unchanged. Reconsider process reuse if a future
 fixture changes browser-level state or requires a different launch configuration.
+
+## 2026-11-16 embedded browser data reset (#985) not ported
+
+Owner-delegated decision (主人授權小瑪). Do not port `ccf1061` (#985) or its lifecycle companion `d935e3c`: clearing cookies, cache, site data and sign-in state is destructive and no user need has been stated. The fork's language work (#984, `ddfb69a`/`e9c9509`) stays deferred under its existing Windows acceptance criteria; that is not a pending owner decision. Reconsider data reset only on an explicit user request, as one Windows-tested reset/lifecycle group, without introducing the session-reminder layer.
