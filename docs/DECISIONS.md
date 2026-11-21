@@ -1422,3 +1422,30 @@ fixture changes browser-level state or requires a different launch configuration
 ## 2026-11-16 embedded browser data reset (#985) not ported
 
 Owner-delegated decision (主人授權小瑪). Do not port `ccf1061` (#985) or its lifecycle companion `d935e3c`: clearing cookies, cache, site data and sign-in state is destructive and no user need has been stated. The fork's language work (#984, `ddfb69a`/`e9c9509`) stays deferred under its existing Windows acceptance criteria; that is not a pending owner decision. Reconsider data reset only on an explicit user request, as one Windows-tested reset/lifecycle group, without introducing the session-reminder layer.
+
+## 2026-11-21 dependency rereview
+
+Base: `595857f`. CI run 44868856094 failed in `bun run verify` at `launcher:audit` with
+`Invalid or expired audit deferral`; strict freshness also reported four attention rows.
+
+**minimatch (GHSA-g3hv-75wg-m249): deferral removed, nothing re-deferred.** The failure was the
+`revisit` date (2026-11-17) of `.github/audit-deferrals.json`, not a live finding. The advisory was
+narrowed after the 2026-11-03 review: GitHub (`gh api advisories/GHSA-g3hv-75wg-m249`, updated
+2026-11-04) and the npm bulk advisory endpoint both report `>=7.0.0 <11.0.1`, no longer `<11.0.1`.
+The three deferred nodes (`@electron/asar/minimatch`, `dir-compare/minimatch`, `glob/minimatch`,
+all 3.1.5) and `filelist/minimatch` 5.1.9 are outside that range, and the only node inside the
+7-11 line resolves to 11.0.5 through the existing `minimatch@>=7.0.0 <11.0.1` override. Raw
+`bun audit --json` in `launcher` prints `{}` with exit 0. With the entry removed,
+`bun run launcher:audit` prints `Launcher audit: no vulnerabilities`. No dependency changed for
+this. The exception mechanism stays; a new finding fails closed as before.
+
+| Package / reviewed latest | Decision | Evidence and reconsideration condition |
+| --- | --- | --- |
+| `electron` 45.4.1 | adopt from 45.3.1 | [v45.4.1](https://github.com/electron/electron/releases/tag/v45.4.1) backports fixes from ANGLE, Chromium, Dawn, FFmpeg, PDFium and V8 (Chromium 156.0.8078.100); in the 45 line these ship only here. Exact manifest and lock pin move together; only the `electron` lock entry changed. Bundled Node is 24.22.3, so the Node 24 typings deferral keeps its reason. Package and installer smoke are taken from CI on a clean runner; the local scripted smoke was not run because it refuses to overwrite an existing current-user installation. |
+| `motion` 14.14.0 | defer (bound 14.13.0 -> 14.14.0); retain 12.43.0 | A trial install passed launcher `typecheck` and `build:renderer`, then was reverted. The packaged inspection of onboarding/page/toast transitions from 2026-11-04 is still outstanding and no automated gate covers it; running a second launcher on the maintainer host risks the live bridge. Reconsider after that inspection, on a relevant animation/security fix, or newer latest. |
+| `playwright-core` 1.65.1 | defer (bound 1.65.0 -> 1.65.1); retain 1.64.1 | Trial lock of 1.65.1: the chromium-bidi compatibility test passes warm (both `lib/cjs` imports resolve from 12.1.0), but a full root suite with Edge DOM fixtures ended 1190 pass / 14 skip / 64 fail / 6 errors under host load, with no same-host 1.64.1 run. Inconclusive, so not adopted. Reconsider after an idle-host DOM fixture comparison of both versions. |
+| `@types/bun` 1.4.5 | defer (bound 1.4.4 -> 1.4.5) | Types move with the pinned Bun 1.4.2 runtime. |
+| `chromium-bidi` 160.0.8175-0, `@vitejs/plugin-react` 6.3.0, `turndown` 7.2.5 | unchanged | Latest is still inside each recorded bound (160 line; 6.3.0 with peer `vite ^8.0.0`; 7.2.5). |
+
+Not resolved here: `bun run check:upstream` exits 1 because upstream `main` moved from the baseline
+`f08d165` to `8e9fac0`, so the Full `tools/dev_check.ps1` gate stops there. It is tracked in ROADMAP.

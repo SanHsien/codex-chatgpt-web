@@ -3,6 +3,13 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-11-21
+
+- Remove the expired minimatch audit exception: GHSA-g3hv-75wg-m249 now covers only `>=7.0.0 <11.0.1`,
+  the legacy 3.1.5 nodes are outside it, and the launcher audit is clean without any exception.
+- Adopt Electron 45.4.1 for the launcher (ANGLE/Chromium/Dawn/FFmpeg/PDFium/V8 backports).
+- Re-defer motion 14.14.0, playwright-core 1.65.1 and @types/bun 1.4.5; see DECISIONS.
+
 ## 2026-11-13
 
 - Raise the `hono` override 4.13.12 -> 4.13.18 (GHSA-4m76-xfj5-7975 and the 2026-11-12 Hono advisory batch).
