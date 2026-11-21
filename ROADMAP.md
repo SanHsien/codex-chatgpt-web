@@ -21,6 +21,8 @@
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
+| 重審 minimatch 舊 API 安全延後 | 觸發條件已成立（2026-11-21 查：到期日 2026-11-17 已過）。原條件：2026-11-17 到期，或相容父套件發布／告警與受影響 lock 節點變動 | 移除舊 API 路徑或重新審查精確延後；audit、verify 與 archive/filter 回歸通過，打包行為另依 release 驗收 | Codex | [.github/audit-deferrals.json](.github/audit-deferrals.json)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-launcher-minimatch-advisory-ghsa-g3hv-75wg-m249) |
+| 重審 chromium-bidi、motion、@vitejs/plugin-react、turndown 延後升級 | 觸發條件已成立（2026-11-21 查：`npm view motion version` 為 14.14.0，高於 `.github/dependency-deferrals.json` 記錄的 `latest` 14.13.0）。原條件：freshness 回報 latest 超出延後界線，或相容工具鏈／動畫視覺驗收條件成立 | 依宣告的精確版本或版本線界線重評升級或延後理由；兩個 workspace audit 與完整 verify 通過；Motion 升級另查頁面／提示動畫，plugin-react 與相容 Vite 一起驗證，chromium-bidi 須通過相容性測試 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-dependency-rereview) |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
@@ -32,8 +34,6 @@
 | 重審已合併的 launcher 語言與瀏覽器資料清除功能（#984/#985） | 語言功能具備 Windows 完全結束後重開、首次設定與 ChatGPT 已存語言的驗收；資料清除功能（#985／`d935e3c`）已裁決不移植（2026-11-16，主人授權小瑪裁決）：屬清除 cookies 與登入狀態的破壞性操作，有明確使用者需求再重開，且不暗中引入 session reminder | 語言含無效值回退；清除含確認／取消、所屬 session 隔離、進行中 turn、失敗恢復與重新登入；離線測試及 Windows 帳戶驗收均通過 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-13-upstream-review-32fd343f08d165) |
 | 重評回覆提早中止與本地 effort 標籤補丁 | 上游 #910 有平台通用根因／Windows 重現，或 #911 上游修正／新標籤被實際觀察 | 用實際失敗輸入先重現；修正後驗證完成偵測、滑桿位置與模型家族，不猜測未見翻譯 | Codex | [docs/DECISIONS.md:662](docs/DECISIONS.md)、[docs/DECISIONS.md:672](docs/DECISIONS.md) |
 | 重審 #935～#963 與工作區分支的延後項 | DECISIONS 各項觸發條件成立；涉及 image retention／MCP、帳戶方案與傳輸界線者先由維護者決定 | 依逐項檔案與行號證據採用；工作區與跨 turn 來源保留權限防線；修 bug 先紅後綠，通過完整本機閘門，帳戶驗收獨立執行 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-upstream-review-935959-and-current-workspace-roots)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-04-upstream-review-960963) |
-| 重審 minimatch 舊 API 安全延後 | 2026-11-17 到期，或相容父套件發布／告警與受影響 lock 節點變動 | 移除舊 API 路徑或重新審查精確延後；audit、verify 與 archive/filter 回歸通過，打包行為另依 release 驗收 | Codex | [.github/audit-deferrals.json](.github/audit-deferrals.json)、[docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-launcher-minimatch-advisory-ghsa-g3hv-75wg-m249) |
-| 重審 chromium-bidi、motion、@vitejs/plugin-react、turndown 延後升級 | freshness 回報 latest 超出延後界線，或相容工具鏈／動畫視覺驗收條件成立 | 依宣告的精確版本或版本線界線重評升級或延後理由；兩個 workspace audit 與完整 verify 通過；Motion 升級另查頁面／提示動畫，plugin-react 與相容 Vite 一起驗證，chromium-bidi 須通過相容性測試 | Codex | [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-03-dependency-rereview) |
 
 ## 刻意不做
 | 不做什麼 | 理由 | 什麼情況下重新考慮 |
