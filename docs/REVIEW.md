@@ -14,6 +14,19 @@ Review the exact proposed SHA and record evidence for:
 
 Do not claim browser, MCP, account, live-model, or packaged-release acceptance from source tests.
 
+## 2026-11-22 browser reply remount
+
+Fixed in `f0a56dc` (2026-11-22). Local diagnostics recorded repeated turn identity
+errors after Send had succeeded. A Windows Edge regression reproduced that
+error when the submitted user message remounted before its assistant node.
+The observer now waits under its existing deadline after verifying the
+message's ownership. It does not resend the prompt or accept competing turns.
+
+The focused Edge test failed before the fix and passed after it (30 assertions,
+including cases that reject other or modified messages). The full check saw a
+timeout in the unrelated Compatibility V1 route test; that test passed in
+isolation. Live ChatGPT confirmation of this specific transition is pending.
+
 ## 2026-10-29 reviewed upstream ledger
 
 Base HEAD: `8e31e86`. Scope: DECISIONS/UPSTREAM review registers, CHANGELOG, ROADMAP,
