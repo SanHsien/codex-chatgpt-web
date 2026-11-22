@@ -4354,3 +4354,19 @@ test("Zero Risk new tabs follow Temporary Chat preference without DOM inspection
     assert.equal(tab.connectorBound, false);
   }
 });
+
+test("hidden-window tabs keep foreground renderer priority so the idle document can commit", () => {
+  // 2026-11-22: with the launcher window in the tray, Chromium started each turn tab's
+  // renderer at background priority. On a loaded Windows host the data: idle document then
+  // missed the 10 s bootstrap deadline on every attempt; the same flag made it commit.
+  const { configureBrowserProcessSwitches } = require("../electron/browser-host.cjs");
+  const switches = [];
+  configureBrowserProcessSwitches({ appendSwitch: (name, value) => switches.push([name, value]) });
+  assert.deepEqual(switches, [["disable-renderer-backgrounding", undefined]]);
+
+  const main = fs.readFileSync(resolve(__dirname, "../electron/main.cjs"), "utf8");
+  const configured = main.indexOf("configureBrowserProcessSwitches(app.commandLine)");
+  assert.ok(configured >= 0, "main.cjs must apply the browser process switches");
+  assert.ok(configured < main.indexOf("await app.whenReady();"),
+    "switches only take effect when appended before the app is ready");
+});

@@ -19,7 +19,7 @@ const {
   shell,
   Tray,
 } = require("electron");
-const { BrowserHost, navigationErrorForLog } = require("./browser-host.cjs");
+const { BrowserHost, configureBrowserProcessSwitches, navigationErrorForLog } = require("./browser-host.cjs");
 const { BrowserControlServer } = require("./control-server.cjs");
 const { LimitsController } = require("./limits-controller.cjs");
 const { SOURCE_URL: LIMITS_SOURCE_URL } = require("./limits-store.cjs");
@@ -1099,6 +1099,7 @@ async function start() {
   cdpPort = await findFreePort();
   app.commandLine.appendSwitch("remote-debugging-address", "127.0.0.1");
   app.commandLine.appendSwitch("remote-debugging-port", String(cdpPort));
+  configureBrowserProcessSwitches(app.commandLine);
 
   await app.whenReady();
 

@@ -14,6 +14,18 @@ Review the exact proposed SHA and record evidence for:
 
 Do not claim browser, MCP, account, live-model, or packaged-release acceptance from source tests.
 
+## 2026-11-22 hidden-window turn tabs miss the idle bootstrap
+
+Fixed in the commit that adds `configureBrowserProcessSwitches` (2026-11-22). With the
+launcher window hidden to the tray, every new turn tab failed with
+`Browser idle document did not commit within 10000ms` (launcher.jsonl 13:12-13:50 UTC,
+12 failures; also 06:50-07:53 UTC). Not a regression from the v6.1.19 ports: a standalone
+Electron probe on the same host reproduced it on Electron 45.4.1, 45.3.1 and 43.7.0 with a
+hidden window (no renderer committed within 15 s), while a shown window committed in about
+0.1 s. `--disable-renderer-backgrounding` made the hidden case commit in 0.3-2.3 s
+(6 of 6 runs); without it 13 of 14 hidden runs took 10 s or more. Host load is the trigger,
+background renderer priority the mechanism. Packaged-launcher confirmation is pending.
+
 ## 2026-11-22 browser reply remount
 
 Fixed in `f0a56dc` (2026-11-22). Local diagnostics recorded repeated turn identity

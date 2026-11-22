@@ -260,6 +260,15 @@ class BrowserTurnCancelledError extends Error {
   }
 }
 
+// Turn tabs run while the launcher window sits in the tray. Chromium starts the renderer of a
+// hidden WebContents at background process priority, and on a loaded Windows host that renderer
+// did not commit even the local data: idle document within PRIMARY_VIEW_BOOTSTRAP_TIMEOUT_MS
+// (2026-11-22: every attempt timed out at 15 s; with this switch it committed in 0.3-2.3 s).
+// backgroundThrottling: false only stops timer throttling; it does not change process priority.
+function configureBrowserProcessSwitches(commandLine) {
+  commandLine.appendSwitch("disable-renderer-backgrounding");
+}
+
 function loadCommittedBrowserSurface(
   contents,
   url,
@@ -3344,6 +3353,7 @@ module.exports = {
   BrowserHost,
   BrowserTurnCancelledError,
   CHATGPT_VIEWPORT_CSS,
+  configureBrowserProcessSwitches,
   IDLE_BROWSER_URL,
   isChatGptCloudflareChallengeResponse,
   isTemporaryChatUrl,
