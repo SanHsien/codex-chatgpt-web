@@ -1,5 +1,21 @@
 # Upstream tracking
 
+## 2026-11-22: f08d165..8e9fac0
+
+Reviewed all nine commits in `upstream/main`
+`f08d16509e6a5447a0d0f2943abb172c69705160..8e9fac038dcd998bf23716df2b08379a15854ec9` (v6.1.19) and
+every item #986-#1004. Live strict upstream check: latest PR #1003 (open draft) head
+`26e6483dd87bddd5128845b12afda7ab754bee15`, latest non-PR issue #1004, branches
+`main@8e9fac038dcd998bf23716df2b08379a15854ec9` and
+`fix/current-workspace-roots@adabeb16abad149f64546b45e8ef88aa4c917f56`; all four axes current. See the
+[per-commit register](DECISIONS.md#2026-11-22-upstream-review-f08d1658e9fac0-v6119-986-1004).
+
+Adopted: retained regressions (`e309382`), passkey localStorage quota (#991), session-loss reason
+logging with invalid-expiry errors (`b5f0e9b`) and the Windows image-preview/no-reupload fix (#996).
+Deferred: disabled-effort handling (#993), the Bigger Context transport-budget rewrite with its test
+timeouts and PR #1003, and issue #1004. The Hono bump is superseded and the release commit is skipped.
+Source remains 6.1.13, the installer/updater v5.0.6, Bun 1.4.2.
+
 ## 2026-11-13: 32fd343..f08d165
 
 Reviewed all ten commits (eight non-merge commits and two merges) in the existing local

@@ -1448,4 +1448,76 @@ this. The exception mechanism stays; a new finding fails closed as before.
 | `chromium-bidi` 160.0.8175-0, `@vitejs/plugin-react` 6.3.0, `turndown` 7.2.5 | unchanged | Latest is still inside each recorded bound (160 line; 6.3.0 with peer `vite ^8.0.0`; 7.2.5). |
 
 Not resolved here: `bun run check:upstream` exits 1 because upstream `main` moved from the baseline
-`f08d165` to `8e9fac0`, so the Full `tools/dev_check.ps1` gate stops there. It is tracked in ROADMAP.
+`f08d165` to `8e9fac0`, so the Full `tools/dev_check.ps1` gate stops there. Resolved by the
+2026-11-22 upstream review below.
+
+## 2026-11-22 upstream review: f08d165..8e9fac0 (v6.1.19, #986-#1004)
+
+Reviewed all nine commits in local `upstream/main`, from
+`f08d16509e6a5447a0d0f2943abb172c69705160` (exclusive) through
+`8e9fac038dcd998bf23716df2b08379a15854ec9` (inclusive), using commit bodies and complete source/test
+deltas. Fetch only; no merge, cherry-pick, upstream write or release action. Four commits are adopted
+as independent ports; the fork source stays 6.1.13, installer/updater stays v5.0.6, Bun stays 1.4.2.
+The added-line scan finds no eval of remote text, `new Function`, remote-pipe commands, long encoded
+blobs, permission-bypass flags or new network endpoints. The only new URLs are upstream issue links,
+ChatGPT CDN references in a selector README that the fork does not carry, a comment in a fixture and
+the `https://unrelated.example` negative test origin. The `<script>` in the locked-efforts fixture is
+local fixture behavior and is not ported. This is a bounded text scan, not proof of general security.
+
+### Commits (oldest first)
+
+| Commit | Decision | Reason and reconsideration condition |
+| --- | --- | --- |
+| `e309382493b04a6174ec34dccccdbe10696ae62e` retained regressions | adopt (tests only) | Adds the captured #974 Mermaid remount case and fixture, a DOM restored-draft multipart case (#977) and UUID calendar-delta cases before and after compaction (#982). All three fixes were ported on 2026-11-13, so these are retained regressions, not a red/green change; they pass against the existing source. |
+| `5f9026ac5c26d4063c1b96300e13e46daa23047a` passkey localStorage quota (#991) | adopt | Values up to the browser's 10 MiB UTF-16 per-origin quota are accepted; aggregate key+value bytes are bounded before session mutation; cookie, name, type and cleanup bounds are unchanged. Reported on macOS, but the validator is platform-neutral and the fork ships passkey import on Windows. Red first: 3 launcher tests failed; green after the port. Reconsider if Chromium changes its DOM storage quota. |
+| `6b38797fd8d9cc317140e32822359154bea54f7f` Hono advisories | skip (superseded) | Moves overrides to `@hono/node-server` 2.1.6 and `hono` 4.13.16. The fork already pins 2.1.6 and 4.13.18 (2026-11-13 entries above); adopting would downgrade `hono`. |
+| `b5f0e9bf95d68ad3737d84c83604a2f27856fab1` session loss vs invalid expiry | adopt | An unparsable `expires` is now an invalid response (`status: error`) instead of a silent sign-out, and an observed authenticated-to-signed-out transition logs `browser.session_signed_out` with only a fixed reason code; the session payload is never logged. This gives evidence for the deferred Windows session-loss reports (#961/#975/#986). Red first: 2 launcher tests failed; green after the port. |
+| `4735c03af4d72642965da4be2643d0c856b773fa` noninteractive image previews (#996) | adopt (adapted) | Windows-reported: an image thumbnail rendered without a preview button was never recognized, the turn timed out, and the generic error was retried, which uploaded the files again. Ported `chatGptAttachmentPreview` into the fork's `src/chatgpt-session.ts` (the fork has no `src/chatgpt-ui/`), limited to image MIME types, a non-inert attachment row and visible elements. Only a preview `TimeoutError` becomes the non-retryable `chatgpt_attachment_unconfirmed` (502) error; abort and page-closed errors propagate unchanged; preview waits are aborted in `finally`; observation disposal rejects pending waits. Red first: a module-load error plus 2 contract failures; green after the port. Reconsider if the composer attachment markup changes. |
+| `783181931a60c6cbaba50010e2e78fc9cfd58833` disabled efforts and explicit Instant (#993/#994) | defer | Fails fast when ChatGPT disables every effort option after a usage limit, and verifies GPT-6 Instant before Send. The source spans `model-picker.ts`, which the fork does not have, and the fork's effort selection carries its own Temporary Chat isolation and Luna capability ports; a correct port is a separate adaptation, not a mechanical one. Linux/Plus report, no Windows reproduction. Reconsider on a Windows report of the 70 s "model controls are unavailable" failure, or when the model-picker module split is ported. |
+| `9eb7eb7a2ed345ad4c30cfd2abe4fb2455d8feb9` smallest Bigger Context transport | defer | Replaces about 285 lines of browser-worker transport planning with a new `transport-budget.ts` and rewrites usage and token estimation (21 files). It does not apply to the fork's diverged prompt/usage code, changes how much context is sent, and its closed predecessor PR #1001 was not merged. Reconsider as one group with `8e9fac0` and open PR #1003 when upstream stabilizes it, with Windows Bigger Context acceptance (#986 is the related Windows report). |
+| `2c986617ac1e64492ba1957ac2496ae4202dfae3` Release v6.1.19 | skip | Upstream version and download links. The fork keeps its own release identity (source 6.1.13, installer v5.0.6). |
+| `8e9fac038dcd998bf23716df2b08379a15854ec9` transport fixture timeouts | defer | Raises test timeouts for fixtures introduced by `9eb7eb7`; it has no meaning without that commit. Reconsider with it. |
+
+### Pull requests and issues above the watermarks
+
+| Item | Observed state | Decision | Reason and reconsideration condition |
+| --- | --- | --- | --- |
+| #986 | open issue, Windows, P1, `needs logs` | defer | Fresh Web turns fail with a missing trusted cwd after toggling Bigger Context. No upstream fix yet; already tracked in the 6.1.18 ROADMAP row. Reconsider on an upstream fix or a Windows reproduction here. |
+| #987 | closed issue, duplicate, not planned | no action | Upstream closed it as a duplicate. |
+| #988, #989, #990, #992, #998 | API returns 404 | no action | Not visible upstream (never allocated or removed). Recorded so the range has no unexplained gap. |
+| #991 | closed issue, fix released | adopt | Fixed by `5f9026a`, ported above. |
+| #993 / PR #994 | issue closed (fix released); PR closed unmerged | defer | Fixed upstream by `7831819`, deferred above. |
+| PR #995 | closed unmerged, feature | reject | The "browser relay no MCP" feature was not accepted upstream and is outside the fork's scope. |
+| #996 | closed issue, Windows, fix released | adopt | Fixed by `4735c03`, ported above. |
+| PR #997 | open draft, `UNSTABLE`, head `3b6bb99a96adfc3b61c47ca3e0197b19a2b9c2ef` | defer | Keeps missing compaction handoffs terminal. Draft, unmerged. Reconsider when merged or on a Windows compaction-handoff report. |
+| #999 | closed issue | reject | No technical content; asks for off-platform contact. |
+| #1000 | open issue, macOS, P1, partial release | defer | macOS Full-harness report without a Windows reproduction. Reconsider on a Windows reproduction. |
+| PR #1001 | closed unmerged, head `c1fbce15bccf662874dcc43a18b170795aeea5eb` | no action | Superseded upstream by `9eb7eb7`, deferred above. |
+| PR #1002 | open draft, `UNSTABLE`, head `3aad5b6c66150986368e19849b7d77a7ee93db61` | defer | Native2 token-copy error recovery; 16 files, including a new recovery path in the turn broker. Reconsider when merged and the fork has a matching Windows failure. |
+| PR #1003 | open draft, `UNSTABLE`, head `26e6483dd87bddd5128845b12afda7ab754bee15` | defer | Account-scoped message-limit recovery built on the `9eb7eb7` transport budget (38 files). Reconsider with `9eb7eb7`. |
+| #1004 | open issue, no PR | defer | Codex 0.169 can send a date/timezone-only preamble that the resolver rejects as unauthenticated history. The logic is platform-neutral, so it can reach Windows with that Codex version. No upstream fix exists, and loosening rollout authentication without one is a security-relevant change. The reporter's standalone test was read as data and not run. Reconsider when upstream lands a fix, or when this fork's Windows Codex reaches 0.169 and reproduces it; any port must keep permissions sourced from the matching native `turn_context`. |
+
+Branches: `main@8e9fac0` and unchanged `fix/current-workspace-roots@adabeb16abad149f64546b45e8ef88aa4c917f56`.
+
+### Verification
+
+The focused red/green runs used Bun 1.4.5 from PATH; the canonical gate uses the repo-local Bun 1.4.2.
+
+- Launcher `node --test tests/passkey-login-state.test.cjs tests/browser-host.test.cjs`: with tests only,
+  3 fail (passkey) and then 2 fail (session loss); after both ports, 144 pass, 0 fail.
+- `bun test tests/browser-worker-contract.test.ts tests/chatgpt-web-harness.test.ts tests/attachment-upload.test.ts`:
+  red 2 fail plus 1 module-load error; green 268 pass, 11 skip, 0 fail.
+- `bun test tests/browser-response-dom.test.ts tests/composer-insert.test.ts tests/environment.test.ts`
+  (retained regressions): 170 pass, 2 skip, 0 fail.
+- `tests/fork-contract.test.ts`: red 1 fail after the watermark expectations moved; green after the baseline update.
+- `bun run check:upstream` (strict): exit 0, all four axes current.
+- `pwsh -NoProfile -File tools/dev_check.ps1` (Bun 1.4.2): fork contract, strict upstream and strict
+  dependency freshness pass. The root suite failed three runs on timeouts under host load (about 60 %
+  CPU), each time on different 5 s cases (1171-1172 pass, 103 skip, 1-2 fail); none is in a changed
+  code path. Each failed case passes alone: `two-part saved chats` takes about 2 s with and without this
+  change. The `verify` steps after the root suite were then run separately and all exit 0:
+  `launcher:typecheck`, `launcher:test`, `build:renderer`, the runtime bundle, third-party notices and
+  `RELOCATABLE_RUNTIME_SMOKE_OK`. No single run passed end to end, so no Full completion summary was written.
+- A local Edge DOM run of `tests/attachment-upload.test.ts` (`CHATGPT_DOM_TEST_BROWSER`) is not evidence:
+  it times out on this host both before the port (0 pass, 10 fail) and after it (3 pass, 8 fail), the
+  browser-lifecycle problem recorded on 2026-11-14. Signed-in UI, MCP and packaged acceptance remain separate.
