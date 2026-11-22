@@ -1604,3 +1604,39 @@ test("an abandoned catalog attempt serves the retry once and is cancelled when n
     fetches.close();
   }
 });
+
+test("a foreign Host header is refused with 403 on every method while loopback hosts work", async () => {
+  const server = startServer({ ...defaultConfig("browser-only"), port: 0 });
+  const port = server.port;
+  if (port === undefined) throw new Error("test server did not bind a TCP port");
+  const call = async (method: string, host: string): Promise<number> => {
+    const socket = createConnection({ host: "127.0.0.1", port });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        socket.once("connect", resolve);
+        socket.once("error", reject);
+      });
+      socket.write([
+        `${method} /healthz HTTP/1.1`, `Host: ${host}`, "Content-Length: 0", "Connection: close", "", "",
+      ].join("\r\n"));
+      const chunks: Buffer[] = [];
+      await new Promise<void>(resolve => {
+        socket.on("data", chunk => chunks.push(Buffer.from(chunk)));
+        socket.once("close", () => resolve());
+      });
+      return Number(/^HTTP\/1\.1 (\d{3})/.exec(Buffer.concat(chunks).toString("utf8"))?.[1]);
+    } finally {
+      socket.destroy();
+    }
+  };
+  try {
+    expect(await call("GET", `127.0.0.1:${port}`)).toBe(200);
+    expect(await call("GET", `localhost:${port}`)).toBe(200);
+    expect(await call("GET", `evil.example:${port}`)).toBe(403);
+    expect(await call("GET", "evil.example")).toBe(403);
+    expect(await call("POST", `evil.example:${port}`)).toBe(403);
+    expect(await call("GET", `127.0.0.1:${port + 1}`)).toBe(403);
+  } finally {
+    await server.stop(true);
+  }
+});

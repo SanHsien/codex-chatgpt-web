@@ -1521,3 +1521,8 @@ The focused red/green runs used Bun 1.4.5 from PATH; the canonical gate uses the
 - A local Edge DOM run of `tests/attachment-upload.test.ts` (`CHATGPT_DOM_TEST_BROWSER`) is not evidence:
   it times out on this host both before the port (0 pass, 10 fail) and after it (3 pass, 8 fail), the
   browser-lifecycle problem recorded on 2026-11-14. Signed-in UI, MCP and packaged acceptance remain separate.
+`f08d165` to `8e9fac0`, so the Full `tools/dev_check.ps1` gate stops there. It is tracked in ROADMAP.
+
+## 2026-11-22 — Responses listener refuses non-loopback Host headers
+
+Fleet audit found the Responses listener (`startServer`) checked `Origin` on non-GET requests only and never looked at `Host`, so a DNS-rebound page could read GET routes such as `/healthz`. `loopbackHostAllowed` now runs first for every method and returns 403 unless `Host` is `127.0.0.1`, `localhost` or `[::1]` (port optional, but if present it must equal the listening port; the existing raw-socket test sends a port-less `Host: 127.0.0.1`). Callers checked: Codex and the launcher use `http://127.0.0.1:<port>`; the managed tunnel talks to the MCP server, not this listener. Fork-only hardening, not yet in upstream; adopt upstream if it adds an equivalent. The running bridge keeps the old code until restarted (ROADMAP row).

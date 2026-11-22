@@ -21,6 +21,7 @@
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
+| 重啟執行中的 bridge（port 17841），讓 Host 檢查生效 | `src/server.ts` 的 `startServer` 已對所有方法要求 `Host` 是 `127.0.0.1`／`localhost`／`[::1]`（port 若有寫須等於監聽埠），否則 403（DNS rebinding 防護，2026-11-22 艦隊稽核）。程式已進 `main`，但稽核當下在跑的 bridge 行程（PID 32580）是舊碼，**需重啟才生效**；該行程是 Codex 的依賴，所以只寫在這裡、沒有代為重啟 | 在沒有進行中 turn 時重啟 bridge（先 `/admin/drain` 再重啟），再用 `curl -H "Host: evil.example" http://127.0.0.1:17841/healthz` 得 403、`curl http://127.0.0.1:17841/healthz` 得 200，且 Codex 之後的 turn 正常 | 維護者／Codex | `src/server.ts` `loopbackHostAllowed`；`tests/server-lifecycle.test.ts`「a foreign Host header is refused」 |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |

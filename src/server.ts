@@ -967,6 +967,14 @@ export async function compactRequest(
   return Response.json({ output: buildCompactV1Output(extractCompactUserMessages(input), summary) });
 }
 
+/** True when a Host header names this loopback listener (port optional, but wrong ports are refused). */
+export function loopbackHostAllowed(host: string | null, port: number | undefined): boolean {
+  if (!host) return false;
+  const match = /^(127\.0\.0\.1|localhost|\[::1\])(?::(\d{1,5}))?$/i.exec(host.trim());
+  if (!match) return false;
+  return match[2] === undefined || port === undefined || Number(match[2]) === port;
+}
+
 export function startServer(
   config: AppConfig,
   dependencies: {
@@ -1013,6 +1021,16 @@ export function startServer(
     idleTimeout: 0,
     async fetch(req) {
       const url = new URL(req.url);
+      // DNS rebinding: a web page can resolve its own name to 127.0.0.1 and then read or call
+      // this listener same-origin, with a Host that is the attacker's name. Every method,
+      // including GET, must name this loopback listener itself.
+      if (!loopbackHostAllowed(req.headers.get("host"), server.port)) {
+        return formatErrorResponse(
+          403,
+          "invalid_request_error",
+          "Requests must address the local Codex route by a loopback host",
+        );
+      }
       // Loopback is reachable from any web page, cross-site or same-origin after DNS rebinding,
       // and this route has no bearer secret. Browsers attach Origin to every such request that
       // can start or control work; Codex and the launcher are not browsers and never send it.
