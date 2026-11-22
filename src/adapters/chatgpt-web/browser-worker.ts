@@ -3503,15 +3503,16 @@ export class ChatGptBrowserWorker {
       // submitted text for browser-only messages. A
       // surviving old group or any competing new turn remains foreign.
       const user = newUsers[0]!;
-      const replacement = identity && newUsers.length === 1
+      const expectedAssistant = `group:assistant:${user.slice("group:user:".length)}`;
+      const replacement = newUsers.length === 1
         && binding.identity.startsWith("group:assistant:")
         && user.startsWith("group:user:")
-        && identity === `group:assistant:${user.slice("group:user:".length)}`
+        && (identity === undefined || identity === expectedAssistant)
         && !state.turnIdentities.includes(binding.identity)
-        && state.turnIdentities.every(turn => acceptedTurns.has(turn) || turn === user || turn === identity);
+        && state.turnIdentities.every(turn => acceptedTurns.has(turn) || turn === user || turn === expectedAssistant);
       let matches = false;
       if (replacement) {
-        const locator = page.locator(chatGptAssistantTurnSelector(identity!));
+        const locator = page.locator(chatGptTurnContainerSelector(expectedAssistant));
         matches = baseline.acceptedUserIdentity
           ? user === baseline.acceptedUserIdentity
           : Boolean(baseline.submittedText) && await this.userMessageMatchesSubmission(locator, baseline.submittedText!, signal, baseline.turnToken);
@@ -3523,11 +3524,15 @@ export class ChatGptBrowserWorker {
       // Expanding a truncated bubble can yield to another DOM update. Keep the
       // no-competing-turn check valid after that action, not just before it.
       const current = await this.submissionDomState(page, baseline.domCache, signal);
-      if (!current.userIdentities.includes(user) || !current.responseIdentities.includes(identity!)
+      if (!current.userIdentities.includes(user)
+        || (identity !== undefined && !current.responseIdentities.includes(expectedAssistant))
         || current.turnIdentities.includes(binding.identity)
-        || current.turnIdentities.some(turn => !acceptedTurns.has(turn) && turn !== user && turn !== identity)) {
+        || current.turnIdentities.some(turn => !acceptedTurns.has(turn) && turn !== user && turn !== expectedAssistant)) {
         throw new Error("ChatGPT changed conversation turns while verifying the submitted message");
       }
+      // The user bubble can remount before the assistant. Keep observing the same
+      // response under the existing deadline, without submitting the prompt again.
+      if (identity === undefined) return binding;
     }
     if (!identity || identity === binding.identity) return binding;
     return {

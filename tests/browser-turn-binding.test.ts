@@ -184,7 +184,7 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("an exchange rekeys only with
       <div data-content-search-unit-key="${key}:assistant"><div data-conversation-role="assistant"></div>
       <div data-markdown-text-style="assistant-message"><p>Answer.</p></div></div>
       ${complete ? '<div class="turn-action-controls"><button>Copy</button></div>' : ""}</div>`;
-    for (const scenario of ["matching", "history", "foreign", "prefix-only", "changed-spaces", "changed-edges", "two-turns", "old-group-remains", "unfinished", "no-prompt", "same-key"] as const) {
+    for (const scenario of ["matching", "history", "foreign", "prefix-only", "changed-spaces", "changed-edges", "two-turns", "old-group-remains", "unfinished", "user-first", "no-prompt", "same-key"] as const) {
       const page = await browser.newPage();
       const history = scenario === "history" ? group("earlier", prompt, true) : "";
       await page.setContent(`<main>${history}</main>`);
@@ -199,9 +199,17 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("an exchange rekeys only with
       let html = history + group(scenario === "same-key" ? "optimistic" : "persisted", text, scenario !== "unfinished");
       if (scenario === "two-turns") html += group("foreign", prompt, true);
       if (scenario === "old-group-remains") html += '<div data-turn-key="optimistic"><div data-user-message-bubble>Earlier</div></div>';
+      if (scenario === "user-first") {
+        // The confirmed user bubble can remount before its assistant node.
+        await page.locator("main").evaluate((node, submitted) => {
+          node.innerHTML = '<div data-turn-key="persisted"><div data-user-message-bubble><div data-search-result-target></div></div></div>';
+          node.querySelector("[data-search-result-target]")!.textContent = submitted;
+        }, prompt);
+        expect(await worker.reconcileAssistantTurnBinding(page, baseline, binding)).toBe(binding);
+      }
       await page.locator("main").evaluate((node, next) => { node.innerHTML = next; }, html);
       const result = worker.reconcileAssistantTurnBinding(page, baseline, binding);
-      if (scenario === "matching" || scenario === "history" || scenario === "same-key" || scenario === "unfinished") {
+      if (scenario === "matching" || scenario === "history" || scenario === "same-key" || scenario === "unfinished" || scenario === "user-first") {
         const rebound = await result;
         expect(rebound.identity).toBe(`group:assistant:${scenario === "same-key" ? "optimistic" : "persisted"}`);
         expect(await rebound.locator.count()).toBe(1);
@@ -211,7 +219,7 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("an exchange rekeys only with
       await page.close();
     }
   } finally { await closeTestContexts(); }
-}, 30_000);
+}, 45_000);
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("collapsed plugin messages rebind only after their complete text is verified", async () => {
   try {
