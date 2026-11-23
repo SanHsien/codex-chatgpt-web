@@ -16,7 +16,7 @@ Do not claim browser, MCP, account, live-model, or packaged-release acceptance f
 
 ## 2026-11-22 hidden-window turn tabs miss the idle bootstrap
 
-Fixed in the commit that adds `configureBrowserProcessSwitches` (2026-11-22). With the
+Fixed in `8c522fd` (2026-11-22), which adds `configureBrowserProcessSwitches`; comment clarified in `8e72cb4` (2026-11-23). With the
 launcher window hidden to the tray, every new turn tab failed with
 `Browser idle document did not commit within 10000ms` (launcher.jsonl 13:12-13:50 UTC,
 12 failures; also 06:50-07:53 UTC). Not a regression from the v6.1.19 ports: a standalone
