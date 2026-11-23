@@ -49,7 +49,7 @@ test("maintained-fork manifest documents Windows-only entrypoints and boundaries
   expect(read("tools/upstream_baseline.json")).toContain('"latestPullRequest": 1003');
   expect(read("tools/upstream_baseline.json")).toContain('"latestPullRequestHead": "26e6483dd87bddd5128845b12afda7ab754bee15"');
   expect(read("tools/upstream_baseline.json")).toContain('"mainCommit": "8e9fac038dcd998bf23716df2b08379a15854ec9"');
-  expect(read("tools/upstream_baseline.json")).toContain('"latestNonPullRequestIssue": 1004');
+  expect(read("tools/upstream_baseline.json")).toContain('"latestNonPullRequestIssue": 1006');
   expect(read("docs/DEVELOPMENT.md")).toContain("do **not** sign in to ChatGPT");
   expect(read("docs/TEST_PLAN.md")).toContain("must never be reported as proof");
 });

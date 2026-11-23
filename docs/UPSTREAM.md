@@ -1,5 +1,16 @@
 # Upstream tracking
 
+## 2026-11-23: issues #1005-#1006
+
+Read-only triage after the 2026-11-22 review; no upstream commit, PR or branch moved
+(`main@8e9fac038dcd998bf23716df2b08379a15854ec9`, PR #1003 head
+`26e6483dd87bddd5128845b12afda7ab754bee15`, `fix/current-workspace-roots@adabeb16abad149f64546b45e8ef88aa4c917f56`).
+Latest non-PR issue is now #1006; #1005 does not resolve as an issue or PR (404 through both the issues
+and pulls APIs). #1006 (open bug, Windows x64, 6.1.19) is recorded as an observation: the Web session
+ends with "Codex ran out of room in the model's context window", the failure class that the deferred
+`9eb7eb7` transport-budget rewrite and PR #1003 address. No port; source remains 6.1.13. See the
+[register](DECISIONS.md#2026-11-23-upstream-issues-1005-1006).
+
 ## 2026-11-22: f08d165..8e9fac0
 
 Reviewed all nine commits in `upstream/main`

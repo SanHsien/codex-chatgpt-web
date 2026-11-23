@@ -1523,6 +1523,18 @@ The focused red/green runs used Bun 1.4.5 from PATH; the canonical gate uses the
   browser-lifecycle problem recorded on 2026-11-14. Signed-in UI, MCP and packaged acceptance remain separate.
 `f08d165` to `8e9fac0`, so the Full `tools/dev_check.ps1` gate stops there. It is tracked in ROADMAP.
 
+## 2026-11-23 upstream issues #1005-#1006
+
+Fetch and `gh` read only; no merge, cherry-pick, upstream write or release action. Issue bodies and the
+attached diagnostics were read as data and nothing in them was run.
+
+| Item | Decision | Reason and reconsideration condition |
+| --- | --- | --- |
+| #1005 | no action | Does not resolve: `gh issue view`, the issues API and the pulls API all return 404 (deleted, transferred or never public). Treated as absent, not as reviewed. Re-check if it appears. |
+| #1006 | open issue, bug, Windows x64, 6.1.19, Free tier | defer (observation) | Reporter cannot send a second message in one Web conversation and gets "Codex ran out of room in the model's context window". That is the symptom family of the deferred `9eb7eb7` transport budget and PR #1003 (account-scoped message limits); no upstream fix or maintainer reply yet, and the report has no fork reproduction. Reconsider together with `9eb7eb7`/#1003, or when this fork reproduces it on Windows. |
+
+Baseline advanced to latest non-PR issue #1006; main, PR #1003 and branches are unchanged.
+
 ## 2026-11-22 — Responses listener refuses non-loopback Host headers
 
 Fleet audit found the Responses listener (`startServer`) checked `Origin` on non-GET requests only and never looked at `Host`, so a DNS-rebound page could read GET routes such as `/healthz`. `loopbackHostAllowed` now runs first for every method and returns 403 unless `Host` is `127.0.0.1`, `localhost` or `[::1]` (port optional, but if present it must equal the listening port; the existing raw-socket test sends a port-less `Host: 127.0.0.1`). Callers checked: Codex and the launcher use `http://127.0.0.1:<port>`; the managed tunnel talks to the MCP server, not this listener. Fork-only hardening, not yet in upstream; adopt upstream if it adds an equivalent. The running bridge keeps the old code until restarted (ROADMAP row).
