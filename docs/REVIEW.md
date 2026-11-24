@@ -14,6 +14,19 @@ Review the exact proposed SHA and record evidence for:
 
 Do not claim browser, MCP, account, live-model, or packaged-release acceptance from source tests.
 
+## 2026-11-24 gate refused to run on the machine's Bun
+
+Fixed in `45a296a` (2026-11-24). `tools/dev_check.ps1` threw `Bun 1.4.2 is required; found '1.4.5'`
+because the machine runs the WinGet Bun 1.4.5 and every pin said 1.4.2; the pin has no recorded reason, so
+all pins moved to 1.4.5 together (see DECISIONS "2026-11-24 Bun pin"). Behind it sat a real checker defect
+first recorded under 2026-11-03 external gate changes: `check-dependency-freshness.ts` ran
+`bun outdated --json`, which 1.4.2 ignored and 1.4.4+ rejects. It now runs `bun outdated` and
+`tests/dependency-freshness.test.ts` pins that. `check-version.ts` now fails when any Bun pin drifts.
+Upstream review `8e9fac0..fc701f6` and the two ports are in `a63651d`. Full
+`pwsh -NoProfile -File tools/dev_check.ps1` with Bun 1.4.5: exit 0, root suite 1179 pass / 0 fail,
+launcher 439 pass / 0 fail, strict upstream and dependency checks current. Not covered: packaged installer
+smoke (CI only), and any signed-in ChatGPT picker check for the #1007 port.
+
 ## 2026-11-22 hidden-window turn tabs miss the idle bootstrap
 
 Fixed in `8c522fd` (2026-11-22), which adds `configureBrowserProcessSwitches`; comment clarified in `8e72cb4` (2026-11-23). With the
@@ -379,7 +392,7 @@ Observed Windows verification (logs under ignored `.maintenance-reports/resume-`
   `Bun 1.4.2 is required; found '1.4.4'.` `bun run verify` exits 1 at check-version,
   `Expected Bun 1.4.2, received 1.4.4`; subsequent verify steps are not executed by that command.
   `npm run check:dependencies` exits 1 with `Status: **check-failure**`: both workspaces report
-  `bun outdated has no --json flag`. This is a runtime/checker incompatibility, not evidence
+  `bun outdated has no --json flag`. This is a runtime/checker incompatibility (fixed in `45a296a`, 2026-11-24), not evidence
   that a dependency is outdated or vulnerable. The packageManager/engines pins remain unchanged.
 - The existing repo-local official Bun 1.4.2 executable was selected only through the verification
   process PATH; the system installation was unchanged. With that executable,
