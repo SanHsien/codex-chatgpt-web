@@ -28,6 +28,14 @@ const expected = [
   [".github/workflows/ci.yml", `bun-version: ${bunVersion}`],
   [".github/workflows/ci.yml", `-Version ${bunVersion}`],
   [".github/workflows/release.yml", `-Version ${bunVersion}`],
+  [".github/workflows/dependency-freshness.yml", `bun-version: ${bunVersion}`],
+  [".github/workflows/upstream-check.yml", `bun-version: ${bunVersion}`],
+  ["scripts/check-dependency-freshness.ts", `bun outdated v${bunVersion.replaceAll(".", "\\.")}`],
+  ["scripts/generate-third-party-notices.ts", `Bun-${bunVersion}.md`],
+  ["tools/dev_check.ps1", `$expectedBun = '${bunVersion}'`],
+  ["tools/bootstrap_dev.ps1", `$expectedBun = '${bunVersion}'`],
+  ["AGENTS.md", `Bun \`${bunVersion}\``],
+  ["docs/DEVELOPMENT.md", `Bun \`${bunVersion}\``],
 ] as const;
 for (const [path, needle] of expected) {
   if (!readFileSync(resolve(root, path), "utf8").includes(needle)) throw new Error(`${path} is not synchronized to ${packageVersion}`);

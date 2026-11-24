@@ -48,7 +48,7 @@ export function parseBunOutdated(output: string): OutdatedDependency[] {
     if (!cells.every(isText)) throw new Error("Bun outdated returned a malformed table row.");
     rows.push({ package: cells[0].replace(/ \((?:dev|peer|optional)\)$/, ""), current: cells[1], update: cells[2], latest: cells[3] });
   }
-  if (!/bun outdated v1\.4\.2/.test(output)) throw new Error("Bun outdated output is unavailable or not from pinned Bun 1.4.2.");
+  if (!/bun outdated v1\.4\.5/.test(output)) throw new Error("Bun outdated output is unavailable or not from pinned Bun 1.4.5.");
   return rows;
 }
 
@@ -69,7 +69,7 @@ export function checkFreshness(root: string, deferrals: Deferrals, runner: Comma
   const rows: FreshnessRow[] = [], outdatedChecks: FreshnessResult["outdatedChecks"] = [], audits: FreshnessResult["audits"] = [];
   let failed = false;
   for (const workspace of ["root", "launcher"] as const) {
-    const cwd = workspace === "root" ? root : resolve(root, "launcher"), outdated = runner("bun", ["outdated", "--json"], cwd), audit = runner("bun", workspace === "launcher" ? ["run", "audit"] : ["audit"], cwd);
+    const cwd = workspace === "root" ? root : resolve(root, "launcher"), outdated = runner("bun", ["outdated"], cwd), audit = runner("bun", workspace === "launcher" ? ["run", "audit"] : ["audit"], cwd);
     try {
       if (outdated.exitCode !== 0) throw new Error(outdated.stderr.trim() || "bun outdated failed");
       rows.push(...evaluateFreshness(workspace, parseBunOutdated(outdated.stdout), deferrals));

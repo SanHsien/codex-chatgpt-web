@@ -1549,3 +1549,19 @@ GitHub suspended this fork's Actions for excessive usage, as it did AIHOT, OpenM
 - `release.yml`: untouched; the `v*` tag trigger is the release mechanism.
 - Revert: remove the marked `paths-ignore` / `paths` / `branches` lines.
 - Revisit when: Actions is re-enabled and `gh run list` shows usage still being limited; then reduce the schedule or the push scope further.
+
+## 2026-11-24 Bun pin 1.4.2 -> 1.4.5
+
+The local gate (`tools/dev_check.ps1`) refused to run: the machine's Bun is 1.4.5 (WinGet `Oven-sh.Bun`) and the gate demanded 1.4.2. The only other Bun on the machine is a 1.4.2 copy under `~/.bun-1.4.2`, selected through `PATH` per process in earlier sessions.
+
+Why 1.4.2 was pinned: `git log -S'1.4.2'` shows it in the initial commit (`75ddaa1`), and no reason is recorded anywhere (`docs/DECISIONS.md`, `FORK.md`, `docs/UPSTREAM.md` and `docs/REVIEW.md` only restate it as a fork specification; the `@types/bun` deferral says the types follow the pin). Upstream is on 1.4.0. The one concrete incompatibility on record (`docs/REVIEW.md`, 2026-11-21, Bun 1.4.4) is `check-dependency-freshness.ts` calling `bun outdated --json`: 1.4.2 silently ignored the flag and printed the text table, while 1.4.4 and later reject it (`bun outdated has no --json flag`). That is a checker bug, not a reason to hold the runtime back, so it is fixed (`bun outdated` without flags) and pinned by a test.
+
+| Item | Decision | Evidence and reconsideration condition |
+| --- | --- | --- |
+| Bun 1.4.2 -> 1.4.5 (`packageManager`, `engines.bun`, `@types/bun`, `tools/dev_check.ps1`, `tools/bootstrap_dev.ps1`, `ci.yml`, `dependency-freshness.yml`, `release.yml` twice, `upstream-check.yml`, `AGENTS.md`, both READMEs, `docs/DEVELOPMENT.md`) | adopt | No recorded reason to stay. `bun install` changed only `@types/bun` and `bun-types` in `bun.lock` (3 lines); launcher `bun install --frozen-lockfile` reports no changes. Release `bun-v1.4.5` is published (not a prerelease) with `bun-windows-x64-baseline.zip`, which `prepare-windows-baseline-bun.ps1` verifies against `SHASUMS256.txt`. Reconsider (pin back) if CI or a packaged smoke shows a Bun 1.4.5 regression. |
+| `LICENSES/Bun-1.4.2.md` -> `LICENSES/Bun-1.4.5.md` | adopt | The embedded runtime ships Bun's licence notice. Bun's `LICENSE.md` at `bun-v1.4.5` is 14778 bytes against 5613 at `bun-v1.4.2`: it adds the `bun lint`, `bun fmt` and `bun test` diff ports (typescript-go, ESLint, typescript-eslint, oxlint, Prettier and others). The file is copied from the tag (line endings normalized) and `generate-third-party-notices.ts` reads the new name. |
+| `.github/dependency-deferrals.json` `@types/bun` entry | remove | `@types/bun` is at latest (1.4.5); the deferral existed only because the types followed the older pin. |
+| `scripts/check-dependency-freshness.ts` | fix | Runs `bun outdated` without `--json` and requires the `bun outdated v1.4.5` header; `tests/dependency-freshness.test.ts` pins both. |
+| `scripts/check-version.ts` | harden | It now also fails when the dev-check and bootstrap `$expectedBun`, `upstream-check.yml`, `dependency-freshness.yml`, the freshness checker header, the notices script licence name, `AGENTS.md` or `docs/DEVELOPMENT.md` disagree with `packageManager`. This drift is why the gate could break without any manifest change. |
+
+Scope boundary: the next built installer embeds Bun 1.4.5. The public installer/updater pin stays v5.0.6 and the shipped 6.1.13 runtime is unchanged. The package build and silent-install smoke (`bun run package:win`, `smoke:package`) were not run locally because they refuse to overwrite the existing current-user installation; packaged acceptance comes from CI on a clean runner and from the release process.

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { checkFailure, checkFreshness, evaluateFreshness, parseBunOutdated, renderReport, validateDeferrals } from "../scripts/check-dependency-freshness";
 
-const table = "bun outdated v1.4.2 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n| pkg (dev) | 1.0.0 | 1.1.0 | 2.0.0 |\n";
+const table = "bun outdated v1.4.5 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n| pkg (dev) | 1.0.0 | 1.1.0 | 2.0.0 |\n";
 const deferrals = { schemaVersion: 1, deferrals: [{ workspace: "root", package: "pkg", latest: "2.0.0", reviewed: "2026-09-06", reason: "Requires packaged desktop verification." }] } as const;
 
 test("version-line deferrals honor numeric component precision and workspace scope", () => {
@@ -51,7 +51,7 @@ test("parses Bun 1.4 text tables and applies exact-version deferrals", () => {
 });
 
 test("checks both workspaces and audits with an injected command runner", () => {
-  const clean = "bun outdated v1.4.2 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n";
+  const clean = "bun outdated v1.4.5 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n";
   const result = checkFreshness("/repo", validateDeferrals(deferrals), (_command, args, cwd) => ({ exitCode: 0, stdout: args[0] === "audit" ? "No vulnerabilities" : (cwd === "/repo" ? table : clean), stderr: "" }));
   expect(result.status).toBe("current");
   expect(result.outdatedChecks).toHaveLength(2);
@@ -61,7 +61,7 @@ test("checks both workspaces and audits with an injected command runner", () => 
 
 test("launcher freshness runs its policy-aware audit script and propagates failures", () => {
   const calls: string[][] = [];
-  const clean = "bun outdated v1.4.2\n";
+  const clean = "bun outdated v1.4.5\n";
   const result = checkFreshness("/repo", validateDeferrals(deferrals), (_command, args) => {
     calls.push(args);
     return { exitCode: args[0] === "run" ? 1 : 0, stdout: clean, stderr: args[0] === "run" ? "Undeferred advisory" : "" };
@@ -74,7 +74,7 @@ test("launcher freshness runs its policy-aware audit script and propagates failu
 
 test("freshness labels accepted security exceptions as deferred rather than clean", () => {
   const result = checkFreshness("/repo", validateDeferrals(deferrals), (_command, args) => ({
-    exitCode: 0, stdout: args[0] === "run" ? "DEFERRED advisory: exact nodes; revisit deadline\nLAUNCHER_AUDIT_OK\n" : "bun outdated v1.4.2\n", stderr: "",
+    exitCode: 0, stdout: args[0] === "run" ? "DEFERRED advisory: exact nodes; revisit deadline\nLAUNCHER_AUDIT_OK\n" : "bun outdated v1.4.5\n", stderr: "",
   }));
   expect(result.status).toBe("current");
   expect(result.audits[1].status).toBe("deferred");
@@ -95,11 +95,25 @@ test("fails closed for malformed output and renders checker detail", () => {
 
 test("strips every Bun dependency-kind suffix so deferrals still match", () => {
   const kinds = ["dev", "peer", "optional"];
-  const output = `bun outdated v1.4.2 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n${kinds.map((kind) => `| pkg-${kind} (${kind}) | 1.0.0 | 1.1.0 | 2.0.0 |`).join("\n")}\n`;
+  const output = `bun outdated v1.4.5 (34cbb9a40)\n| Package | Current | Update | Latest |\n|---|---|---|---|\n${kinds.map((kind) => `| pkg-${kind} (${kind}) | 1.0.0 | 1.1.0 | 2.0.0 |`).join("\n")}\n`;
   expect(parseBunOutdated(output).map((row) => row.package)).toEqual(kinds.map((kind) => `pkg-${kind}`));
 });
 
 test("rejects non-object deferral entries with the documented error", () => {
   expect(() => validateDeferrals({ schemaVersion: 1, deferrals: [null] })).toThrow("invalid or incomplete");
   expect(() => validateDeferrals({ schemaVersion: 1, deferrals: ["pkg"] })).toThrow("invalid or incomplete");
+});
+
+test("runs bun outdated without --json because Bun 1.4.4 and later reject that flag", () => {
+  const outdatedArgs: string[][] = [];
+  checkFreshness("/repo", validateDeferrals(deferrals), (_command, args) => {
+    if (args[0] === "outdated") outdatedArgs.push(args);
+    return { exitCode: 0, stdout: args[0] === "outdated" ? "bun outdated v1.4.5 (a7733435c)\n" : "No vulnerabilities", stderr: "" };
+  });
+  expect(outdatedArgs).toEqual([["outdated"], ["outdated"]]);
+});
+
+test("rejects bun outdated output from a Bun other than the pinned release", () => {
+  expect(() => parseBunOutdated("bun outdated v1.4.2 (34cbb9a40)\n")).toThrow("not from pinned Bun 1.4.5");
+  expect(() => parseBunOutdated("bun outdated v1.4.5 (a7733435c)\n")).not.toThrow();
 });
