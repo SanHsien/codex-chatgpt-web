@@ -5,6 +5,11 @@ This file records maintained-fork work and release identity. See this fork's
 
 ## 2026-11-24
 
+- Version 6.1.14 (fork-local; not upstream 6.1.14, whose other changes are not adopted): add GPT-6.2 Sol and
+  GPT-6.2 Sol Instant routes (`chatgpt-web/gpt-6.2-sol`, `chatgpt-web/gpt-6.2-sol-instant`), the `6.2` model
+  family in selection and verification, the GPT-6.2 Instant 500,000-character composer limit and the
+  Bigger Context budget shared with GPT-6, ported from upstream `5b1f511` (#1007). The installer/updater pin
+  stays v5.0.6. The three-family locked-effort panel is not ported.
 - Move Bun 1.4.2 -> 1.4.5 (the pin had no recorded reason); `LICENSES/Bun-1.4.5.md` replaces the 1.4.2 notice.
   `check-dependency-freshness.ts` no longer passes `--json` to `bun outdated` (rejected since 1.4.4), and
   `check-version.ts` now also covers the dev-check, bootstrap, workflow, notices and doc pins.

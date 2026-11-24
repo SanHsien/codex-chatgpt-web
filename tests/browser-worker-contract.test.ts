@@ -3788,6 +3788,11 @@ test("browser preflight separates model context from one-message transport limit
     )).toThrow("500,000-character ChatGPT composer boundary");
   }
 
+  // 2026-11-23: Pro GPT-6.2 Instant accepts 500,000 characters, not the 545,000 of the other families.
+  expect(() => assertChatGptWebInputWithinLimits(1, 1, "gpt-5.6-sol", "low", pro, 545_000, "6")).not.toThrow();
+  expect(() => assertChatGptWebInputWithinLimits(1, 1, "gpt-5.6-sol", "low", pro, 500_000, "6.2")).not.toThrow();
+  expect(() => assertChatGptWebInputWithinLimits(1, 1, "gpt-5.6-sol", "low", pro, 500_001, "6.2"))
+    .toThrow("500,000-character ChatGPT composer boundary");
   expect(() => assertChatGptWebInputWithinLimits(
     111_192,
     103_000,

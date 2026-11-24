@@ -47,6 +47,7 @@ describe("fixed ChatGPT Web model routes", () => {
       ["chatgpt-web/pro", "ultra", "max"],
     ]);
     expect(CHATGPT_WEB_MODEL_ROUTES.map(route => route.displayName)).toEqual([
+      "GPT-6.2 Sol Instant (Web)", "GPT-6.2 Sol (Web)",
       "GPT-6 Sol Instant (Web)", "GPT-6 Sol (Web)",
       "GPT-5.6 Sol Instant (Web)", "GPT-5.6 Sol (Web)", "GPT-5.6 Pro (Web)", "GPT-6 Pro (Web)",
     ]);
@@ -55,6 +56,8 @@ describe("fixed ChatGPT Web model routes", () => {
 
   test("exposes only Plus-eligible routes without the Pro account capability", () => {
     expect(availableChatGptWebModelRoutes(plus).map(route => route.slug)).toEqual([
+      "chatgpt-web/gpt-6.2-sol-instant",
+      "chatgpt-web/gpt-6.2-sol",
       "chatgpt-web/gpt-6-sol-instant",
       "chatgpt-web/gpt-6-sol",
       "chatgpt-web/gpt-5.6-sol-instant",
@@ -71,7 +74,11 @@ describe("fixed ChatGPT Web model routes", () => {
   test("Extra High stays routable without granting Pro or Pro-sized context", () => {
     const config = { ...defaultConfig("full"), extraHighAvailable: true, proAvailable: false };
     expect(availableChatGptWebModelRoutes(config).map(route => route.slug))
-      .toEqual(["chatgpt-web/gpt-6-sol-instant", "chatgpt-web/gpt-6-sol", "chatgpt-web/gpt-5.6-sol-instant", "chatgpt-web/gpt-5.6-sol"]);
+      .toEqual([
+        "chatgpt-web/gpt-6.2-sol-instant", "chatgpt-web/gpt-6.2-sol",
+        "chatgpt-web/gpt-6-sol-instant", "chatgpt-web/gpt-6-sol",
+        "chatgpt-web/gpt-5.6-sol-instant", "chatgpt-web/gpt-5.6-sol",
+      ]);
     const request = parsed("chatgpt-web/extra-high", "low");
     expect(routeChatGptWebRequest(request, config).adapterEffort).toBe("xhigh");
     expect(request.options.reasoning).toBe("xhigh");
@@ -194,6 +201,10 @@ describe("fixed ChatGPT Web model routes", () => {
     expect(resolveChatGptWebTransportLimits(CHATGPT_WEB_BACKEND_MODEL, "low", pro)).toEqual({
       browserMessageTokenLimit: 103_000,
       browserComposerCharLimit: 545_000,
+    });
+    expect(resolveChatGptWebTransportLimits(CHATGPT_WEB_BACKEND_MODEL, "low", pro, "6.2")).toEqual({
+      browserMessageTokenLimit: 103_000,
+      browserComposerCharLimit: 500_000,
     });
     for (const effort of ["medium", "high", "xhigh"] as const) {
       expect(resolveChatGptWebTransportLimits(CHATGPT_WEB_BACKEND_MODEL, effort, pro)).toEqual({
@@ -344,7 +355,7 @@ describe("fixed ChatGPT Web model routes", () => {
 
   test("new families honor effort, gate availability, and separate pinned retained conversations", () => {
     const config = { ...defaultConfig("full"), extraHighAvailable: true, proAvailable: true };
-    for (const family of ["5.6", "6"] as const) {
+    for (const family of ["5.6", "6", "6.2"] as const) {
       for (const effort of ["medium", "high", "xhigh"] as const) {
         const request = parsed(`chatgpt-web/gpt-${family}-sol`, effort);
         routeChatGptWebRequest(request, config);
@@ -385,5 +396,17 @@ describe("fixed ChatGPT Web model routes", () => {
       expect(() => routeChatGptWebRequest(parsed(model, "max"), { ...config, proAvailable: false })).toThrow("not available");
     }
     expect(new Set(keys).size).toBe(3);
+  });
+
+  test("GPT-6.2 Sol and GPT-6 Sol keep separate retained conversations on the same thread", () => {
+    const config = { ...defaultConfig("full"), extraHighAvailable: true, proAvailable: true };
+    const keyFor = (model: string) => {
+      const request: CodexParsedRequest = { ...parsed(model, "high"), options: { reasoning: "high" } };
+      request._rawBody = { client_metadata: { "x-codex-turn-metadata": JSON.stringify({ thread_id: "same-thread" }) } };
+      routeChatGptWebRequest(request, config);
+      return chatGptConversationKey(request, "provider")!;
+    };
+    expect(keyFor("chatgpt-web/gpt-6.2-sol")).not.toBe(keyFor("chatgpt-web/gpt-6-sol"));
+    expect(keyFor("chatgpt-web/gpt-6.2-sol")).toBe(keyFor("chatgpt-web/gpt-6.2-sol"));
   });
 });

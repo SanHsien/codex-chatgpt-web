@@ -1011,7 +1011,7 @@ export class ChatGptSubmissionRejectionObserver {
 }
 
 type SelectedChatGptWebModelMode = ChatGptWebModelMode & {
-  modelFamily?: "5.6" | "6";
+  modelFamily?: "5.6" | "6" | "6.2";
   selection?: { url: string; label: string };
   usageModel?: ChatGptUsageModel;
 };
@@ -1152,6 +1152,7 @@ export function assertChatGptWebInputWithinLimits(
   effort: ChatGptWebModelMode["effort"],
   capabilities: ChatGptWebCapabilities,
   promptChars?: number,
+  modelFamily?: ChatGptWebModelFamily,
 ): void {
   if (modelId !== CHATGPT_WEB_MODEL_ID && modelId !== CHATGPT_WEB_LUNA_MODEL_ID) {
     throw new Error(`ChatGPT web context limit is not defined for model: ${modelId}`);
@@ -1170,6 +1171,7 @@ export function assertChatGptWebInputWithinLimits(
     modelId,
     effort,
     capabilities,
+    modelFamily,
   );
   if (
     browserComposerCharLimit !== undefined
@@ -1234,6 +1236,7 @@ export function assertChatGptWebMultipartInputWithinLimits(
       modelId,
       messageEffort,
       capabilities,
+      modelFamily,
     );
     if (browserComposerCharLimit !== undefined && messageChars > browserComposerCharLimit) {
       throw new ChatGptWebAdapterError(
@@ -1293,6 +1296,7 @@ export function resolveChatGptWebMultipartStagingMode(
   capabilities: ChatGptWebCapabilities,
   maxStageMessageTokens: number,
   maxStageChars: number,
+  modelFamily?: ChatGptWebModelFamily,
 ): ChatGptWebModelMode {
   if (modelId !== CHATGPT_WEB_MODEL_ID && modelId !== CHATGPT_WEB_LUNA_MODEL_ID) {
     throw new Error(`ChatGPT Bigger Context staging mode is not defined for model: ${modelId}`);
@@ -1302,7 +1306,7 @@ export function resolveChatGptWebMultipartStagingMode(
     : ["low", "medium"];
   for (const effort of efforts) {
     const mode = resolveChatGptWebModelMode(modelId, effort, capabilities);
-    const limits = resolveChatGptWebTransportLimits(modelId, effort, capabilities);
+    const limits = resolveChatGptWebTransportLimits(modelId, effort, capabilities, modelFamily);
     const messageTokenLimit = resolveChatGptWebStagingTokenBudget(modelId, effort, capabilities);
     const tokenFits = maxStageMessageTokens <= messageTokenLimit;
     const charsFit = limits.browserComposerCharLimit === undefined
@@ -1469,7 +1473,7 @@ export interface BrowserTurn {
   traceId: string;
   modelId: string;
   reasoning?: string;
-  modelFamily?: "5.6" | "6";
+  modelFamily?: "5.6" | "6" | "6.2";
   capabilities: ChatGptWebCapabilities;
   prepare: () => Promise<CompiledChatGptWebPrompt & { release: () => void }>;
   prepareResume?: () => Promise<CompiledChatGptWebPrompt & { release: () => void }>;
@@ -2758,7 +2762,7 @@ export class ChatGptBrowserWorker {
     capabilities: ChatGptWebCapabilities,
     captureDiagnostic?: (checkpoint: string) => Promise<void>,
     trackUsage = false,
-    modelFamily?: "5.6" | "6",
+    modelFamily?: "5.6" | "6" | "6.2",
   ): Promise<SelectedChatGptWebModelMode> {
     const mode = resolveChatGptWebModelMode(modelId, reasoning, capabilities);
     const composer = await this.activeComposer(page);
@@ -5515,6 +5519,7 @@ export class ChatGptBrowserWorker {
           browserCapabilities,
           maxStageMessageTokens!,
           maxStageChars!,
+          turn.modelFamily,
         )
         : requestedMode;
       // Pro's inert context uploads have always used 5.6 Sol. Pin that existing
@@ -5553,6 +5558,7 @@ export class ChatGptBrowserWorker {
           requestedMode.effort,
           browserCapabilities,
           maxMessageChars,
+          turn.modelFamily,
         );
       }
       const deadline = this.config.turnTimeoutMs === undefined

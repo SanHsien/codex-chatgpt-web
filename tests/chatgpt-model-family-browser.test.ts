@@ -282,14 +282,17 @@ const nov23Picker = (oldLatest = false) => `<form><div id="prompt-textarea" cont
   })();</script>`;
 
 // #1007 (upstream P0): with an explicit "6" row beside "Latest", the shared-family selector matched two rows
-// and refused to select. This fork has no GPT-6.2 routes, so only the GPT-6 and GPT-5.6 families are exercised.
-test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("November 23 three-family picker selects GPT-6 (with repeated header) and GPT-5.6 without a Latest collision", async () => {
+// and refused to select; GPT-6.2 Sol is the "Latest" row.
+test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("November 23 three-family picker selects GPT-6.2 Sol, GPT-6 (with repeated header) and GPT-5.6 without collision", async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const caps = { localToolsEnabled: false, solAvailable: true, extraHighAvailable: true, proAvailable: true };
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
     const page = await browser.newPage();
     for (const [family, effort, expectedLabel, expectedUsage] of [
+      ["6.2", "low", "6.2 Instant", "other"],
+      ["6.2", "high", "6.2 High", "other"],
+      ["6.2", "xhigh", "6.2 Extra High", "other"],
       ["6", "low", "6 Instant", "other"],
       ["6", "high", "6 High", "other"],
       ["6", "max", "6 Pro", "gpt-6-pro"],
@@ -306,3 +309,19 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("November 23 three-family pic
     }
   } finally { await browser.close(); }
 }, 60_000);
+
+test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("November 23 picker fails closed when 6.2 is requested on an older account whose Latest still serves GPT-6", async () => {
+  const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
+  try {
+    const caps = { localToolsEnabled: false, solAvailable: true, extraHighAvailable: true, proAvailable: true };
+    const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
+    const page = await browser.newPage();
+    await page.setContent(nov23Picker(true));
+    let failure: unknown;
+    try {
+      await worker.selectModelAndEffort(page, CHATGPT_WEB_MODEL_ID, "high", caps, undefined, false, "6.2");
+    } catch (error) { failure = error; }
+    expect(String(failure)).toContain("ChatGPT model 6.2 could not be selected and verified");
+    expect(await page.locator("#prompt-textarea").innerText()).toBe("Draft");
+  } finally { await browser.close(); }
+}, 30_000);

@@ -5,14 +5,17 @@
 Reviewed the three new commits in `upstream/main`
 `8e9fac038dcd998bf23716df2b08379a15854ec9..fc701f6fbcff9fb65f679445389aca0c60410271` (tag `v6.2.0`), issues
 #1007-#1008 and PR #1010. Live strict upstream check before the review: main moved, latest PR #1010 (open) head
-`52028cba49d9188ebd989f0b28cdb5bf41f85513`, latest non-PR issue #1008, branches
+`52028cba49d9188ebd989f0b28cdb5bf41f85513`, latest non-PR issue #1011 (open bug on 6.2.0, deferred as an
+observation), branches
 `main@fc701f6fbcff9fb65f679445389aca0c60410271` and
 `fix/current-workspace-roots@adabeb16abad149f64546b45e8ef88aa4c917f56`; all four axes current after the
 baseline move. See the [register](DECISIONS.md#2026-11-24-upstream-review-8e9fac0fc701f6-v620-1007-1010).
 
 Adopted: `a3eed96` (Codex 0.169 calendar-only preamble, #1004) verbatim, and the GPT-6 / Latest row
 collision and repeated-version header from `5b1f511` (#1007) as an adapted port for GPT-6 and GPT-5.6
-only. Deferred: the GPT-6.2 routes and three-family locked-effort panel of `5b1f511`, PR #1010, and issue
+only; the GPT-6.2 routes, catalog entries and composer limit of `5b1f511` followed the same day as fork-local
+version 6.1.14 ([decision](DECISIONS.md#2026-11-24-gpt-62-sol-support-fork-local-version-6114)). Deferred: the
+three-family locked-effort panel of `5b1f511`, PR #1010, and issue
 #1008. Skipped: the release commit `fc701f6` (version strings). #1009 does not resolve. Source remains
 6.1.13 and the installer/updater v5.0.6; Bun moved from 1.4.2 to 1.4.5 the same day
 ([decision](DECISIONS.md#2026-11-24-bun-pin-142---145)).

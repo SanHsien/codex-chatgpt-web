@@ -91,25 +91,32 @@ test("family confirmation accepts the observed Chinese effort labels without loo
   expect(chatGptModelFamilyMatches(["6 Astra 高，3 / 3。"], "6", "high")).toBeFalse();
 });
 
-// #1007 (upstream P0, 2026-11-23): ChatGPT's picker now lists "Latest", an explicit "6" and "GPT-5.6 Sol" together,
-// and the active header repeats the bare version ("6 6 High"). This fork has no GPT-6.2 routes, so only GPT-6 and
-// GPT-5.6 are pinned; a GPT-6.2 request is never issued and Latest must not stand in for GPT-6 once "6" exists.
-test("bare repeated picker versions verify GPT-6 without accepting mismatches", () => {
+// #1007 (upstream P0, 2026-11-23): ChatGPT's picker now lists "Latest" (GPT-6.2 Sol), an explicit "6" and
+// "GPT-5.6 Sol" together, and the active header repeats the bare version ("6 6 High"). Latest must not stand in
+// for GPT-6 once "6" exists, and GPT-6.2 is verified by its announced version, never by the row alone.
+test("bare repeated picker versions verify GPT-6 and GPT-6.2 without accepting mismatches", () => {
   for (const [effort, mode] of [["low", "Instant"], ["medium", "Medium"], ["high", "High"], ["xhigh", "Extra High"], ["max", "Pro"]] as const) {
     const evidence = [`6 ${mode}, 1 of 5.`, `6 6 ${mode}`];
     expect(chatGptModelFamilyMatches(evidence, "6", effort)).toBeTrue();
     expect(chatGptModelFamilyMatches(evidence, "5.6", effort)).toBeFalse();
+    expect(chatGptModelFamilyMatches(evidence, "6.2", effort)).toBeFalse();
   }
   expect(chatGptUsageModelFromAnnouncements(["6 Pro, 5 of 5.", "6 6 Pro"])).toBe("gpt-6-pro");
+  for (const [effort, mode] of [["low", "Instant"], ["medium", "Medium"], ["high", "High"], ["xhigh", "Extra High"]] as const) {
+    expect(chatGptModelFamilyMatches([`6.2 ${mode}, 2 of 5.`, `6.2 ${mode}`], "6.2", effort)).toBeTrue();
+    expect(chatGptModelFamilyMatches([`6.2 ${mode}, 2 of 5.`, `6.2 6.2 ${mode}`], "6.2", effort)).toBeTrue();
+    expect(chatGptModelFamilyMatches([`6.2 ${mode}, 2 of 5.`, `6.2 ${mode}`], "6", effort)).toBeFalse();
+  }
   for (const conflicting of ["6 6.2 High", "6.2 6 Pro", "6 6.1 High", "6 5.6 Pro", "6 6"]) {
     expect(chatGptModelFamilyMatches([conflicting], "6", "high")).toBeFalse();
     expect(chatGptModelFamilyMatches([conflicting], "6", "max")).toBeFalse();
+    expect(chatGptModelFamilyMatches([conflicting], "6.2", "high")).toBeFalse();
     expect(chatGptUsageModelFromAnnouncements([conflicting])).toBe("pro-unknown");
   }
 });
 
-test("coexisting Latest and 6 rows resolve GPT-6 to the explicit 6 row, never to Latest", async () => {
-  const resolveTo = async (labels: string[], family: "6" | "5.6", effort?: "max") => {
+test("coexisting Latest and 6 rows resolve 6 to explicit 6 and 6.2 to Latest without collision", async () => {
+  const resolveTo = async (labels: string[], family: "6" | "6.2" | "5.6", effort?: "max") => {
     const matched: string[] = [];
     const menu = { menu: {
       getByRole: (_role: string, options: { name: RegExp }) => {
@@ -126,7 +133,11 @@ test("coexisting Latest and 6 rows resolve GPT-6 to the explicit 6 row, never to
     return matched;
   };
   expect(await resolveTo(["Latest", "6", "GPT-5.6 Sol"], "6")).toEqual(["6"]);
+  expect(await resolveTo(["Latest", "6", "GPT-5.6 Sol"], "6.2")).toEqual(["Latest"]);
   expect(await resolveTo(["Latest", "6", "GPT-5.6 Sol"], "5.6")).toEqual(["GPT-5.6 Sol"]);
+  // An explicit 6.2 row wins over Latest, named or bare.
+  expect(await resolveTo(["Latest", "6", "6.2"], "6.2")).toEqual(["6.2"]);
+  expect(await resolveTo(["Latest", "6", "GPT-6.2 Sol"], "6.2")).toEqual(["GPT-6.2 Sol"]);
   // Named rows still win, and the old picker where only Latest names GPT-6 keeps working.
   expect(await resolveTo(["Latest", "6", "GPT-6 Sol"], "6")).toEqual(["GPT-6 Sol"]);
   expect(await resolveTo(["Latest", "6", "GPT-6 Astra"], "6", "max")).toEqual(["GPT-6 Astra"]);

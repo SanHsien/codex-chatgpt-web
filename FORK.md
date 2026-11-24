@@ -12,13 +12,13 @@ retained in [LICENSE](LICENSE).
 - Upstream default branch: `main`
 - Reviewed upstream baseline: `860fa576eb47d9e20d7d8289235bfea94392d2fd` (upstream `main` / `v6.1.17`, PR #934, issue #933; see [tools/upstream_baseline.json](tools/upstream_baseline.json) and [docs/UPSTREAM.md](docs/UPSTREAM.md))
 - Baseline meaning: reviewed history, not merged or automatically adopted
-- Adopted source version: upstream 6.1.13 (`0901b9fb1976b4a984c7e9b4082c2868767bbf7c`, adopted 2026-10-25; see [docs/DECISIONS.md](docs/DECISIONS.md))
+- Adopted source version: upstream 6.1.13 (`0901b9fb1976b4a984c7e9b4082c2868767bbf7c`, adopted 2026-10-25; see [docs/DECISIONS.md](docs/DECISIONS.md)); the working tree is the fork-local `6.1.14`, which adds GPT-6.2 Sol support and is **not** upstream 6.1.14 (see [docs/DECISIONS.md](docs/DECISIONS.md#2026-11-24-gpt-62-sol-support-fork-local-version-6114))
 - Published release version: `v5.0.6` Windows release identity, installer, and updater pin
 
 This fork uses the reviewed upstream `v5.0.6` release identity for its own Windows release. That
 identity does not assert source or artifact byte-equivalence with upstream; the fork's published
 assets, installer, updater, support, and release records belong to `SanHsien/codex-chatgpt-web`.
-Separating the adopted source version (6.1.13) from the published release version (`v5.0.6`) is an
+Separating the adopted source version (6.1.13, fork-local 6.1.14) from the published release version (`v5.0.6`) is an
 intentional release boundary (see [docs/DECISIONS.md](docs/DECISIONS.md#2026-10-25-6x-adoption-stage-c-upstream-614-6113-0901b9f)).
 
 Follow-up work and pending tasks are tracked exclusively in [ROADMAP.md](ROADMAP.md).

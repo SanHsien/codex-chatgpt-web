@@ -14,6 +14,15 @@ function familyError(family: ChatGptWebModelFamily, cause?: unknown): ChatGptWeb
 async function familyOption(menu: EffortMenu, family: ChatGptWebModelFamily, effort?: ChatGptWebAdapterEffort) {
   // The explicit picker lists Sol and Astra together, beside GPT-6.1. Select
   // the requested name before consulting the legacy shared-family selector.
+  if (family === "6.2") {
+    // 2026-11-23: GPT-6.2 Sol is served by "Latest" unless the picker also lists an explicit 6.2 row.
+    // An account whose Latest still serves GPT-6 selects it here and then fails the announced-version
+    // check, so 6.2 is never reported for a different model.
+    const explicit = menu.menu.getByRole("menuitemradio", {
+      name: /^(?:GPT[-\s]?)?6\.2(?:\s+Sol)?$/i, exact: true, includeHidden: true,
+    });
+    if (await explicit.count() > 0) return explicit;
+  }
   if (family === "6") {
     const explicit = menu.menu.getByRole("menuitemradio", {
       name: effort === "max" ? /^GPT[-\s]?6\s+Astra$/i : /^GPT[-\s]?6\s+Sol$/i,
