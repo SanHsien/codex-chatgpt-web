@@ -4,7 +4,9 @@ on:
   schedule:
     - cron: "11 3 1 * *"
   workflow_dispatch:
+  # Fork patch (docs/DECISIONS.md 2026-11-24, Actions usage): pushes run only on main and only when the checker, its config or this workflow change.
   push:
+    branches: [main]
     paths:
       - "package.json"
       - "bun.lock"

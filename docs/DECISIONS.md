@@ -1538,3 +1538,14 @@ Baseline advanced to latest non-PR issue #1006; main, PR #1003 and branches are 
 ## 2026-11-22 — Responses listener refuses non-loopback Host headers
 
 Fleet audit found the Responses listener (`startServer`) checked `Origin` on non-GET requests only and never looked at `Host`, so a DNS-rebound page could read GET routes such as `/healthz`. `loopbackHostAllowed` now runs first for every method and returns 403 unless `Host` is `127.0.0.1`, `localhost` or `[::1]` (port optional, but if present it must equal the listening port; the existing raw-socket test sends a port-less `Host: 127.0.0.1`). Callers checked: Codex and the launcher use `http://127.0.0.1:<port>`; the managed tunnel talks to the MCP server, not this listener. Fork-only hardening, not yet in upstream; adopt upstream if it adds an equivalent. The running bridge keeps the old code until restarted (ROADMAP row).
+
+## 2026-11-24 — Push-triggered Actions cut back after GitHub suspended this fork's workflows for usage
+
+GitHub suspended this fork's Actions for excessive usage, as it did AIHOT, OpenMontage and reverse-skill on 2026-11-23. Before re-enabling, push triggers are narrowed the same way (AIHOT commit 713caec). Every push ran CI and CodeQL on `windows-latest`, the most expensive runner class, including pushes that only touched notes.
+
+- `ci.yml`: push (main only) ignores `ROADMAP.md`, `FORK.md`, `NOTICE.md`, `docs/REVIEW.md`, `docs/UPSTREAM.md`, `docs/DECISIONS.md`, `tools/upstream_baseline.json`. `pull_request` is unfiltered so required checks never stick pending; `tests/fork-contract.test.ts` still reads these notes, and every change reaches it through a PR run or the next code push.
+- `codeql.yml`: push scans only when `*.ts/tsx/mts/js/mjs/cjs`, `.github/codeql/codeql-config.yml` or the workflow change. `pull_request` and the weekly schedule stay unfiltered.
+- `dependency-freshness.yml`, `upstream-check.yml`: already had a `paths` allowlist of their own checker, config and workflow; added `branches: [main]` so pushes to other branches no longer trigger them. Schedules unchanged (monthly, weekly).
+- `release.yml`: untouched; the `v*` tag trigger is the release mechanism.
+- Revert: remove the marked `paths-ignore` / `paths` / `branches` lines.
+- Revisit when: Actions is re-enabled and `gh run list` shows usage still being limited; then reduce the schedule or the push scope further.

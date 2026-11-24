@@ -1,8 +1,18 @@
 name: CI
 
 on:
+  # Fork patch (docs/DECISIONS.md 2026-11-24, Actions usage): pushes skip changes that only touch fork notes and records.
+  # Pull requests stay unfiltered so required checks never stick pending.
   push:
     branches: [main]
+    paths-ignore:
+      - "ROADMAP.md"
+      - "FORK.md"
+      - "NOTICE.md"
+      - "docs/REVIEW.md"
+      - "docs/UPSTREAM.md"
+      - "docs/DECISIONS.md"
+      - "tools/upstream_baseline.json"
   pull_request:
 
 permissions:

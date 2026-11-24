@@ -4,7 +4,9 @@ on:
   schedule:
     - cron: "17 3 * * 1"
   workflow_dispatch:
+  # Fork patch (docs/DECISIONS.md 2026-11-24, Actions usage): pushes run only on main and only when the checker, its config or this workflow change.
   push:
+    branches: [main]
     paths:
       - "scripts/check-upstream-baseline.ts"
       - "tools/upstream_baseline.json"

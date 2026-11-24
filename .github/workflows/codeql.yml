@@ -1,8 +1,19 @@
 name: CodeQL
 
 on:
+  # Fork patch (docs/DECISIONS.md 2026-11-24, Actions usage): pushes scan only when JS/TS sources, CodeQL config or this workflow change.
+  # Pull requests and the weekly schedule stay unfiltered.
   push:
     branches: [main]
+    paths:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.mts"
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.cjs"
+      - ".github/codeql/codeql-config.yml"
+      - ".github/workflows/codeql.yml"
   pull_request:
     branches: [main]
   schedule:
