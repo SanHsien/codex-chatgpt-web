@@ -37,9 +37,10 @@ export function parseChatGptModelAnnouncement(text: string): {
   version: string; name?: string; mode: string;
 } | undefined {
   // The active header can concatenate separate model and effort labels:
-  // "5.6 Sol" + "5.6 Pro". Only collapse an identical repeated version.
+  // "5.6 Sol" + "5.6 Pro", or (2026-11-23 live capture, #1007) "6" + "6 High". Only collapse an
+  // identical repeated version; "6 6.1 High" and "6 6" stay unparsed as evidence.
   const normalized = text.normalize("NFKC").replace(/\p{Cf}/gu, "").replace(/\s+/g, " ").trim()
-    .replace(/^((?:GPT[-\s]?)?(\d+(?:\.\d+)?)\s+(?:Sol|Astra))\s+(?:GPT[-\s]?)?\2\s+/i, "$1 ");
+    .replace(/^((?:GPT[-\s]?)?(\d+(?:\.\d+)?)(?:\s+(?:Sol|Astra))?)\s+(?:GPT[-\s]?)?\2\s+/i, "$1 ");
   const match = /^(?:GPT[-\s]?)?(\d+(?:\.\d+)?)(?:\s+(Sol|Astra))?\s+([^\p{P}]+)(?:\p{P}|$)/iu.exec(normalized);
   if (!match) return undefined;
   return { version: match[1]!, ...(match[2] ? { name: match[2].toLowerCase() } : {}), mode: match[3]!.trim() };

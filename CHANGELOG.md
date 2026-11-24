@@ -3,6 +3,16 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-11-24
+
+- Move Bun 1.4.2 -> 1.4.5 (the pin had no recorded reason); `LICENSES/Bun-1.4.5.md` replaces the 1.4.2 notice.
+  `check-dependency-freshness.ts` no longer passes `--json` to `bun outdated` (rejected since 1.4.4), and
+  `check-version.ts` now also covers the dev-check, bootstrap, workflow, notices and doc pins.
+- Port the Codex 0.169 date/timezone-only initial preamble check (upstream `a3eed96`, #1004) and the GPT-6
+  versus `Latest` picker-row collision with the repeated bare-version header (upstream `5b1f511`, #1007) for
+  GPT-6 and GPT-5.6; GPT-6.2 routes, PR #1010 and issue #1008 are deferred. Review `8e9fac0..fc701f6` and
+  advance the baseline to `fc701f6`, PR #1010 and issue #1008. Source remains 6.1.13; installer/updater v5.0.6.
+
 ## 2026-11-21
 
 - Remove the expired minimatch audit exception: GHSA-g3hv-75wg-m249 now covers only `>=7.0.0 <11.0.1`,

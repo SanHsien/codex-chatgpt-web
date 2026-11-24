@@ -20,11 +20,20 @@ async function familyOption(menu: EffortMenu, family: ChatGptWebModelFamily, eff
       exact: true, includeHidden: true,
     });
     if (await explicit.count() > 0) return explicit;
+    // 2026-11-23 (#1007): the three-family picker lists "Latest" (now GPT-6.2) beside an explicit "6" row.
+    // Matching both made the family look ambiguous. Prefer the explicit row so Latest never stands in for
+    // GPT-6; the old picker, where only Latest names GPT-6, still falls through to it. Version and effort
+    // are verified afterwards either way.
+    const versioned = menu.menu.getByRole("menuitemradio", {
+      name: /^(?:GPT[-\s]?)?6(?:\s+Astra)?(?:\s+Pro)?$/i,
+      exact: true, includeHidden: true,
+    });
+    if (await versioned.count() > 0) return versioned;
   }
   return menu.menu.getByRole("menuitemradio", {
     name: family === "5.6" ? /^GPT[-\s]?5\.6\s+Sol(?:\s+Pro)?$/i
       // Simplified/Traditional Chinese and Japanese share 最新; Korean uses 최신.
-      : /^(?:Latest|最新|최신|(?:GPT[-\s]?)?6(?:\s+Astra)?(?:\s+Pro)?)$/i,
+      : /^(?:Latest|最新|최신)$/i,
     exact: true,
     includeHidden: true,
   });
