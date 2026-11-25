@@ -3,6 +3,19 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-11-25
+
+- Version 6.1.15 (fork-local): rebuild detached-answer binding around one ownership rule
+  (`turn-ownership.ts`). A user turn is ours only by this Send's per-turn token (or, for
+  token-less browser text, the accepted key or the unique exact-text last user), never by
+  "a new user appeared". Remounted virtualized history is ignored instead of aborting the
+  turn, never acknowledges Send and never supplies an answer; a user after our owner still
+  aborts; with no provable owner the turn waits under its existing deadline, and a lone
+  remounted answer is never bound or taken as proof of Send. A non-baseline user after the last
+  mounted baseline user is "uncertain", so compaction retries never reset or re-send. Probing is
+  bounded per poll. The legacy non-group turn layout keeps its original behavior. No history
+  expansion, failure diagnostics carry counts only. No upstream writes.
+
 ## 2026-11-24
 
 - Version 6.1.14 (fork-local; not upstream 6.1.14, whose other changes are not adopted): add GPT-6.2 Sol and

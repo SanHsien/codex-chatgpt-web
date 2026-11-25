@@ -1,5 +1,12 @@
 # Upstream tracking
 
+## 2026-11-25: fork-local 6.1.15 detached-turn recovery
+
+The #963 symptom has a fork-local reproduction and repair; see
+[decision](DECISIONS.md#2026-11-25-fork-local-detached-turn-root-cause-963).
+This does not adopt an upstream patch or resolve the unrelated effort-menu timeout.
+No upstream write or baseline change is part of this fix.
+
 ## 2026-11-24: 8e9fac0..fc701f6 (v6.2.0)
 
 Reviewed the three new commits in `upstream/main`

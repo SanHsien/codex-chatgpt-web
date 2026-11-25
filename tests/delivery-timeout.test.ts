@@ -53,7 +53,7 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("a damaged staging acknowledg
           <div data-content-search-unit-key="current:assistant"><div data-conversation-role="assistant"></div><div class="markdown"><p>${actual}</p></div></div>
           <div class="turn-action-controls"><button data-testid="copy-turn-action-button">Copy</button></div></section>`);
         const identity = 'group:assistant:current';
-        const binding = { identity, locator: page.locator(chatGptAssistantTurnSelector(identity)), acceptedTurnIdentities: [identity] };
+        const binding = { identity, locator: page.locator(chatGptAssistantTurnSelector(identity)) };
         const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
         const inspected = await worker.responseDomSnapshot(binding.locator);
         expect(inspected.visibleText).toBe(actual);

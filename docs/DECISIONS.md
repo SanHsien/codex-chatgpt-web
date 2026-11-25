@@ -1151,7 +1151,7 @@ heads are unchanged. The table records reviewed history, not a merge.
 | --- | --- | --- |
 | #960 / #962 | not applicable: each exact issue API returns 404; no source patch exists. | The number becomes available. |
 | #961 | defer diagnosis. Windows Plus, Full harness: the turn ends with `A newer Codex instruction superseded this ChatGPT response.` This fork emits the same message from `chatGptTurnSupersededError` (`src/adapters/chatgpt-web/adapter-error.ts:67`) when a newer Codex instruction replaces an in-flight turn (`src/adapters/chatgpt-web/turn-execution.ts:540`), which is intended cancellation, not by itself a defect. The report has screenshots and an attached diagnostics file but no identified trigger, no upstream triage and no fix. | A privacy-safe diagnostic shows the supersede firing without a newer Codex instruction (for example a duplicate or replayed request), with a Windows reproduction and a regression. |
-| #963 | defer diagnosis. Windows 6.1.17, GPT-6 Sol (Web): `Reconnecting 5/5`, repeated `ChatGPT opened another user turn while the bound assistant response was detached` (`src/adapters/chatgpt-web/browser-worker.ts:3486`) followed by retained compaction fallback, and 120 s `effort_selection` stage timeouts (`src/adapters/chatgpt-web/browser-worker.ts:5640`). The report itself says the concurrent Cloudflare check is not established as the cause, and the tunnel-ID rejection is a separate setup observation. No root cause or patch is supplied; raising timeouts or loosening the detached-turn binding is not a proven repair. | A controlled Windows reproduction isolates why the bound response detaches or the effort menu never settles, with a regression that keeps the turn-binding and no-resend guarantees. |
+| #963 | Fork-local detached-turn root cause/fix recorded on 2026-11-25; see the decision below. The effort-menu timeout remains deferred. Original upstream report: defer diagnosis. Windows 6.1.17, GPT-6 Sol (Web): `Reconnecting 5/5`, repeated `ChatGPT opened another user turn while the bound assistant response was detached` (`src/adapters/chatgpt-web/browser-worker.ts:3486`) followed by retained compaction fallback, and 120 s `effort_selection` stage timeouts (`src/adapters/chatgpt-web/browser-worker.ts:5640`). The report itself says the concurrent Cloudflare check is not established as the cause, and the tunnel-ID rejection is a separate setup observation. No root cause or patch is supplied; raising timeouts or loosening the detached-turn binding is not a proven repair. | A controlled Windows reproduction isolates why the bound response detaches or the effort menu never settles, with a regression that keeps the turn-binding and no-resend guarantees. |
 
 The four-axis reviewed ledger advances to issue #963; PR #959/head `e1b3c7e8` and both exact branch
 heads are unchanged. Deferred items are tracked in ROADMAP.
@@ -1289,7 +1289,7 @@ cancellation smoke harness of `d3734f1` (earlier range, deferred, not executed).
 | Issue | State | Decision | Reason |
 | --- | --- | --- | --- |
 | #961 | open, Windows 11 | defer | "stream disconnected ... superseded" report without a root cause. Keep with #963 for a controlled Windows diagnosis. |
-| #963 | open, Windows | defer | Unchanged decision (2026-11-04). |
+| #963 | open, Windows | fork-local fix; effort timeout deferred | Detached-turn ownership/history classification is reproduced and fixed in fork 6.1.15 (2026-11-25); no upstream patch or contact. Effort-menu timeout remains unproven. |
 | #965 | closed | reject | macOS performance report. |
 | #968 | closed | no change | Portuguese-language Windows MCP tunnel `removeChild` report, closed upstream; no fork reproduction. |
 | #969 | open, Linux | reject | Linux-only; this fork is Windows-only. |
@@ -1613,3 +1613,81 @@ The owner's Codex default model is `gpt-6.2-sol` and ChatGPT's web picker moved 
 Naming: the owner's `~/.codex/config.toml` has `model = "gpt-6.2-sol"`, which is the native Codex slug. The Web route is the catalog entry `chatgpt-web/gpt-6.2-sol` (and `chatgpt-web/gpt-6.2-sol-instant`); it appears after the bridge restarts on the new build and Codex refreshes its model catalog. This change does not edit the owner's Codex configuration.
 
 Version: `package.json`, `launcher/package.json` and `src/version.ts` move 6.1.13 -> 6.1.14 so the installer file name differs from the installed one. This is fork-local numbering: it is not upstream 6.1.14, whose other changes remain unadopted, and the installer/updater pin stays v5.0.6.
+
+## 2026-11-25 fork-local detached-turn root cause (#963)
+
+Decision: fix locally in 6.1.15. No upstream contact, push, or adoption. The #963
+120 s effort-selection symptom is separate and remains deferred.
+
+Root cause: in a long retained conversation ChatGPT virtualizes old turns and later
+remounts history groups that were never in the pre-Send baseline. The previous
+binding code treated any unknown user group as "ChatGPT opened another user turn",
+and four rounds of special cases (accepted-user anchors, history prefixes, rekeying)
+kept finding paths that bound a historical answer or aborted our own turn.
+
+Design (6.1.15, `src/adapters/chatgpt-web/turn-ownership.ts`, two pure functions):
+
+- `ownerOf`: candidates are mounted user groups outside `baseline.initialTurnIdentities`.
+  With a prepared turn token the owner is the unique candidate whose rendered message
+  carries exactly that token. Without one (browser-only text) it is the accepted key if
+  it is a candidate with exactly the submitted text, else the unique exact-text candidate
+  that is the last user group. A user key is never proof by itself when a token exists,
+  and `acceptedUserIdentity` is only written from this same proof.
+- `resolve`: no owner -> WAIT (keep the binding; the existing deadline governs). A user
+  group after the owner -> ABORT (a genuine competing turn). Otherwise the answer is
+  `group:assistant:<owner key>`; it must not be in the baseline and must be mounted,
+  else WAIT. Nothing falls back to an older user, and history before the owner is
+  ignored, never expanded.
+- Evidence is read by a cheap non-expanding probe, bounded per poll: only the last
+  `MAX_PROBED_USERS` (4) non-baseline users after the last mounted baseline user are
+  read, so hundreds of remounted history groups cost nothing. First binding and
+  detached-answer recovery may additionally expand only the single last non-baseline user
+  (per-action timeouts; a group that vanishes mid-expansion means "no proof yet"), and
+  that proof is transferred only onto the same node after the cleanup.
+- Token-less text is the weaker mode: its candidate must come after the last mounted
+  baseline user, and when the baseline had users but none is mounted any more nothing
+  anchors the position, so only a previously proven accepted key can own (else WAIT).
+- In the group layout first binding has no "any new answer" path: without owner proof it
+  WAITs, so a remounted lone answer (or several) is neither bound nor reported as "N new
+  turns"; a group without a user bubble (an Activity shell with another key) is not bound.
+  The expansion proof is substituted into the real observation, so the token-less baseline
+  anchor still applies to it.
+- Layout split: a conversation whose turn ids carry no `group:` key at all (the legacy
+  `data-turn-id` / `conversation-turn-*` layout, `chatGptUsesGroupTurns`) keeps the original
+  behavior unchanged: `chatGptSubmissionEvidence`, `chatGptNewTurnIdentity` first binding and
+  `chatGptReboundTurnIdentity` rebinding with the binding's accepted turn set. Virtualization
+  remounts of never-seen history only happen with `data-turn-key` groups, so the ownership
+  rules apply there only. Any `group:` id (state, baseline or binding) selects the new rules.
+- Send acknowledgement (never expands; ChatGPT can swap the just-sent bubble for
+  Activity) is `submissionEvidence`: owner proof -> user_turn; a new answer paired with a
+  probed candidate user (one of the last four after the last mounted baseline user, not
+  conclusively foreign; its tail may be collapsed) -> assistant_turn; running generation ->
+  generation_running; any other non-baseline user after the last mounted baseline user ->
+  `uncertain` (history above that user, and lone remounted answers, are neither evidence
+  nor uncertainty, so they cannot fail a retry or fake an acknowledgement). Acknowledgement ignores `uncertain` and keeps waiting, but
+  the compaction retry/reset paths treat it as "possibly sent": they refuse to reset the
+  composer or re-attach the prompt, so unproven history can never cause a resend.
+  `foreign` is set only when the adapter read complete, uncollapsed content that is
+  conclusively not this Send, so readable remounted history does not acknowledge.
+
+Kept from earlier rounds: no history expansion, no resubmission (Send is activated once in
+`sendAttachedPrompt`; the binding path never calls it), expansion cleanup bounded by the
+10 s connector action timeout that cannot mutate a rebound page, no new total cap on the
+multipart acknowledgement path, `reconcileMultipartHistory` unchanged, and failure
+diagnostics that carry only counts and booleans (candidates, owner found, token mode,
+later users), never text, tokens or identities.
+
+Documented limits: a competing user that cannot be distinguished from our own turn
+(a token that never renders, or token-less text identical to remounted history that sits
+after the last mounted baseline user) waits until the existing deadline instead of
+guessing, and token-less ownership needs a mounted baseline user (else WAIT); in the group
+layout owner-less Activity shells with a different key are never bound (acknowledgement
+still comes from generation); the legacy layout is deliberately not covered by these rules; a real user turn inserted before our owner is indistinguishable from remounted
+history and is ignored, though it cannot select its answer. Token-less browser-only
+text is the weaker mode by design.
+
+Local evidence: 21 field failures (14 with zero users at acceptance) match the symptom,
+but those files lack the failing predicate and cannot prove one shared cause. Version
+numbers follow 56e0e55 (root/launcher manifests, `src/version.ts`, fork docs,
+changelog); both lockfiles and the v5.0.6 installer/updater pins are unchanged.
+Evidence: [REVIEW](REVIEW.md#2026-11-26-detached-turn-ownership-redesign-fork-6115).

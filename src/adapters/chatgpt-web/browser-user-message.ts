@@ -62,3 +62,34 @@ export function readChatGptUserMessage(
   // its own chip separator too. Only this leading transport spacing is excluded.
   return { text: leadingConnector ? value.trimStart() : value, leadingConnector };
 }
+
+/** Runs in the page; requires exactly one fully rendered, bounded token. */
+export function chatGptUserMessageHasToken(element: Element, token: string): boolean {
+  // textContent concatenates BR/block boundaries with the next word.
+  // Read rendered boundaries, but inspect all source text for ambiguity.
+  const raw = element.textContent ?? "";
+  const candidates = [...raw.matchAll(/turn_[A-Za-z0-9_-]{32}/g)];
+  const tokens = (element as HTMLElement).innerText
+    .match(/(?<![A-Za-z0-9_-])turn_[A-Za-z0-9_-]{32}(?![A-Za-z0-9_-])/g) ?? [];
+  if (tokens.length !== 1 || tokens[0] !== token
+    || candidates.length !== 1 || candidates[0]![0] !== token) return false;
+  // innerText includes transparent text and falls back to textContent
+  // for hidden roots. Every source character of the identity must render.
+  const start = candidates[0]!.index!;
+  const end = start + token.length;
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  let offset = 0;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const next = offset + (node.textContent?.length ?? 0);
+    if (next > start && offset < end) {
+      for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+        const style = getComputedStyle(parent);
+        if (parent.hidden || style.display === "none"
+          || style.visibility === "hidden" || style.opacity === "0") return false;
+      }
+    }
+    offset = next;
+    if (offset >= end) break;
+  }
+  return element.isConnected;
+}

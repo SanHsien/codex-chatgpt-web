@@ -7,6 +7,7 @@ import { createContext, runInContext } from "node:vm";
 import type { Page } from "playwright-core";
 import { ChatGptWebAdapterError } from "../src/adapters/chatgpt-web/adapter-error";
 import { CHATGPT_BROWSER_OBSERVATION_PROBE_TIMEOUT_MS, CHATGPT_COMPLETION_SETTLE_MS, CHATGPT_EXTERNAL_PROGRESS_CLOCK_SKEW_MS, CHATGPT_EXTERNAL_PROGRESS_STALL_CEILING_MS, ChatGptCompletionTracker, chatGptExternalProgressSuppressesDomHealth, CHATGPT_RESPONSE_DOM_GRACE_MS, MAX_CHATGPT_INTERNAL_OBSERVATION_FAULTS, CHATGPT_COMPOSER_DOCUMENT_END_KEY, CHATGPT_COMPOSER_SELECT_ALL_KEY, ChatGptBrowserObservationTimeoutError, ChatGptBrowserWorker, ChatGptSubmissionRejectionObserver, ChatGptPromptAttachmentIntegrityError, ChatGptTurnDomHealthTracker, ChatGptVisibleTraceTracker, MAX_CHATGPT_BROWSER_PAGE_REBINDS, MAX_CHATGPT_BROWSER_TABS, MAX_CHATGPT_CONNECTOR_TRIGGER_ATTEMPTS, assertChatGptWebInputWithinLimits, assertChatGptWebMultipartInputWithinLimits, browserDiagnosticCheckpoint, chatGptNewTurnIdentity, chatGptReboundTurnIdentity, chatGptSubmissionEvidence, connectAfterClosingBrowserConnection, dismissChatGptTemporaryChatOnboarding, isChatGptTraceControl, redactChatGptUiDiagnostic, resolveBrowserConfig, resolveChatGptToolConfirmation, resolveChatGptWebMultipartStagingMode, sanitizeChatGptBrowserDiagnosticState, setChatGptThinkMode, stripChatGptTraceControlSuffix, throwIfChatGptRateLimitDialog, throwIfChatGptSessionFailureAlert, throwIfChatGptTerminalErrorAlert, withChatGptBrowserObservationTimeout, CHATGPT_MULTIPART_RESPONSE_DOM_GRACE_MS, browserStageTimeouts, ChatGptSuspensionClock, remainingStageBudgetMs } from "../src/adapters/chatgpt-web/browser-worker";
+import { MAX_PROBED_USERS } from "../src/adapters/chatgpt-web/turn-ownership";
 import { ensureChatGptPersonalizedConnectorAccess, chatGptUnavailableProDetail } from "../src/adapters/chatgpt-web/browser-worker";
 import { chatGptStoppedThinkingError } from "../src/adapters/chatgpt-web/adapter-error";
 import { CHATGPT_STOPPED_THINKING_LABELS } from "../src/adapters/chatgpt-web/ui-labels";
@@ -137,7 +138,7 @@ test("submission DOM tracks logical identities and retains virtualized history i
   } as unknown as Page;
   const worker = Object.create(ChatGptBrowserWorker.prototype) as {
     captureSubmissionBaseline(page: Page): Promise<{ initialTurnIdentities: string[]; domCache: { fullScans: number } }>;
-    currentSubmissionEvidence(page: Page, baseline: unknown): Promise<string | undefined>;
+    currentSubmissionEvidence(page: Page, baseline: unknown, signal?: AbortSignal, reportUncertain?: boolean): Promise<string | undefined>;
     submissionDomState(page: Page, cache: unknown): Promise<{ responseIdentities: string[] }>;
   };
   const baseline = await worker.captureSubmissionBaseline(page);
@@ -152,6 +153,7 @@ test("submission DOM tracks logical identities and retains virtualized history i
   // Changing a logical ID invalidates the cached snapshot; its display index is not authority.
   turns[2] = { ...turns[2]!, id: "new-user" };
   observers.forEach(notify => notify());
+  // Legacy (non-group) layout keeps the original acknowledgement: any new user turn.
   expect(await worker.currentSubmissionEvidence(page, baseline)).toBe("user_turn");
   turns.push({ ...turns[3]!, index: 20 });
   observers.forEach(notify => notify());
@@ -196,7 +198,8 @@ test("power turn identity separates roles and keeps virtualized groups in the su
   });
   const page = {
     evaluate: async (callback: Function, options: unknown) => runInContext(`(${callback.toString()})`, context)(options),
-    locator: () => ({}),
+    // No mounted message content: a new group carries no ownership evidence.
+    locator: () => ({ locator: () => ({ count: async () => 0 }) }),
   } as unknown as Page;
   const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
   const baseline = await worker.captureSubmissionBaseline(page);
@@ -211,11 +214,18 @@ test("power turn identity separates roles and keeps virtualized groups in the su
   next.innerHTML = '<div data-user-message-bubble></div>';
   window.document.body.appendChild(next);
   observers.forEach(notify => notify());
-  expect(await worker.currentSubmissionEvidence(page, baseline)).toBe("user_turn");
-  expect(chatGptNewTurnIdentity(baseline.initialTurnIdentities, (await worker.submissionDomState(page)).responseIdentities)).toBeUndefined();
+  // A new user group alone is not ownership proof (it can be remounted history); the DOM
+  // cases in browser-turn-binding.test.ts cover acknowledgement by token or exact text.
+  expect(await worker.currentSubmissionEvidence(page, baseline)).toBeUndefined();
+  expect(await worker.currentSubmissionEvidence(page, baseline, undefined, true)).toBe("uncertain");
+  const freshResponses = async () => (await worker.submissionDomState(page)).responseIdentities
+    .filter((identity: string) => !baseline.initialTurnIdentities.includes(identity));
+  expect(await freshResponses()).toEqual([]);
   next.innerHTML += '<h4 data-conversation-role="assistant"></h4>';
   observers.forEach(notify => notify());
-  expect(chatGptNewTurnIdentity(baseline.initialTurnIdentities, (await worker.submissionDomState(page)).responseIdentities)).toBe("group:assistant:next");
+  expect(await freshResponses()).toEqual(["group:assistant:next"]);
+  // Its question has no readable content and no token: the pair acknowledges Send, never a bind.
+  expect(await worker.currentSubmissionEvidence(page, baseline)).toBe("assistant_turn");
   window.document.body.appendChild(next.cloneNode(true));
   observers.forEach(notify => notify());
   await expect(worker.submissionDomState(page)).rejects.toThrow("duplicate conversation turn identities");
@@ -5060,4 +5070,160 @@ test("missing connectors in Temporary Chat explain how to return to ordinary cha
       expect(message).toContain(titles.length ? "no row named" : "menu did not open");
     }
   }
+});
+
+// Round-5 review: without owner proof nothing is bound, acknowledged as owned, or re-sent. These
+// drive the real worker methods over a mocked DOM state, so they run in default CI.
+function proofWorker(state: { turnIdentities: string[]; userIdentities: string[]; responseIdentities: string[]; visibleStopButtonCount?: number },
+  users: { identity: string; token?: string; foreign?: true }[] = [], probes?: { count: number }) {
+  const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
+  worker.submissionDomState = async () => ({ userTurnCount: 0, assistantTurnCount: 0, visibleStopButtonCount: 0, ...state });
+  worker.reconcileMultipartHistory = async () => {};
+  worker.bindingObservation = async () => {
+    if (probes) probes.count += users.length;
+    return { users, responses: state.responseIdentities };
+  };
+  return worker;
+}
+// A page with no alerts or dialogs; turn-container selectors resolve to `turn` when given.
+function quietPage(turn: unknown = {}) {
+  const hidden: any = {
+    filter() { return hidden; }, last() { return hidden; }, first() { return hidden; }, getByText() { return hidden; },
+    isVisible: async () => false, count: async () => 0,
+  };
+  return { isClosed: () => false, locator: (selector: string) => selector.startsWith("[data-turn-key=") ? turn : hidden } as any;
+}
+const proofBaseline = () => ({
+  initialTurnIdentities: ["group:user:B", "group:assistant:B"], domCache: {},
+  turnToken: "turn_0123456789abcdef0123456789abcdef", submittedText: "Request turn_0123456789abcdef0123456789abcdef",
+});
+
+test("a remounted old answer is neither acknowledged nor bound as ours", async () => {
+  for (const responses of [["group:assistant:H"], ["group:assistant:H1", "group:assistant:H2"]]) {
+    const worker = proofWorker({ turnIdentities: responses, userIdentities: [], responseIdentities: responses });
+    const baseline = proofBaseline();
+    expect(await worker.currentSubmissionEvidence({}, baseline)).toBeUndefined();
+    // Remounted answers without any new user are not "possibly sent" either.
+    expect(await worker.currentSubmissionEvidence({}, baseline, undefined, true)).toBeUndefined();
+    worker.waitForTurnDomOrExternalProgress = async () => { await new Promise(resolve => setTimeout(resolve, 15)); };
+    const outcome = await worker.waitForNewAssistantTurn(quietPage(), baseline, Date.now() + 80)
+      .then((binding: unknown) => ({ binding }), (error: Error) => ({ error }));
+    expect(outcome).toHaveProperty("error");
+    expect((outcome as { error: Error }).error.message).toMatch(/timed out|did not expose/);
+  }
+});
+
+test("an unproven new user is uncertain, never 'not sent', so a compaction retry cannot resend", async () => {
+  const state = { turnIdentities: ["group:user:U"], userIdentities: ["group:user:U"], responseIdentities: [] as string[] };
+  const worker = proofWorker(state, [{ identity: "group:user:U" }]);
+  const baseline = proofBaseline();
+  expect(await worker.currentSubmissionEvidence({}, baseline)).toBeUndefined();
+  expect(await worker.currentSubmissionEvidence({}, baseline, undefined, true)).toBe("uncertain");
+  let attempts = 0;
+  let resets = 0;
+  worker.attachPrompt = async () => {
+    attempts += 1;
+    throw new ChatGptPromptAttachmentIntegrityError("composer cleared");
+  };
+  worker.resetCompactionComposerForRetry = async () => { resets += 1; };
+  await expect((ChatGptBrowserWorker.prototype as any).attachPromptWithCompactionRetry.call(
+    worker, {}, "compact prompt", false, true, baseline,
+  )).rejects.toThrow("ChatGPT changed while the compaction prompt was being prepared");
+  expect({ attempts, resets }).toEqual({ attempts: 1, resets: 0 });
+  // The reset path itself refuses to touch the composer in that state.
+  worker.activeComposer = async () => { throw new Error("must not touch the composer"); };
+  await expect((ChatGptBrowserWorker.prototype as any).resetCompactionComposerForRetry.call(worker, {}, baseline))
+    .rejects.toThrow("ChatGPT changed while the compaction prompt was being prepared");
+});
+
+test("a new answer paired with a new user whose tail is collapsed acknowledges Send", async () => {
+  const state = { turnIdentities: ["group:user:U", "group:assistant:U"], userIdentities: ["group:user:U"], responseIdentities: ["group:assistant:U"] };
+  const worker = proofWorker(state, [{ identity: "group:user:U" }]);
+  expect(await worker.currentSubmissionEvidence({}, proofBaseline())).toBe("assistant_turn");
+  // The same shape for readable history that is conclusively not this Send is not evidence.
+  const history = proofWorker(state, [{ identity: "group:user:U", foreign: true }]);
+  expect(await history.currentSubmissionEvidence({}, proofBaseline())).toBeUndefined();
+});
+
+test("owner proof reads at most a few users per poll, however much history remounts", async () => {
+  const identities = Array.from({ length: 200 }, (_, i) => `group:user:R${i}`);
+  const users = [{ identity: "group:user:B" }, ...identities.map(identity => ({ identity }))];
+  const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
+  worker.submissionDomState = async () => ({ userIdentities: users.map(user => user.identity), responseIdentities: [], turnIdentities: [] });
+  let contentLookups = 0;
+  const page = { locator: () => ({ locator: () => ({ count: async () => { contentLookups += 1; return 0; } }) }) };
+  await worker.bindingObservation(page, proofBaseline());
+  expect(contentLookups).toBeGreaterThan(0);
+  expect(contentLookups).toBeLessThanOrEqual(MAX_PROBED_USERS);
+});
+
+test("token-less ownership proven by expanding a truncated message keeps the baseline anchor and binds", async () => {
+  const submitted = "Long browser-only request";
+  const baseline = { initialTurnIdentities: ["group:user:B", "group:assistant:B"], domCache: {}, submittedText: submitted };
+  const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
+  const state = {
+    turnIdentities: ["group:user:B", "group:assistant:B", "group:user:U", "group:assistant:U"],
+    userIdentities: ["group:user:B", "group:user:U"], responseIdentities: ["group:assistant:B", "group:assistant:U"],
+    visibleStopButtonCount: 0,
+  };
+  worker.submissionDomState = async () => state;
+  // The cheap probe sees only a truncated preview: no text proof for U.
+  worker.bindingObservation = async () => ({
+    users: [{ identity: "group:user:B" }, { identity: "group:user:U", text: "Long browser-only" }],
+    responses: state.responseIdentities,
+  });
+  let expansions = 0;
+  worker.withExpandedUserMessage = async () => { expansions += 1; return { identity: "group:user:U", text: submitted }; };
+  const handle = { evaluate: async () => true, dispose: async () => {} };
+  const group = { locator: () => ({ count: async () => 1 }), elementHandle: async () => handle };
+  const page = quietPage(group);
+  const binding = { identity: "group:assistant:gone", locator: { count: async () => 0 } };
+  const rebound = await worker.reconcileAssistantTurnBinding(page, baseline, binding);
+  expect(expansions).toBe(1);
+  expect(rebound.identity).toBe("group:assistant:U");
+  expect(baseline.initialTurnIdentities).toContain("group:user:B");
+  // First binding takes the same expanded proof instead of waiting for the deadline.
+  const first = await worker.waitForNewAssistantTurn(page, baseline, Date.now() + 5_000);
+  expect(first.identity).toBe("group:assistant:U");
+  expect(expansions).toBe(2);
+});
+
+test("legacy turn ids keep the original acknowledgement and binding; group ids use ownership rules", async () => {
+  const legacy = { turnIdentities: ["old-user", "old-answer", "new-user", "new-answer"], userIdentities: ["old-user", "new-user"],
+    responseIdentities: ["old-answer", "new-answer"], visibleStopButtonCount: 0 };
+  const grouped = { turnIdentities: ["group:user:old", "group:assistant:old", "group:user:new", "group:assistant:new"],
+    userIdentities: ["group:user:old", "group:user:new"], responseIdentities: ["group:assistant:old", "group:assistant:new"],
+    visibleStopButtonCount: 0 };
+  const page = quietPage();
+  const legacyWorker = proofWorker(legacy);
+  const legacyBaseline = { initialTurnIdentities: ["old-user", "old-answer"], domCache: {} };
+  expect(await legacyWorker.currentSubmissionEvidence({}, legacyBaseline)).toBe("user_turn");
+  expect((await legacyWorker.waitForNewAssistantTurn(page, legacyBaseline, Date.now() + 500)).identity).toBe("new-answer");
+  // The detached legacy binding rebinds to its one replacement, and a new user still aborts.
+  const detached = { identity: "gone", locator: { count: async () => 0 }, acceptedTurnIdentities: ["old-user", "old-answer", "new-user", "gone"] };
+  expect((await legacyWorker.reconcileAssistantTurnBinding({ locator: () => ({}) }, legacyBaseline, detached)).identity).toBe("new-answer");
+  // Same shape in the group layout, with no ownership proof: nothing is bound.
+  const groupedWorker = proofWorker(grouped, [{ identity: "group:user:old" }, { identity: "group:user:new" }]);
+  const groupedBaseline = { initialTurnIdentities: ["group:user:old", "group:assistant:old"], domCache: {},
+    turnToken: "turn_0123456789abcdef0123456789abcdef", submittedText: "x" };
+  groupedWorker.waitForTurnDomOrExternalProgress = async () => { await new Promise(resolve => setTimeout(resolve, 15)); };
+  await expect(groupedWorker.waitForNewAssistantTurn(page, groupedBaseline, Date.now() + 80)).rejects.toThrow();
+});
+
+test("remounted history before the last baseline user never fails a compaction retry; a user after it does", async () => {
+  const baseline = proofBaseline();
+  const state = { turnIdentities: [], userIdentities: ["group:user:O1", "group:user:B"], responseIdentities: ["group:assistant:O1"] };
+  const history = proofWorker(state, [{ identity: "group:user:O1" }, { identity: "group:user:B" }]);
+  expect(await history.currentSubmissionEvidence({}, baseline, undefined, true)).toBeUndefined();
+  let attempts = 0;
+  let resets = 0;
+  history.attachPrompt = async () => {
+    attempts += 1;
+    if (attempts === 1) throw new ChatGptPromptAttachmentIntegrityError("composer cleared");
+  };
+  history.resetCompactionComposerForRetry = async () => { resets += 1; };
+  await (ChatGptBrowserWorker.prototype as any).attachPromptWithCompactionRetry.call(history, {}, "compact prompt", false, true, baseline);
+  expect({ attempts, resets }).toEqual({ attempts: 2, resets: 1 });
+  const sent = proofWorker({ ...state, userIdentities: ["group:user:B", "group:user:U"] }, [{ identity: "group:user:B" }, { identity: "group:user:U" }]);
+  expect(await sent.currentSubmissionEvidence({}, baseline, undefined, true)).toBe("uncertain");
 });

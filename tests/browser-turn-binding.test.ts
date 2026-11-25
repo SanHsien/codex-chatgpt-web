@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { chromium, type Browser, type Locator, type Page } from "playwright-core";
-import { ChatGptBrowserWorker } from "../src/adapters/chatgpt-web/browser-worker";
+import { ChatGptBrowserWorker, ChatGptBrowserDiagnostics } from "../src/adapters/chatgpt-web/browser-worker";
 import { chatGptHtmlToMarkdown, ChatGptMarkdownBuffer } from "../src/adapters/chatgpt-web/markdown";
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { matchesSubmission, shellBinding } from "./ownership-probe";
 
 // Own the Edge process at suite scope: process shutdown can outlast a case's
 // assertion budget. Every case still gets fresh contexts, closed in its finally.
@@ -20,13 +22,103 @@ async function closeTestContexts(): Promise<void> {
   for (const context of browser.contexts()) await context.close();
 }
 
+for (const scenario of ["history", "accepted-rekey", "history-users-only", "later-user", "duplicate-own", "user-first", "during-expansion"] as const) {
+  test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)(
+    ({ history: "remounted own turn accepts previously unseen virtualized history",
+      "accepted-rekey": "a remounted accepted user with a changed key still requires ownership proof",
+      "history-users-only": "historical user remounts do not fail the replacement predicate",
+      "later-user": "a competing later user still aborts a detached response",
+      "duplicate-own": "duplicate ownership cannot be mistaken for remounted history",
+      "user-first": "a verified user may remount before its answer without resubmission",
+      "during-expansion": "a competing turn inserted during expansion still aborts" })[scenario], async () => {
+      try {
+        const page = await browser.newPage();
+        const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
+        const token = "turn_0123456789abcdef0123456789abcdef";
+        const prompt = `Long request\n${"context\n".repeat(2000)}${token}`;
+        const group = (key: string, text: string, answer = true) => `<div data-turn-key="${key}">
+          <div data-user-message-bubble><div data-search-result-target style="white-space:pre-wrap">${text}</div></div>
+          ${answer ? '<div data-conversation-role="assistant">Answer</div>' : ""}</div>`;
+        await page.setContent('<main></main><form><div id="composer" contenteditable="true">Draft</div><button id="send" type="button" data-testid="send-button">Send</button></form>');
+        worker.activeComposer = async () => page.locator('#composer');
+        await page.locator('#send').evaluate(button => {
+          (globalThis as any).sendCount = 0;
+          button.addEventListener('click', () => {
+            (globalThis as any).sendCount++;
+            document.querySelector('main')!.innerHTML = '<div data-turn-key="pending"><span hidden data-chatgpt-agent-turn-start></span></div><button data-testid="stop-button">Stop</button>';
+          });
+        });
+        const baseline = await worker.captureSubmissionBaseline(page, prompt, [], token);
+        // An owner-less shell is no evidence by itself; the running generation acknowledges Send.
+        expect(await worker.sendAttachedPrompt(page, baseline)).toBe("generation_running");
+        expect(await worker.currentSubmissionEvidence(page, baseline)).toBe("generation_running");
+        expect(baseline.acceptedUserIdentity).toBeUndefined();
+        if (scenario === "accepted-rekey") baseline.acceptedUserIdentity = "group:user:pending";
+        const binding = shellBinding(page);
+        const history = scenario === "accepted-rekey" ? "" : group("unseen-old-1", "Earlier question", scenario !== "history-users-only") + group("unseen-old-2", "Older question", scenario !== "history-users-only");
+        let html = history + group("persisted", prompt, scenario !== "user-first");
+        if (scenario === "later-user") html += group("competitor", "Real second message");
+        if (scenario === "duplicate-own") html = group("duplicate", prompt) + html;
+        await page.locator('main').evaluate((node, html) => { node.innerHTML = html; }, html);
+        if (scenario === "during-expansion") {
+          await page.locator('[data-turn-key="persisted"] [data-user-message-bubble]').evaluate((bubble, prompt) => {
+            bubble.querySelector('[data-search-result-target]')!.textContent = 'Preview';
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.setAttribute('aria-expanded', 'false');
+            button.setAttribute('data-thread-find-skip', 'true');
+            button.setAttribute('data-markdown-copy', 'exclude');
+            button.textContent = 'Show more';
+            button.onclick = () => {
+              const open = button.getAttribute('aria-expanded') === 'false';
+              button.setAttribute('aria-expanded', String(open));
+              bubble.querySelector('[data-search-result-target]')!.textContent = open ? prompt : 'Preview';
+              if (open) document.querySelector('main')!.insertAdjacentHTML('beforeend', '<div data-turn-key="racing"><div data-user-message-bubble>Competing</div></div>');
+            };
+            bubble.append(button);
+          }, prompt);
+        }
+        let resendCalls = 0;
+        worker.sendAttachedPrompt = async () => { resendCalls++; throw new Error("Reconcile must not resubmit"); };
+        const result = worker.reconcileAssistantTurnBinding(page, baseline, binding);
+        if (scenario === "history" || scenario === "history-users-only" || scenario === "accepted-rekey") expect((await result).identity).toBe("group:assistant:persisted");
+        else if (scenario === "user-first") {
+          expect(await result).toBe(binding);
+          await page.locator('[data-turn-key="persisted"]').evaluate(node => node.insertAdjacentHTML('beforeend', '<div data-conversation-role="assistant">Done</div>'));
+          expect((await worker.reconcileAssistantTurnBinding(page, baseline, binding)).identity).toBe("group:assistant:persisted");
+        } else if (scenario === "duplicate-own") {
+          expect(await result).toBe(binding);
+        } else {
+          const error = await result.catch((error: Error) => error);
+          expect(error).toBeInstanceOf(Error);
+          expect(error.bindingEvidence).toMatchObject({ ownerFound: true, tokenMode: true, laterUserCount: 1 });
+          // Exercise the actual disk diagnostic path with a synthetic offline page.
+          const root = join(process.cwd(), ".maintenance-reports");
+          mkdirSync(root, { recursive: true });
+          const directory = mkdtempSync(join(root, "binding-diagnostic-"));
+          try {
+            const diagnostics = new ChatGptBrowserDiagnostics("binding-fixture", directory, "Fixture");
+            await diagnostics.capture(page, "turn-failed", error);
+            const trace = join(directory, readdirSync(directory).find(name => name.startsWith("binding-fixture-"))!);
+            const json = JSON.parse(readFileSync(join(trace, "01-turn-failed.json"), "utf8"));
+            expect(json.bindingEvidence).toEqual(error.bindingEvidence);
+          } finally { rmSync(directory, { recursive: true, force: true }); }
+          const serialized = JSON.stringify(error.bindingEvidence);
+          for (const secret of [token, prompt, "unseen-old", "persisted", "competitor"]) expect(serialized).not.toContain(secret);
+        }
+        expect(resendCalls).toBe(0);
+        expect(await page.locator('#composer').innerText()).toBe("Draft");
+      } finally { await closeTestContexts(); }
+    }, 20_000);
+}
+
 // 2026-11-08, #948: scrolling a real retained ChatGPT conversation removed whole
 // data-turn-key groups. Returning to them reported three new user turns without Send.
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("scrolling previously observed history cannot acknowledge Send after helper replacement", async () => {
   try {
     const page = await browser.newPage();
-    const group = (id: string) => `<div data-turn-key="${id}"><div data-user-message-bubble>${id}</div><div data-conversation-role="assistant">Answer</div></div>`;
-    const old = ["old-top", "old-middle", "old-bottom"].map(group).join("");
+    const group = (id: string, text = id) => `<div data-turn-key="${id}"><div data-user-message-bubble><div data-search-result-target>${text}</div></div><div data-conversation-role="assistant">Answer</div></div>`;
+    const old = ["old-top", "old-middle", "old-bottom"].map(id => group(id)).join("");
     await page.setContent(`<main>${old}</main>`);
     const first = Object.create(ChatGptBrowserWorker.prototype) as any;
     await first.submissionDomState(page);
@@ -39,20 +131,27 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("scrolling previously observe
     // The same unchanged observation must also work through the DOM cache.
     expect(await second.currentSubmissionEvidence(page, baseline)).toBeUndefined();
 
-    await page.locator("main").evaluate((node, html) => node.insertAdjacentHTML("beforeend", html), group("new-request"));
+    await page.locator("main").evaluate((node, html) => node.insertAdjacentHTML("beforeend", html), group("new-request", "Next request"));
+    // Only the exact submitted text, as the last user, proves ownership without a token.
     expect(await second.currentSubmissionEvidence(page, baseline)).toBe("user_turn");
     expect(baseline.acceptedUserIdentity).toBe("group:user:new-request");
     const binding = await second.waitForNewAssistantTurn(page, baseline, Date.now() + 2000);
     expect(binding.identity).toBe("group:assistant:new-request");
     // Observing a competing post-baseline turn must never add it to that baseline.
     await page.locator("main").evaluate((node, html) => node.insertAdjacentHTML("beforeend", html), group("competing-request"));
-    await expect(second.currentSubmissionEvidence(page, baseline)).rejects.toThrow("2 new conversation turns");
+    // Bun's `.rejects` drains the loop synchronously and starves Playwright round trips; catch instead.
+    const competing = await second.currentSubmissionEvidence(page, baseline).catch((error: Error) => error);
+    expect(competing).toBeInstanceOf(Error);
+    expect((competing as Error).message).toContain("another user turn");
+    expect(baseline.acceptedUserIdentity).toBe("group:user:new-request");
 
     await page.goto("about:blank");
     await page.setContent("<main></main>");
     const fresh = await second.captureSubmissionBaseline(page, "Next request");
     await page.locator("main").evaluate((node, html) => { node.innerHTML = html; }, old);
-    await expect(second.currentSubmissionEvidence(page, fresh)).rejects.toThrow("3 new conversation turns");
+    // Remounted history carries no proof for this Send: wait, never acknowledge or abort.
+    expect(await second.currentSubmissionEvidence(page, fresh)).toBeUndefined();
+    expect(fresh.acceptedUserIdentity).toBeUndefined();
   } finally { await closeTestContexts(); }
 }, 15_000);
 
@@ -133,7 +232,8 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("activity tone and collapsed 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("preserves the accepted user identity across Activity's temporary fallback group", async () => {
   try {
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
-    const prompt = "Read first.txt.\n\nReturn its contents.";
+    const prompt = "Read first.txt.\nReturn its contents.";
+    worker.config = { appName: "Codex Native" };
     // Captured on the installed launcher: the user group appears at Send, disappears
     // during Activity, then returns with the same ID and a rich-text user bubble.
     const user = '<div data-user-message-bubble><div data-search-result-target><p><span data-prompt-link-href="app://test">Codex Native</span> Read first.txt.<br>Return its contents.</p></div></div>';
@@ -145,8 +245,8 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("preserves the accepted user 
       await page.locator("main").evaluate((node, html) => { node.innerHTML = html; }, `<div data-turn-key="submitted">${user}</div>`);
       expect(await worker.currentSubmissionEvidence(page, baseline)).toBe("user_turn");
       await page.locator("main").evaluate(node => { node.innerHTML = '<div data-turn-key="fallback-turn-0"><span hidden data-chatgpt-agent-turn-start></span></div>'; });
-      const binding = await worker.waitForNewAssistantTurn(page, baseline, Date.now() + 2000);
-      expect(binding.identity).toBe("group:assistant:fallback-turn-0");
+      // First binding never takes an owner-less shell; the detached binding starts from it.
+      const binding = shellBinding(page, "fallback-turn-0");
       const key = scenario === "different-user" ? "unrelated" : "submitted";
       const renderedUser = scenario === "different-user"
         ? `<div data-user-message-bubble><div data-search-result-target style="white-space:pre-wrap">${prompt}</div></div>`
@@ -158,8 +258,8 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("preserves the accepted user 
       if (scenario === "old-group-remains") replacement += '<div data-turn-key="fallback-turn-0"></div>';
       await page.locator("main").evaluate((node, html) => { node.innerHTML = html; }, replacement);
       const result = worker.reconcileAssistantTurnBinding(page, baseline, binding);
-      if (["same-user", "unfinished", "streaming"].includes(scenario)) {
-        expect((await result).identity).toBe("group:assistant:submitted");
+      if (["same-user", "different-user", "old-group-remains", "unfinished", "streaming"].includes(scenario)) {
+        expect((await result).identity).toBe(`group:assistant:${key}`);
       } else {
         await expect(result).rejects.toThrow("another user turn");
       }
@@ -170,28 +270,28 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("preserves the accepted user 
 
 // Execute the real observation/rebinding code against the reported renderer transition.
 // No account, network requests, or model submissions are used.
-test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("an exchange rekeys only with the exact submitted prompt and no competing turn", async () => {
+for (const scenario of ["matching", "history", "foreign", "prefix-only", "changed-spaces", "changed-edges", "two-turns", "old-group-remains", "unfinished", "user-first", "no-prompt", "same-key"] as const) {
+test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)(`an exchange rekeys only with the exact submitted prompt and no competing turn: ${scenario}`, async () => {
   try {
     const worker = Object.create(ChatGptBrowserWorker.prototype) as {
-      captureSubmissionBaseline(page: Page, submittedText?: string): Promise<unknown>;
+      captureSubmissionBaseline(page: Page, submittedText?: string, stages?: unknown[], token?: string): Promise<unknown>;
       waitForNewAssistantTurn(page: Page, baseline: unknown, deadline: number): Promise<Binding>;
       reconcileAssistantTurnBinding(page: Page, baseline: unknown, binding: Binding): Promise<Binding>;
     };
-    type Binding = { identity: string; locator: Locator; acceptedTurnIdentities: string[] };
-    const prompt = "Explain one thing.\nKeep  two spaces.";
+    type Binding = { identity: string; locator: Locator };
+    const token = "turn_0123456789abcdef0123456789abcdef";
+    const prompt = "Explain one thing.\nKeep  two spaces." + (scenario === "matching" || scenario === "history" || scenario === "user-first" ? "\n" + token : "");
     const group = (key: string, text?: string, complete = false) => `<div data-turn-key="${key}">
       ${text === undefined ? "" : `<div data-user-message-bubble><div data-search-result-target style="white-space:pre-wrap">${text}</div><span aria-hidden="true">\u200b</span><button>Show more</button></div>`}
       <div data-content-search-unit-key="${key}:assistant"><div data-conversation-role="assistant"></div>
       <div data-markdown-text-style="assistant-message"><p>Answer.</p></div></div>
       ${complete ? '<div class="turn-action-controls"><button>Copy</button></div>' : ""}</div>`;
-    for (const scenario of ["matching", "history", "foreign", "prefix-only", "changed-spaces", "changed-edges", "two-turns", "old-group-remains", "unfinished", "user-first", "no-prompt", "same-key"] as const) {
       const page = await browser.newPage();
-      const history = scenario === "history" ? group("earlier", prompt, true) : "";
+      const history = scenario === "history" ? group("earlier", "Earlier request", true) : "";
       await page.setContent(`<main>${history}</main>`);
-      const baseline = await worker.captureSubmissionBaseline(page, scenario === "no-prompt" ? undefined : prompt);
+      const baseline = await worker.captureSubmissionBaseline(page, scenario === "no-prompt" ? undefined : prompt, [], prompt.includes(token) ? token : undefined);
       await page.locator("main").evaluate((node, html) => { node.innerHTML = html; }, history + group("optimistic"));
-      const binding = await worker.waitForNewAssistantTurn(page, baseline, Date.now() + 5000);
-      expect(binding.identity).toBe("group:assistant:optimistic");
+      const binding = shellBinding(page, "optimistic");
       const text = scenario === "foreign" ? "Different task."
         : scenario === "prefix-only" ? prompt + " Another request."
         : scenario === "changed-spaces" ? prompt.replace("  ", " ")
@@ -209,17 +309,19 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("an exchange rekeys only with
       }
       await page.locator("main").evaluate((node, next) => { node.innerHTML = next; }, html);
       const result = worker.reconcileAssistantTurnBinding(page, baseline, binding);
-      if (scenario === "matching" || scenario === "history" || scenario === "same-key" || scenario === "unfinished" || scenario === "user-first") {
+      if (scenario === "matching" || scenario === "history" || scenario === "same-key" || scenario === "user-first" || scenario === "unfinished") {
         const rebound = await result;
         expect(rebound.identity).toBe(`group:assistant:${scenario === "same-key" ? "optimistic" : "persisted"}`);
         expect(await rebound.locator.count()).toBe(1);
+      } else if (["foreign", "prefix-only", "changed-spaces", "changed-edges", "old-group-remains", "two-turns", "no-prompt"].includes(scenario)) {
+        expect(await result).toBe(binding);
       } else {
         await expect(result).rejects.toThrow();
       }
       await page.close();
-    }
   } finally { await closeTestContexts(); }
 }, 45_000);
+}
 
 test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("collapsed plugin messages rebind only after their complete text is verified", async () => {
   try {
@@ -237,7 +339,7 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("collapsed plugin messages re
       await page.setContent('<main></main>');
       const baseline = await worker.captureSubmissionBaseline(page, prompt);
       await page.locator('main').evaluate(e => { e.innerHTML = '<div data-turn-key="optimistic"><span hidden data-chatgpt-agent-turn-start></span></div>'; });
-      const binding = await worker.waitForNewAssistantTurn(page, baseline, Date.now() + 2_000);
+      const binding = shellBinding(page, "optimistic");
       const collapsed = render(prompt.slice(0, 10_000));
       await page.locator('main').evaluate((e, html) => { e.innerHTML = html; }, `<div data-turn-key="persisted">
         <div data-user-message-bubble><div data-search-result-target>${collapsed}</div>
@@ -258,10 +360,15 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("collapsed plugin messages re
           if (competing) document.querySelector('main')!.insertAdjacentHTML('beforeend', '<div data-turn-key="other"><div data-user-message-bubble>Another task</div></div>');
         });
       }, { html: expanded, competing: scenario === "competing-turn" });
+      // Text rendering and ownership are separate proofs. An acknowledged key
+      // permits binding; an unacknowledged text-only answer is now ambiguous.
+      expect(await matchesSubmission(worker, page.locator('[data-turn-key="persisted"]'), prompt))
+        .toBe(scenario === "complete" || scenario === "competing-turn");
+      if (scenario === "complete") baseline.acceptedUserIdentity = "group:user:persisted";
       const result = await worker.reconcileAssistantTurnBinding(page, baseline, binding)
         .then((value: unknown) => ({ value }), (error: Error) => ({ error }));
       if (scenario === "complete") expect(result.value).toMatchObject({ identity: "group:assistant:persisted" });
-      else expect(result.error).toBeInstanceOf(Error);
+      else expect(result.value).toBe(binding);
       await page.close();
     }
   } finally { await closeTestContexts(); }
@@ -283,7 +390,7 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("auto-linked URLs preserve ex
         link.textContent = scenario === "changed-label" ? "report" : url;
         node.append(link, scenario === "extra-content" ? " extra\nEnd." : "\nEnd.");
       }, { url, scenario });
-      expect(await worker.userMessageMatchesSubmission(page.locator('#group'), prompt)).toBe(scenario === "exact");
+      expect(await matchesSubmission(worker, page.locator('#group'), prompt)).toBe(scenario === "exact");
     }
   } finally { await closeTestContexts(); }
 });
@@ -308,7 +415,7 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("reading a collapsed message 
     }, text);
     await page.locator('#composer').focus();
     await page.locator('#scroll').evaluate(node => { node.scrollTop = node.scrollHeight; });
-    expect(await worker.userMessageMatchesSubmission(page.locator('#group'), text)).toBeTrue();
+    expect(await matchesSubmission(worker, page.locator('#group'), text)).toBeTrue();
     expect(await page.locator('button').getAttribute('aria-expanded')).toBe('false');
     expect(await page.locator('#answer').count()).toBe(1);
     expect(await page.locator('#scroll').evaluate(node => node.scrollHeight - node.clientHeight - node.scrollTop)).toBeLessThanOrEqual(1);
@@ -324,8 +431,8 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("plain user code blocks prese
     // Captured plain user-message renderer: only fenced code becomes an HTML block.
     await page.setContent('<div id="group"><div data-user-message-bubble><div data-search-result-target>'
       + 'Literal header\n\n<pre data-markdown-copy="code-block"><code data-markdown-copy-content="true" data-language="json">{"value":"a  b"}</code></pre>\n\n\tEnd.</div></div></div>');
-    expect(await worker.userMessageMatchesSubmission(page.locator('#group'), prompt)).toBeTrue();
-    expect(await worker.userMessageMatchesSubmission(page.locator('#group'), prompt.replace('a  b', 'a b'))).toBeFalse();
+    expect(await matchesSubmission(worker, page.locator('#group'), prompt)).toBeTrue();
+    expect(await matchesSubmission(worker, page.locator('#group'), prompt.replace('a  b', 'a b'))).toBeFalse();
   } finally { await closeTestContexts(); }
 });
 
@@ -340,7 +447,7 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("rich-text rebind requires th
       await page.setContent('<main></main>');
       const baseline = await worker.captureSubmissionBaseline(page, prompt, [], token);
       await page.locator('main').evaluate(e => { e.innerHTML = '<div data-turn-key="pending"><span hidden data-chatgpt-agent-turn-start></span></div>'; });
-      const binding = await worker.waitForNewAssistantTurn(page, baseline, Date.now() + 2_000);
+      const binding = shellBinding(page);
       await page.locator('main').evaluate(e => { e.innerHTML = '<div data-turn-key="persisted"><div data-user-message-bubble>'
         + '<div data-search-result-target><a data-search-result-target href="https://example.com">Altered JSON/link label</a></div>'
         + '<button type="button" aria-expanded="false" data-thread-find-skip="true" data-markdown-copy="exclude">Afficher plus</button></div>'
@@ -361,7 +468,8 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("rich-text rebind requires th
       const result = await worker.reconcileAssistantTurnBinding(page, baseline, binding)
         .then((value: unknown) => ({ value }), (error: Error) => ({ error }));
       if (scenario === "matching") expect(result.value).toMatchObject({ identity: "group:assistant:persisted" });
-      else expect(result.error).toBeInstanceOf(Error);
+      else if (scenario === "competing-turn") expect(result.error).toBeInstanceOf(Error);
+      else expect(result.value).toBe(binding);
       const invalid = await worker.captureSubmissionBaseline(page, "No broker token here", [], token)
         .then(() => undefined, (error: Error) => error);
       expect(invalid).toBeInstanceOf(Error);
@@ -395,13 +503,13 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("rebind reads token boundarie
       await page.setContent("<main></main>");
       const baseline = await worker.captureSubmissionBaseline(page, `Identity\n${token}\nContinue`, [], token);
       await page.locator("main").evaluate(node => { node.innerHTML = '<div data-turn-key="pending"><span hidden data-chatgpt-agent-turn-start></span></div>'; });
-      const binding = await worker.waitForNewAssistantTurn(page, baseline, Date.now() + 2_000);
+      const binding = shellBinding(page);
       await page.locator("main").evaluate((node, body) => {
         node.innerHTML = '<div data-turn-key="persisted"><div data-user-message-bubble><div data-search-result-target>'
           + body + '</div></div><span hidden data-chatgpt-agent-turn-start></span></div>';
       }, html);
       const group = page.locator('[data-turn-key="persisted"]');
-      expect(await worker.userMessageMatchesSubmission(group, baseline.submittedText, undefined, token), name).toBe(accepted);
+      expect(await matchesSubmission(worker, group, baseline.submittedText, undefined, token), name).toBe(accepted);
       if (accepted) expect((await worker.reconcileAssistantTurnBinding(page, baseline, binding)).identity, name)
         .toBe("group:assistant:persisted");
       await page.close();
@@ -420,7 +528,11 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("binds captured Activity befo
     await page.setContent('<main></main>');
     const baseline = await worker.captureSubmissionBaseline(page, "Prompt");
     const html = readFileSync(new URL("./fixtures/chatgpt-power-activity.html", import.meta.url), "utf8");
-    await page.locator("main").evaluate((node, content) => { node.innerHTML = content; }, html);
+    // The anonymized capture has no message target; ownership needs the exact submitted text.
+    await page.locator("main").evaluate((node, content) => {
+      node.innerHTML = content;
+      node.querySelector("[data-user-message-bubble]")!.innerHTML = "<div data-search-result-target>Prompt</div>";
+    }, html);
     const binding = await worker.waitForNewAssistantTurn(page, baseline, Date.now() + 2000);
     expect(binding.identity).toBe("group:assistant:activity");
     expect((await worker.responseDomSnapshot(binding.locator)).traceBlocks.some((block: { kind: string }) => block.kind === "commentary")).toBeTrue();

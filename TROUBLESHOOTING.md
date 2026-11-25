@@ -61,7 +61,7 @@ A green step 3 followed by a browser-turn error means installation succeeded. Re
 not repair an unrelated ChatGPT browser or model-turn failure.
 
 If Codex offers **only Luna (Web)** while the launcher's ChatGPT browser shows a paid model picker,
-the saved account capabilities may be wrong. The October 29 control change caused this in v6.1.15
+the saved account capabilities may be wrong. The October 29 control change caused this in upstream v6.1.15
 (#924, #932), including the subsequent Think-button timeout. Once the picker fix is installed, use
 **Setup → Install into Codex → Reinstall** to refresh those capabilities, then fully restart Codex.
 The launcher now requires a recognized model picker or Luna/Think control before saving this

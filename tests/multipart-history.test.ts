@@ -53,7 +53,7 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("a new multipart user message
   } finally { await browser.close(); }
 }, 15_000);
 
-test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("pending multipart submissions do not expand their transient user bubble while earlier stages remain accounted for", async () => {
+test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("acknowledging a pending multipart submission never expands its transient user bubble while earlier stages remain accounted for", async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHATGPT_DOM_TEST_BROWSER, headless: true });
   try {
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
@@ -79,21 +79,27 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("pending multipart submission
           button.setAttribute("data-markdown-copy", "exclude");
           button.textContent = "Show more";
           // ChatGPT replaces the just-submitted bubble with Activity while starting
-          // its answer. Waiting for this control to expand cannot establish Send.
+          // its answer. Waiting for this control to expand cannot establish Send, and a
+          // truncated preview carries no ownership proof, so acknowledgement just waits.
           button.onclick = () => {
             bubble.closest("[data-turn-key]")!.innerHTML = '<span hidden data-chatgpt-agent-turn-start></span>';
           };
           bubble.append(button);
         });
-        expect(await worker.currentSubmissionEvidence(page, baseline, AbortSignal.timeout(1_500))).toBe("user_turn");
-        expect(baseline.acceptedUserIdentity).toBe("group:user:pending");
+        // The truncated preview proves no ownership, but its new answer pairs with it: that acknowledges
+        // Send without expanding anything. It is never an owner, so nothing is bound from it.
+        expect(await worker.currentSubmissionEvidence(page, baseline, AbortSignal.timeout(1_500))).toBe("assistant_turn");
+        expect(baseline.acceptedUserIdentity).toBeUndefined();
         expect(await page.locator('[data-turn-key="pending"] button').getAttribute("aria-expanded")).toBe("false");
         // The ordinary turn-binding path owns the subsequent Activity replacement.
         await page.locator('[data-turn-key="pending"]').evaluate(node => {
           node.setAttribute("data-turn-key", "fallback");
           node.innerHTML = '<span hidden data-chatgpt-agent-turn-start></span>';
         });
-        expect((await worker.waitForNewAssistantTurn(page, baseline, Date.now() + 1_000)).identity).toBe("group:assistant:fallback");
+        // An owner-less Activity group with another key is not bound: wait under the deadline instead.
+        const waited = await worker.waitForNewAssistantTurn(page, baseline, Date.now() + 500).catch((error: Error) => error);
+        expect(waited).toBeInstanceOf(Error);
+        expect((waited as Error).message).toMatch(/timed out|did not expose/);
       } finally { await page.close(); }
     }
   } finally { await browser.close(); }
@@ -111,13 +117,15 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("acknowledged multipart histo
             ...formatChatGptWebMultipartStage(JSON.stringify({ context: `part ${index + 1}` }), `ctx_${"a".repeat(32)}`, index + 1, total),
             identities: [`group:assistant:stage-${index}`],
           }));
+          // A mounted baseline user anchors token-less ownership by position.
+          const anchor = group("anchor", "Earlier question", "Earlier answer");
           const history = (persisted: boolean) => stages.map((stage, index) => group(
             `${persisted ? "persisted" : "stage"}-${index}`, persisted ? stage.text : undefined, stage.acknowledgement,
           )).join("");
           const prompt = "Use the uploaded context.\nReturn the final answer.";
-          await page.setContent(`<main>${history(when === "before-baseline")}</main>`);
+          await page.setContent(`<main>${anchor}${history(when === "before-baseline")}</main>`);
           let baseline = await worker.captureSubmissionBaseline(page, prompt, stages);
-          const render = (html: string) => page.locator("main").evaluate((node, next) => { node.innerHTML = next; }, html);
+          const render = (html: string) => page.locator("main").evaluate((node, next) => { node.innerHTML = next; }, anchor + html);
           if (when === "before-send") {
             await render(history(true));
             expect(await worker.currentSubmissionEvidence(page, baseline)).toBeUndefined();
@@ -133,8 +141,9 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("acknowledged multipart histo
           expect(binding.identity).toBe("group:assistant:final");
           if (when === "during-rebind") {
             await render(history(true) + group("fallback", undefined, "Answer", false));
+            // Only the owner's own answer may bind: an unrelated Activity group must not.
             binding = await worker.reconcileAssistantTurnBinding(page, baseline, binding);
-            expect(binding.identity).toBe("group:assistant:fallback");
+            expect(binding.identity).toBe("group:assistant:final");
             await render(history(true) + group("final", prompt, "Answer"));
             binding = await worker.reconcileAssistantTurnBinding(page, baseline, binding);
             expect(binding.identity).toBe("group:assistant:final");
@@ -158,7 +167,8 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("multipart history does not a
           identities: ["group:assistant:stage"],
         };
         const old = group("stage", undefined, stage.acknowledgement);
-        await page.setContent(`<main>${old}</main>`);
+        const anchor = group("anchor", "Earlier question", "Earlier answer");
+        await page.setContent(`<main>${anchor}${old}</main>`);
         const baseline = await worker.captureSubmissionBaseline(page, "Final request", scenario === "not-acknowledged" ? [] : [stage]);
         const remounted = group("persisted", stage.text + (scenario === "payload" ? " altered" : ""),
           stage.acknowledgement + (scenario === "acknowledgement" ? " altered" : ""), scenario !== "unfinished");
@@ -166,11 +176,22 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("multipart history does not a
           : scenario === "duplicate" ? group("duplicate", stage.text, stage.acknowledgement)
           : scenario === "foreign" ? group("foreign", "Unrelated request", "Unrelated answer") : "";
         await page.locator("main").evaluate((node, html) => { node.innerHTML = html; },
-          remounted + extra + group("final", "Final request", "Answer"));
+          anchor + remounted + extra + group("final", "Final request", "Answer"));
         let failure: unknown;
-        try { await worker.currentSubmissionEvidence(page, baseline); }
+        let evidence: unknown;
+        try { evidence = await worker.currentSubmissionEvidence(page, baseline); }
         catch (error) { failure = error; }
-        expect(failure).toBeInstanceOf(Error);
+        if (scenario === "foreign" || scenario === "not-acknowledged") {
+          // Unrelated or unacknowledged history before our uniquely proven user is ignored, never
+          // admitted as an acknowledged stage, and cannot be the acknowledged user.
+          expect(failure).toBeUndefined();
+          expect(evidence).toBe("user_turn");
+          expect(baseline.acceptedUserIdentity).toBe("group:user:final");
+          expect(stage.identities).not.toContain("group:assistant:foreign");
+          if (scenario === "not-acknowledged") expect(baseline.initialTurnIdentities).not.toContain("group:assistant:persisted");
+        } else {
+          expect(failure).toBeInstanceOf(Error);
+        }
       } finally { await page.close(); }
     }
   } finally { await browser.close(); }

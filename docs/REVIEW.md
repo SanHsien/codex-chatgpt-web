@@ -14,6 +14,73 @@ Review the exact proposed SHA and record evidence for:
 
 Do not claim browser, MCP, account, live-model, or packaged-release acceptance from source tests.
 
+## 2026-11-26 detached-turn ownership redesign (fork 6.1.15)
+
+Working tree only, **uncommitted by explicit task instruction**; fix commit hash: none.
+No push, login, model call or release validation. Replaces the earlier round-by-round
+notes; design and limits are in
+[DECISIONS](DECISIONS.md#2026-11-25-fork-local-detached-turn-root-cause-963).
+
+Review findings that drove it: (HIGH) a history turn remounted after the baseline could become
+the "accepted" anchor and have its old answer bound when our own user was briefly unmounted;
+(HIGH) `acceptedUserIdentity` was set from any single new user, so remounted history could abort
+our turn or own the answer; (MEDIUM) a multi-condition `pendingHistory`, two anchor notions and
+a shared 5 s budget. All three are removed by `ownerOf`/`resolve` rather than patched.
+
+Second review (same round, all fixed): (1) HIGH the old "any new assistant binds / acknowledges"
+path survived when no non-baseline `group:user:` existed; it is removed, so a remounted answer
+(or several, previously a false "N new conversation turns" abort) is neither bound nor evidence.
+(2) MEDIUM acknowledgement returned undefined when a long prompt's tail was collapsed and Stop was
+not visible, which the compaction retry paths read as "not sent" (composer reset, prompt re-sent);
+a new answer paired with a not-conclusively-foreign new user now acknowledges, and an unproven
+non-baseline turn is reported as `uncertain`, on which the retry paths refuse to reset or re-attach.
+(3) MEDIUM-LOW token-less text candidates must follow the last mounted baseline user, and without a
+mounted baseline user only a previously proven key can own. (4) MEDIUM only the last four
+non-baseline users after the last baseline user are probed per poll.
+
+Sixth review, also fixed: (1) HIGH the token-less proof from expanding a truncated message was
+dropped by a one-user ownership check that ignored the baseline anchor; it is now decided on the real
+observation. (2) Legacy non-`group:` layouts regressed; they keep the base behavior (layout split in
+DECISIONS). (3) Remounted history pairs counted as Send acknowledgement; the paired user must now be
+a probed candidate after the last mounted baseline user. (4) Retry paths failed on remounted history;
+only a non-baseline user after that anchor is "uncertain".
+
+Evidence (offline, installed Edge for DOM cases; not signed-in acceptance):
+
+- Browser-free tests, default CI. `tests/turn-ownership.test.ts` (36 cases; 5 new for the second
+  review: token-less anchor, candidate before a baseline user, bounded probe targets, lone remounted
+  answer is never evidence, paired answer vs foreign history) plus real-worker contract tests over a
+  mocked DOM state in `tests/browser-worker-contract.test.ts`: `a remounted old answer is neither
+  acknowledged nor bound as ours`, `an unproven new user is uncertain, never 'not sent', so a
+  compaction retry cannot resend` (real `attachPromptWithCompactionRetry`: 1 attempt, 0 resets),
+  `a new answer paired with a new user whose tail is collapsed acknowledges Send`, and `owner proof
+  reads at most a few users per poll`. The round-5 code (legacy bind path, unbounded probe, no
+  `uncertain`) cannot satisfy them by construction; the round-5 tree was not kept to re-run them red.
+- Sixth-review tests (default CI): in `tests/browser-worker-contract.test.ts` `token-less ownership proven
+  by expanding a truncated message keeps the baseline anchor and binds` (reconcile and first binding),
+  `legacy turn ids keep the original acknowledgement and binding; group ids use ownership rules`, `remounted
+  history before the last baseline user never fails a compaction retry; a user after it does`; in
+  `tests/turn-ownership.test.ts` `remounted history pairs before the last baseline user are neither evidence
+  nor uncertainty` and `a pair outside the probed last users is not acknowledgement`. The base tests for
+  `chatGptNewTurnIdentity`, `chatGptReboundTurnIdentity` and `chatGptSubmissionEvidence` are restored.
+  Mutation check: reinstating the old one-user transfer fails the first of these.
+- Edge DOM: `tests/turn-ownership.test.ts tests/browser-detached-round2.test.ts
+  tests/browser-turn-binding.test.ts tests/multipart-history.test.ts tests/browser-worker-contract.test.ts`,
+  267 pass, 0 fail (unit 38, contract 167, DOM 62).
+  Owner-less shell groups are no longer bound at first binding, so DOM tests start detached bindings
+  from a shell (`shellBinding`), the Send test is acknowledged by a visible Stop, the multipart tests
+  keep a mounted baseline user as the token-less anchor, and a lone Activity fallback group now waits.
+  Earlier adaptations stand: token-less cases need the exact text as last user; removed pinned internals
+  (`chatGptNewTurnIdentity`, `chatGptSubmissionEvidence`, `chatGptReboundTurnIdentity`,
+  `acceptedTurnIdentities`, `userMessageMatchesSubmission`, now `tests/ownership-probe.ts`). Tests use
+  `.catch` rather than Bun's `expect().rejects` for multi-round-trip Playwright paths (it starves the
+  browser pipe). A wider sweep of every DOM-env file earlier showed `composer-insert` "a selected
+  connector never appends…" timing out identically on the untouched base commit, and load-dependent
+  5 s/20 s timeouts in `browser-live-progress` and `delivery-timeout` that pass alone.
+- `bunx tsc --noEmit` and `git diff --check`: exit 0. `bun run verify` (no Edge variable, so DOM
+  cases skip there): exit 0; root 1,225 pass, 148 skip, 0 fail (1,373 tests, 97 files), launcher 439 pass, 1 skip, 0 fail (440 tests), both typechecks/audits, builds, notices and `RELOCATABLE_RUNTIME_SMOKE_OK`. Independent offline verification, not the canonical Full gate
+  or account/release acceptance.
+
 ## 2026-11-24 gate refused to run on the machine's Bun
 
 Fixed in `45a296a` (2026-11-24). `tools/dev_check.ps1` threw `Bun 1.4.2 is required; found '1.4.5'`
