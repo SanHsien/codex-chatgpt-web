@@ -1,5 +1,18 @@
 # Upstream tracking
 
+## 2026-11-26: fc701f6..065a478
+
+Reviewed the one new commit in `upstream/main` `fc701f6fbcff9fb65f679445389aca0c60410271..065a478e380c75080d2d304db5db46915a160a92`,
+PRs #1014, #1017, #1018 and issues #1011, #1013, #1015. Live strict check before the review: main moved, latest
+PR #1018 (open) head `eb686c4f5d425486dee83f0f4c87e1b0dc7dbd3a`, latest non-PR issue #1015, branches
+`main@065a478e380c75080d2d304db5db46915a160a92` and
+`fix/current-workspace-roots@adabeb16abad149f64546b45e8ef88aa4c917f56`; all four axes current after the
+baseline move. See the [register](DECISIONS.md#2026-11-26-upstream-review-fc701f6065a478-1000-attachment-names-1011-1018).
+
+Adopted (adapted): `065a478` (ChatGPT-suffixed attachment names, #1000). Deferred: PRs #1017/#1018 (GPT-5.6
+Sol retirement subtitle, #1013), PR #1014 (Project routing), issues #1011 and #1015. The 6.1.15 turn-ownership
+design is unchanged by this review.
+
 ## 2026-11-25: fork-local 6.1.15 detached-turn recovery
 
 The #963 symptom has a fork-local reproduction and repair; see

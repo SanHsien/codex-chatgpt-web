@@ -15,6 +15,9 @@ This file records maintained-fork work and release identity. See this fork's
   mounted baseline user is "uncertain", so compaction retries never reset or re-send. Probing is
   bounded per poll. The legacy non-group turn layout keeps its original behavior. No history
   expansion, failure diagnostics carry counts only. No upstream writes.
+  Also adapted upstream `065a478` (#1000): attachment previews and upload observation accept ChatGPT's
+  parenthesized numeric/timestamp rename of an attached file; review `fc701f6..065a478` advances the baseline. Launcher dev dependencies move to Electron 45.5.0,
+  `@types/node` 24.19.4 and `@types/react` 19.3.3 so the strict freshness check is current.
 
 ## 2026-11-24
 

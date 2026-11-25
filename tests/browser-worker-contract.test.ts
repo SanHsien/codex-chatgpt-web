@@ -2632,22 +2632,28 @@ test.each(["visible", "missing", "page closed"])("image attachment readiness che
     },
   };
   const composerForm = {
-    getByRole: (role: string, options: { name: string; exact: boolean }) => {
+    getByAltText: () => ({}),
+    getByRole: (role: string, options: { name: RegExp }) => {
+      if (role === "button") return {};
       expect(role).toBe("group");
-      expect(options).toEqual({ name: "codex-input-image-1.png", exact: true });
+      // The lookup matches this exact name (or ChatGPT's parenthesized rename of it), not a prefix.
+      expect(options.name.test("codex-input-image-1.png")).toBe(true);
+      expect(options.name.test("codex-input-image-10.png")).toBe(false);
       return {
+        and() { return this; },
         or() { return this; },
         filter() { return this; },
         waitFor: async (state: { state: string; timeout: number }) => {
           expect(state).toMatchObject({ state: "visible", timeout: 60_000 });
-          calls.push(["fileTile", options.name]);
+          calls.push(["fileTile", "codex-input-image-1.png"]);
           if (outcome === "missing") throw Object.assign(new Error("private file locator"), { name: "TimeoutError" });
           if (outcome === "page closed") throw new Error("Target page has been closed");
         },
       };
     },
     locator: (selector: string) => {
-      if (selector.startsWith(".composer-attachment-surface") || selector.startsWith("[data-composer-attachments]")) return {};
+      if (selector.startsWith(".composer-attachment-surface") || selector.startsWith("[data-composer-attachments]")) return { and() { return this; } };
+      if (selector.startsWith(":not([inert])")) return {};
       if (selector === 'input[data-testid="upload-photos-input"], input[type="file"][multiple]:not([accept])') return input;
       expect(selector).toBe(CHATGPT_SEND_BUTTON_SELECTOR);
       return send;
