@@ -3,7 +3,7 @@ import {chromium,type Browser} from "playwright-core";
 import {observeChatGptAttachmentUploads} from "../src/adapters/chatgpt-web/attachment-upload";
 import {ChatGptBrowserWorker} from "../src/adapters/chatgpt-web/browser-worker";
 import {ChatGptWebAdapterError} from "../src/adapters/chatgpt-web/adapter-error";
-import { chatGptAttachmentNamePattern, chatGptAttachmentPreview } from "../src/chatgpt-session";
+import { chatGptAttachmentNameMatcher, chatGptAttachmentNamePattern, chatGptAttachmentPreview } from "../src/chatgpt-session";
 
 test("chatGptAttachmentNamePattern matches exact and ChatGPT-deduplicated names without colliding (#1000)", () => {
   const pattern = chatGptAttachmentNamePattern("codex-input-image-1.png");
@@ -14,6 +14,35 @@ test("chatGptAttachmentNamePattern matches exact and ChatGPT-deduplicated names 
   expect(pattern.test("codex-input-image-1(copy).png")).toBe(false);
   expect(pattern.test("Remove codex-input-image-1(20261124-215438).png")).toBe(false);
   expect(pattern.test("codex-input-image-1.jpg")).toBe(false);
+});
+
+test("chatGptAttachmentNamePattern escapes special characters and handles extension edge cases", () => {
+  const special = chatGptAttachmentNamePattern("a[1].(x)+.png");
+  expect(special.test("a[1].(x)+.png")).toBe(true);
+  expect(special.test("a[1].(x)+(20261124-215438).png")).toBe(true);
+  expect(special.test("a1.xx.png")).toBe(false);
+  const dotfile = chatGptAttachmentNamePattern(".env");
+  expect(dotfile.test(".env")).toBe(true);
+  expect(dotfile.test("xenv")).toBe(false);
+  const bare = chatGptAttachmentNamePattern("README");
+  expect(bare.test("README")).toBe(true);
+  expect(bare.test("README (2)")).toBe(true);
+  expect(bare.test("README2")).toBe(false);
+  const multi = chatGptAttachmentNamePattern("a.tar.gz");
+  expect(multi.test("a.tar.gz")).toBe(true);
+  expect(multi.test("a.tar(1).gz")).toBe(true);
+  expect(multi.test("a(1).tar.gz")).toBe(false);
+  const unicode = chatGptAttachmentNamePattern("報告-é.md");
+  expect(unicode.test("報告-é.md")).toBe(true);
+  expect(unicode.test("報告-é(20261124-1).md")).toBe(true);
+  expect(unicode.test("報告-e.md")).toBe(false);
+});
+
+test("chatGptAttachmentNameMatcher falls back to the exact name when another expected file is a renamed variant", () => {
+  expect(chatGptAttachmentNameMatcher("a.md", ["a.md", "a(1).md"]).test("a(1).md")).toBe(false);
+  expect(chatGptAttachmentNameMatcher("a.md", ["a.md", "a(1).md"]).test("a.md")).toBe(true);
+  expect(chatGptAttachmentNameMatcher("a(1).md", ["a.md", "a(1).md"]).test("a(1).md")).toBe(true);
+  expect(chatGptAttachmentNameMatcher("a.md", ["a.md", "b.md"]).test("a(2).md")).toBe(true);
 });
 
 const executable=process.env.CHATGPT_DOM_TEST_BROWSER;
@@ -86,6 +115,41 @@ test.skipIf(!executable)("the composer verifies an image preview renamed with a 
   }, () => new Response('{"event":"file.processing.completed"}\n', {
     headers: { "content-type": "application/x-ndjson" },
   }), document);
+}, 15_000);
+
+test.skipIf(!executable)("an upload of a(1).md is attributed to its own expected name, not to a.md", async () => {
+  await fixture(async (browser, base) => {
+    const page = await browser.newPage();
+    await page.goto(base);
+    const observer = await observeChatGptAttachmentUploads(page, ["a.md", "a(1).md"]);
+    try {
+      await page.evaluate(async () => {
+        for (const file_name of ["a.md", "a(1).md"]) await fetch("/backend-api/files/process_upload_stream", { method: "POST", body: JSON.stringify({ file_name }) });
+      });
+      await observer.wait(AbortSignal.timeout(3000));
+    } finally { await observer.dispose(); }
+  }, () => new Response('{"event":"file.processing.completed"}\n', { headers: { "content-type": "application/x-ndjson" } }));
+}, 15_000);
+
+test.skipIf(!executable)("preview of a.md is not satisfied by the a(1).md tile when both are expected, and plain group tiles still match", async () => {
+  const tile = (name: string) => `<div role="group" aria-label="${name}">${name}</div>`;
+  const document = `<form><div id="prompt-textarea" contenteditable="true">x</div><input type="file" multiple><button type="submit">Send</button>
+    <div data-composer-attachments>${tile("a(1).md")}</div></form>`;
+  await fixture(async (browser, base) => {
+    const page = await browser.newPage();
+    await page.goto(base);
+    const form = page.locator("form");
+    const both = ["a.md", "a(1).md"];
+    expect(await chatGptAttachmentPreview(form, { name: "a.md", mimeType: "text/markdown" }, both).count()).toBe(0);
+    expect(await chatGptAttachmentPreview(form, { name: "a(1).md", mimeType: "text/markdown" }, both).count()).toBe(1);
+    // Alone, a.md tolerates ChatGPT's rename.
+    expect(await chatGptAttachmentPreview(form, { name: "a.md", mimeType: "text/markdown" }, ["a.md"]).count()).toBe(1);
+    // A normal group tile inside an inert subtree never counts as ready.
+    await page.locator("form").evaluate((f, markup) => f.insertAdjacentHTML("beforeend", `<div inert>${markup}</div>`), tile("c.md"));
+    expect(await chatGptAttachmentPreview(form, { name: "c.md", mimeType: "text/markdown" }, ["c.md"]).count()).toBe(0);
+    await page.locator("[data-composer-attachments]").evaluate((row, markup) => row.insertAdjacentHTML("beforeend", markup), tile("a.md"));
+    expect(await chatGptAttachmentPreview(form, { name: "a.md", mimeType: "text/markdown" }, both).count()).toBe(1);
+  }, () => new Response("{}"), document);
 }, 15_000);
 
 test.skipIf(!executable)('saved-chat uploads use the active composer while the hidden home composer remains mounted',async()=>{

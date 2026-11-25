@@ -12,8 +12,14 @@ export async function observeChatGptAttachmentUploads(page: Page, names: string[
     throw error;
   });
   const expected = names.map(name => ({ name, pattern: chatGptAttachmentNamePattern(name) }));
-  const matchExpectedName = (candidate: unknown): string | undefined =>
-    typeof candidate === "string" ? expected.find(entry => entry.pattern.test(candidate))?.name : undefined;
+  // Exact name first; a renamed variant counts only when exactly one expected name could own it.
+  const matchExpectedName = (candidate: unknown): string | undefined => {
+    if (typeof candidate !== "string") return undefined;
+    const exact = expected.find(entry => entry.name === candidate);
+    if (exact) return exact.name;
+    const matches = expected.filter(entry => entry.pattern.test(candidate));
+    return matches.length === 1 ? matches[0]!.name : undefined;
+  };
   const completed = new Set<string>();
   const creations = new Set<string>();
   const streams = new Map<string, { name: string; fileId?: string; decoder: StringDecoder; pending: string; buffered?: string[]; activation?: Promise<void> }>();

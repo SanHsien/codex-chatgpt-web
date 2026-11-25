@@ -100,8 +100,21 @@ export function chatGptAttachmentNamePattern(fileName: string): RegExp {
   return new RegExp(`^${escapeRegExp(stem)}(?:\\s*\\(\\d[\\d-]*\\))?${escapeRegExp(ext)}$`);
 }
 
-export function chatGptAttachmentPreview(form: Locator, file: { name: string; mimeType: string }): Locator {
-  const namePattern = chatGptAttachmentNamePattern(file.name);
+/**
+ * Pattern for one expected attachment, or its exact name when another expected attachment is itself a
+ * renamed variant of it (`a.md` with `a(1).md`): then the suffix tolerance would let one file's tile or
+ * upload stand in for the other, so ambiguity falls back to exact matching.
+ */
+export function chatGptAttachmentNameMatcher(fileName: string, allNames: readonly string[] = [fileName]): RegExp {
+  const pattern = chatGptAttachmentNamePattern(fileName);
+  const ambiguous = allNames.some(other => other !== fileName && pattern.test(other));
+  return ambiguous ? new RegExp(`^${escapeRegExp(fileName)}$`) : pattern;
+}
+
+export function chatGptAttachmentPreview(form: Locator, file: { name: string; mimeType: string }, allNames?: readonly string[]): Locator {
+  const namePattern = chatGptAttachmentNameMatcher(file.name, allNames);
+  // Upstream 065a478 also ignores tiles inside an inert subtree for group/button tiles (a stale hidden row
+  // must not satisfy readiness for a renamed file); this is a behavior change beyond #1000, see DECISIONS.
   let preview = form.getByRole("group", { name: namePattern }).and(form.locator(":not([inert]):not([inert] *)"))
     .or(form.locator('.composer-attachment-surface:is(button, [role="button"]):not([inert]):not([inert] *)')
       .and(form.getByRole("button", { name: namePattern })));

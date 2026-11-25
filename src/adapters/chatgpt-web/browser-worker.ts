@@ -4634,7 +4634,7 @@ export class ChatGptBrowserWorker {
       let visiblePreviews = 0;
       try {
         const previews = files.map(async file => {
-          await chatGptAttachmentPreview(composerForm, file)
+          await chatGptAttachmentPreview(composerForm, file, files.map(other => other.name))
             .waitFor({ state: "visible", timeout: 60_000, signal: previewWait.signal });
           visiblePreviews++;
         });
