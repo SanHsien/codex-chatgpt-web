@@ -14,6 +14,12 @@ Review the exact proposed SHA and record evidence for:
 
 Do not claim browser, MCP, account, live-model, or packaged-release acceptance from source tests.
 
+## 2026-11-27 hidden history in long Web prompts (fork 6.1.16)
+
+Fixed in `2dfa41b` (2026-11-27). Repeated Windows failures ended after Send with a mounted assistant response. A preserved page contained three raw token occurrences and one visible token in the final bridge contract. The prior ownership predicate rejected this shape. The new predicate recognized that same page without submitting another turn or reading browser storage. It still rejects a duplicate current token, visible foreign tokens, foreign tokens inside the contract, and an untrusted nonterminal contract.
+
+The focused Chrome and server suites ran 101 passing tests. Type checking passed. The canonical gate reached the strict upstream issue check (#1015 reviewed, #1020 observed), so no full-gate pass is recorded. An installed signed-in end-to-end test remains a separate acceptance step.
+
 ## 2026-11-26 detached-turn ownership redesign (fork 6.1.15)
 
 Working tree only, **uncommitted by explicit task instruction**; fix commit hash: none.
