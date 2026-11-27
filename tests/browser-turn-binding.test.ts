@@ -483,6 +483,7 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("rebind reads token boundarie
     const worker = Object.create(ChatGptBrowserWorker.prototype) as any;
     const token = "turn_0123456789abcdef0123456789abcdef";
     const foreign = "turn_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const resume = (extra = "") => `&lt;codex_transport_resume&gt;<br>The task context is complete. Pass turn_token ${token} unchanged to every tool call through the selected local Codex plugin in this response.${extra}<br>&lt;/codex_transport_resume&gt;`;
     for (const [name, html, accepted] of [
       ["line-after", `${token}<br>Continue`, true],
       ["line-before", `Identity<br>${token}`, true],
@@ -495,6 +496,11 @@ test.skipIf(!process.env.CHATGPT_DOM_TEST_BROWSER)("rebind reads token boundarie
       ["duplicate", `${token}<br>${token}`, false],
       ["hidden-duplicate", `${token}<span hidden>${token}</span>`, false],
       ["hidden-foreign", `${token}<span hidden>${foreign}<br>Continue</span>`, false],
+      ["hidden-history-before-resume", `<span hidden>${foreign}<br>${foreign}</span>${resume()}`, true],
+      ["visible-history-before-resume", `${foreign}<br>${resume()}`, false],
+      ["duplicate-current-before-resume", `<span hidden>${token}</span>${resume()}`, false],
+      ["foreign-inside-resume", `<span hidden>${foreign}</span>${resume(`<span hidden>${foreign}</span>`)}`, false],
+      ["nonterminal-resume", `<span hidden>${foreign}</span>${resume()}<br>More text`, false],
       ["hidden-only", `<span hidden>${token}</span>`, false],
       ["transparent-only", `<span style="opacity:0">${token}</span>`, false],
       ["partly-hidden", `${token.slice(0, 10)}<span style="opacity:0">${token.slice(10)}</span>`, false],

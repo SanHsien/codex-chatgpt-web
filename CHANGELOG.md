@@ -3,6 +3,10 @@
 This file records maintained-fork work and release identity. See this fork's
 [releases](https://github.com/SanHsien/codex-chatgpt-web/releases) for published Windows assets.
 
+## 2026-11-27
+
+- Fork-local 6.1.16 recognizes the current Web turn when ChatGPT retains hidden older tokens in a long prompt. The current token must still be unique and visible, and older tokens are ignored only before the final bridge contract.
+
 ## 2026-11-25
 
 - Version 6.1.15 (fork-local): rebuild detached-answer binding around one ownership rule

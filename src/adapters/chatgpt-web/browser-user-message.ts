@@ -69,13 +69,27 @@ export function chatGptUserMessageHasToken(element: Element, token: string): boo
   // Read rendered boundaries, but inspect all source text for ambiguity.
   const raw = element.textContent ?? "";
   const candidates = [...raw.matchAll(/turn_[A-Za-z0-9_-]{32}/g)];
-  const tokens = (element as HTMLElement).innerText
+  const visible = (element as HTMLElement).innerText;
+  const tokens = visible
     .match(/(?<![A-Za-z0-9_-])turn_[A-Za-z0-9_-]{32}(?![A-Za-z0-9_-])/g) ?? [];
-  if (tokens.length !== 1 || tokens[0] !== token
-    || candidates.length !== 1 || candidates[0]![0] !== token) return false;
+  const matching = candidates.filter(candidate => candidate[0] === token);
+  if (tokens.length !== 1 || tokens[0] !== token || matching.length !== 1) return false;
+
+  // Expanded prompts can retain hidden history in the same renderer. Ignore its older
+  // tokens only when the sole visible token is also the only token in the final bridge contract.
+  if (candidates.length > 1) {
+    const resumeToken = (text: string): string | undefined => {
+      const start = text.lastIndexOf("<codex_transport_resume>");
+      if (start < 0) return;
+      const tail = text.slice(start).trimEnd();
+      const match = /^<codex_transport_resume>\s*The task context is complete\. Pass turn_token (turn_[A-Za-z0-9_-]{32}) unchanged to every tool call\b[^<]*<\/codex_transport_resume>$/.exec(tail);
+      if (match && [...tail.matchAll(/turn_[A-Za-z0-9_-]{32}/g)].length === 1) return match[1];
+    };
+    if (resumeToken(raw) !== token || resumeToken(visible) !== token) return false;
+  }
   // innerText includes transparent text and falls back to textContent
   // for hidden roots. Every source character of the identity must render.
-  const start = candidates[0]!.index!;
+  const start = matching[0]!.index!;
   const end = start + token.length;
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   let offset = 0;
