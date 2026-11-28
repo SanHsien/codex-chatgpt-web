@@ -20,6 +20,13 @@ Fixed in `2dfa41b` (2026-11-27). Repeated Windows failures ended after Send with
 
 The focused Chrome and server suites ran 101 passing tests. Type checking passed. The canonical gate reached the strict upstream issue check (#1015 reviewed, #1020 observed), so no full-gate pass is recorded. An installed signed-in end-to-end test remains a separate acceptance step.
 
+### 2026-11-28 stable-release validation progress
+
+- GitHub Windows CI for `ba5d51e` passed the packaged clean-runner install and embedded runtime smoke. The full local maintenance gate passed at `3b82d5e`, including upstream, dependency, and relocatable runtime checks.
+- Windows 11 build 26300, fork-local 6.1.16. The signed-in, isolated DEV profile completed a Browser-only turn and a separate Temporary Chat on GPT-6.2 Sol Instant. The ordinary-chat smoke crossed the 32,000-token threshold with one synthetic fill, recorded one compaction, then returned the expected continuation marker. The DEV ordinary-chat preference was restored. The earlier automatic 5.6 route failed before Send and remains outside the successful model evidence.
+- The installed Full bridge recorded three completed browser turns with successful tool receipts and logged a runtime verification request. The active model catalog overlay preserves all 28 native rows and contains nine distinct Web rows without duplicate effort entries. The installed account does not expose Pro. These observations do not establish a fresh Codex restart and picker inspection.
+- The 6.1.15-to-6.1.16 manual upgrade retained a working bridge. The stable gate still requires the previous public-version upgrade, Zero Risk, live cancellation and restart, and Voice route restoration evidence. No release tag has been issued.
+
 ## 2026-11-26 detached-turn ownership redesign (fork 6.1.15)
 
 Working tree only, **uncommitted by explicit task instruction**; fix commit hash: none.
