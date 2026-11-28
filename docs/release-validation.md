@@ -8,22 +8,20 @@ manually on Windows.
 ## Preview releases and updater visibility
 
 Use GitHub's **Set as a pre-release** flag for public test builds. They remain downloadable from
-Releases but are excluded from `/releases/latest`, the endpoint used by both existing launchers
-and the installer. A draft is private; a pre-release is the public testing option. No separate
-launcher update channel or custom release-body flag is required.
+Releases and are excluded from `/releases/latest`. A draft keeps a release private before
+publication.
 
 After validation, uncheck **Set as a pre-release** and select **Set as latest release**, or publish
-a newer stable release. Launchers discover it on their next startup update check, provided its
-version is newer and its platform asset and checksums are present. Already running launchers
-do not poll for publication changes.
+a newer stable release. The Windows fork's updater and PowerShell installer use a reviewed
+version pin. The launcher shipped in v5.0.6 can only discover v5.0.6. Promotion changes GitHub's
+latest-release listing. Existing v5.0.6 installations need a separately verified migration path.
 
 The tag workflow marks new suffixed versions such as `v6.0.0-rc.1` as pre-releases automatically
 and preserves an existing release's pre-release flag when rerun.
 Use a new version for changed binaries; toggling publication flags promotes the existing build.
-Do not publish a stable tag and only mark it as a pre-release afterwards: an older launcher could
-offer it during that interval. To keep a final version out of the updater during testing,
-prepare a draft release with **Set as a pre-release** checked before pushing its tag.
-The workflow publishes it with that flag preserved.
+To keep a final version out of GitHub's latest-release listing during public testing, prepare a
+draft release with **Set as a pre-release** checked before pushing its tag. The workflow publishes
+it with that flag preserved.
 
 GitHub documents this contract in [Get the latest release](https://docs.github.com/en/rest/releases/releases#get-the-latest-release).
 
