@@ -1,5 +1,11 @@
 # Upstream tracking
 
+## 2026-11-28: issue #1020 and PR #1021
+
+[Issue #1020](https://github.com/miuuyy/codex-chatgpt-web/issues/1020) reports oversized multipart compaction stages on a Business account with Pro. The fork likewise plans stages against the `max` budget when Pro is available. The installed account reports no Pro support, so the reported account-specific composer failure remains unverified. Defer changes to the staging policy until a reproducible fixture and an eligible account are available.
+
+[PR #1021](https://github.com/miuuyy/codex-chatgpt-web/pull/1021) adds recognition of same-turn companion page outputs while requiring native rollout proof for the working directory. The tests cover mismatched items and missing rollout authority. Defer integration until the fork can reproduce this Desktop follow-up and verify the resulting workspace roots. Main and branch revisions stay at the prior reviewed commits.
+
 ## 2026-11-26: fc701f6..065a478
 
 Reviewed the one new commit in `upstream/main` `fc701f6fbcff9fb65f679445389aca0c60410271..065a478e380c75080d2d304db5db46915a160a92`,
